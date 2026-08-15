@@ -93,7 +93,7 @@
   }
 
   /* hero */
-  .hero{padding:60px 0 46px}
+  .hero{padding-top:60px;padding-bottom:46px}
   .hero-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:56px;align-items:center}
   h1{
     font-family:var(--serif);
@@ -104,6 +104,7 @@
     white-space:nowrap;
     margin-bottom:16px;
   }
+  @media (max-width:380px){h1{font-size:1.5rem}}
   .role{margin-bottom:26px}
   .role .r1{font-weight:600;color:var(--ink);font-size:1.2rem}
   .role .r2{color:#3B4B57;font-size:1.05rem;line-height:1.55}
@@ -136,7 +137,7 @@
     box-shadow:14px 14px 0 -6px var(--panel),14px 14px 0 -5px var(--line);
   }
   @media (max-width:860px){
-    .hero{padding:40px 0 38px}
+    .hero{padding-top:40px;padding-bottom:38px}
     .hero-grid{grid-template-columns:1fr;gap:40px}
     .portrait{justify-self:start}
     .portrait img{width:220px;height:264px}
