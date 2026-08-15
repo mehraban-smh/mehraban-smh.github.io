@@ -58,14 +58,15 @@
     *,*::before,*::after{animation:none!important;transition:none!important}
   }
   body{
-    font-family:var(--sans);
+    font-family:var(--serif);
     background:var(--paper);
     color:var(--ink);
-    line-height:1.65;
-    font-size:16.5px;
+    line-height:1.7;
+    font-size:17px;
     -webkit-font-smoothing:antialiased;
   }
   ::selection{background:rgba(31,78,121,.16)}
+  header,nav a,.wordmark,.btn,.plink,.sec-label,.card .tag,.socials a,footer{font-family:var(--sans)}
   a{color:var(--accent);text-decoration:none}
   a:hover{color:var(--accent-dark);text-decoration:underline;text-underline-offset:3px}
   a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
@@ -91,7 +92,7 @@
   }
 
   /* hero */
-  .hero{padding:88px 0 76px}
+  .hero{padding:60px 0 46px}
   .hero-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:56px;align-items:center}
   h1{
     font-family:var(--serif);
@@ -112,6 +113,7 @@
   .hero p.lede{font-size:1.12rem;color:var(--ink-soft);max-width:36em;margin-bottom:16px}
   .hero-email{margin:0 0 30px;font-size:1.05rem}
   .hero-email a{font-weight:500}
+  .email-lbl{color:var(--ink-soft);font-weight:500}
   .hero p.lede strong{color:var(--ink);font-weight:600}
 
   .btns{display:flex;gap:14px;flex-wrap:wrap}
@@ -133,14 +135,14 @@
     box-shadow:14px 14px 0 -6px var(--panel),14px 14px 0 -5px var(--line);
   }
   @media (max-width:860px){
-    .hero{padding:56px 0 52px}
+    .hero{padding:40px 0 38px}
     .hero-grid{grid-template-columns:1fr;gap:40px}
     .portrait{justify-self:start}
     .portrait img{width:220px;height:264px}
   }
 
   /* sections */
-  section{padding:76px 0;border-top:1px solid var(--line)}
+  section{padding:50px 0;border-top:1px solid var(--line)}
   .sec-label{font-size:.74rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:14px;display:flex;align-items:center;gap:12px}
   .sec-label::before{content:"";width:22px;height:3px;background:var(--accent)}
   h2{font-family:var(--serif);font-size:clamp(1.7rem,3.4vw,2.25rem);font-weight:600;letter-spacing:-.005em;margin-bottom:32px}
@@ -179,7 +181,7 @@
   .figcap{font-size:.8rem;margin-top:10px}
 
   /* collaboration */
-  .collab{margin-top:70px}
+  .collab{margin-top:46px}
   .map-wrap{border:1px solid var(--line);border-radius:10px;background:#fff;padding:18px}
   .worldmap{width:100%;height:auto;display:block}
   .worldmap .country{fill:#E9EEF2;stroke:#FFFFFF;stroke-width:.6}
@@ -237,6 +239,10 @@
   .foot{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
 
   /* reveal on scroll */
+  /* justified prose on wider screens, left-aligned on phones */
+  @media (min-width:781px){
+    .hero p.lede,.about-grid p,.card p{text-align:justify;hyphens:auto;-webkit-hyphens:auto}
+  }
   .reveal{opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
   .reveal.in{opacity:1;transform:none}
   @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}}
@@ -270,7 +276,7 @@
           <p class="r2">London South Bank University</p>
         </div>
         <p class="lede">My research brings together artificial intelligence, Digital Twins, and building science to develop data-driven approaches for understanding, predicting, and improving how buildings perform in the real world, from energy and indoor environmental performance to resilience and occupant comfort.</p>
-        <p class="hero-email"><a href="mailto:info@mehraban.uk">info@mehraban.uk</a></p>
+        <p class="hero-email"><span class="email-lbl">Email:</span> <a href="mailto:info@mehraban.uk">info@mehraban.uk</a></p>
         <div class="btns">
           <a class="btn btn-solid" href="#publications">View publications</a>
           <a class="btn btn-ghost" href="#contact">Get in touch</a>
@@ -304,8 +310,8 @@
           <div class="fact-block">
             <h3>Education</h3>
             <ul class="edu">
-              <li><span class="deg">PhD, Construction Management and Economics</span><span class="inst">London South Bank University</span></li>
-              <li><span class="deg">MSc Construction Management, Distinction</span><span class="inst">Kingston University London</span></li>
+              <li><span class="deg">PhD, Construction Management</span><span class="inst">London South Bank University</span></li>
+              <li><span class="deg">MSc Construction Management</span><span class="inst">Kingston University London</span></li>
               <li><span class="deg">BSc Civil Engineering</span><span class="inst">Shahid Beheshti University</span></li>
             </ul>
           </div>
