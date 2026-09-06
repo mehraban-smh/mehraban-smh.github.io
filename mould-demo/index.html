@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo video — Physics-Informed AI Digital Twin for Early Mould Prediction | Mohammad H. Mehraban</title>
+<meta name="description" content="Seven-minute narrated demo of a physics-informed, AI-integrated digital twin that predicts mould growth on building surfaces up to one week ahead. IoT sensing, a calibrated EnergyPlus model, the VTT mould model and a physics-informed XGBoost forecaster, validated in an occupied building in Syracuse, New York.">
+<meta name="author" content="Mohammad H. Mehraban">
+<link rel="canonical" href="https://mehraban.uk/mould-demo/">
+<meta property="og:type" content="video.other">
+<meta property="og:title" content="Physics-Informed AI Digital Twin for Early Mould Prediction — demo video">
+<meta property="og:description" content="A 7-minute walkthrough of the framework, the case study and the results: mould risk predicted at the surface level up to one week before it becomes visible.">
+<meta property="og:url" content="https://mehraban.uk/mould-demo/">
+<meta property="og:image" content="https://mehraban.uk/mould-demo/poster.jpg">
+<meta property="og:video" content="https://mehraban.uk/mould-demo/mould-digital-twin-demo.mp4">
+<meta property="og:video:type" content="video/mp4">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" sizes="64x64" href="../favicon.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoObject",
+  "name": "Physics-Informed AI Digital Twin for Early Mould Prediction — research demo",
+  "description": "Narrated demo of a digital-twin framework that combines IoT sensing, a calibrated EnergyPlus model, the VTT mould model and a physics-informed XGBoost forecaster to predict mould growth on building surfaces up to one week ahead.",
+  "thumbnailUrl": "https://mehraban.uk/mould-demo/poster.jpg",
+  "contentUrl": "https://mehraban.uk/mould-demo/mould-digital-twin-demo.mp4",
+  "duration": "PT7M2S",
+  "uploadDate": "2026-09-06",
+  "author": { "@type": "Person", "name": "Mohammad H. Mehraban", "url": "https://mehraban.uk" }
+}
+</script>
+<style>
+  :root{
+    --paper:#FFFFFF;--panel:#F5F7F9;--ink:#1C2A35;--ink-soft:#5A6B77;--line:#E5EAEE;
+    --accent:#1F4E79;--accent-dark:#163A5B;--navy:#0B1D33;
+    --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+    --sans:"Inter",-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+    --maxw:1060px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--serif);background:var(--paper);color:var(--ink);line-height:1.7;font-size:17px;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{color:var(--accent-dark);text-decoration:underline;text-underline-offset:3px}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+
+  header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);font-family:var(--sans)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:62px;gap:16px}
+  .wordmark{font-weight:600;font-size:.82rem;letter-spacing:.14em;color:var(--ink);text-transform:uppercase}
+  .wordmark:hover{text-decoration:none;color:var(--accent)}
+  .back{color:var(--ink-soft);font-size:.92rem;font-weight:500}
+  .back:hover{color:var(--ink);text-decoration:none}
+
+  .intro{padding:44px 0 26px}
+  .kicker{font-family:var(--sans);font-size:.74rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:14px;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:22px;height:3px;background:var(--accent)}
+  h1{font-size:clamp(1.6rem,3.6vw,2.4rem);font-weight:700;line-height:1.15;letter-spacing:-.01em;max-width:22em}
+  .sub{font-size:1.1rem;color:var(--ink-soft);margin-top:14px;max-width:38em}
+
+  .player{background:var(--navy);border-radius:12px;overflow:hidden;box-shadow:0 18px 40px rgba(11,29,51,.18)}
+  .player video{display:block;width:100%;aspect-ratio:16/9;background:var(--navy)}
+  .player-meta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-family:var(--sans);font-size:.85rem;color:var(--ink-soft);margin-top:12px}
+  .player-meta a{font-weight:500}
+
+  .grid{display:grid;grid-template-columns:1.6fr 1fr;gap:48px;padding:40px 0 20px}
+  @media (max-width:860px){.grid{grid-template-columns:1fr;gap:32px}}
+  h2{font-size:1.24rem;font-weight:600;line-height:1.32;margin-bottom:14px}
+  .about p{margin-bottom:16px;color:var(--ink-soft)}
+  .about p strong{color:var(--ink);font-weight:600}
+
+  .chapters{list-style:none;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
+  .chapters li{border-top:1px dashed var(--line)}
+  .chapters li:first-child{border-top:none}
+  .chapters button{
+    all:unset;box-sizing:border-box;display:flex;gap:14px;align-items:baseline;width:100%;padding:10px 16px;cursor:pointer;
+    font-family:var(--sans);font-size:.9rem;line-height:1.45;color:var(--ink);
+    transition:background .15s ease;
+  }
+  .chapters button:hover{background:var(--panel)}
+  .chapters li.active button{background:var(--panel);box-shadow:inset 3px 0 0 var(--accent)}
+  .chapters .t{font-variant-numeric:tabular-nums;color:var(--accent);font-weight:600;flex:0 0 2.6em;font-size:.85rem}
+
+  .facts{list-style:none;margin-top:26px;border-top:1px solid var(--line)}
+  .facts li{display:grid;grid-template-columns:8.5em 1fr;gap:16px;padding:12px 0;border-bottom:1px dashed var(--line);font-size:.95rem}
+  .facts .n{font-weight:700;font-size:1.05rem;color:var(--ink)}
+  .facts .d{color:var(--ink-soft)}
+  @media (max-width:480px){.facts li{grid-template-columns:1fr;gap:2px}}
+
+  .credits{border-top:1px solid var(--line);padding:32px 0 44px;font-size:.95rem}
+  .credits h2{font-size:1.02rem}
+  .credits p{color:var(--ink-soft);margin-bottom:8px}
+  .credits p strong{color:var(--ink);font-weight:600}
+  .credits .inst{font-family:var(--sans);font-size:.85rem}
+
+  footer{border-top:1px solid var(--line);padding:30px 0 40px;font-size:.85rem;color:var(--ink-soft);font-family:var(--sans)}
+  .foot{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="wordmark" href="../">M.H. Mehraban</a>
+    <a class="back" href="../#research">← Back to research</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="intro">
+      <p class="kicker">Research demo · 7 min</p>
+      <h1>Physics-Informed AI Digital Twin for Early Mould Prediction</h1>
+      <p class="sub">A narrated walkthrough of the framework, the case study and the results: mould risk assessed surface by surface and predicted up to one week before it becomes visible.</p>
+    </div>
+
+    <div class="player">
+      <video id="demo" controls preload="metadata" playsinline poster="poster.jpg">
+        <source src="mould-digital-twin-demo.mp4" type="video/mp4">
+        Your browser cannot play this video. <a href="mould-digital-twin-demo.mp4">Download the MP4</a> instead.
+      </video>
+    </div>
+    <div class="player-meta">
+      <span>1080p · 7:02 · English narration</span>
+      <span><a href="mould-digital-twin-demo.mp4" download>Download MP4</a> · Short link: <a href="https://mehraban.uk/mould-demo">mehraban.uk/mould-demo</a></span>
+    </div>
+
+    <div class="grid">
+      <div class="about">
+        <h2>What the video shows</h2>
+        <p>Most building management systems watch energy and comfort, while <strong>dampness and mould</strong> develop unseen on or beneath building surfaces, and are usually dealt with only once visible or reported. This demo presents a digital-twin framework that detects <strong>where</strong> mould risk is developing and predicts <strong>how it will progress</strong> before that point.</p>
+        <p>An IoT sensor network measuring indoor, outdoor and envelope-surface conditions feeds a <strong>calibrated EnergyPlus model</strong> built from BIM, which estimates surface temperature and humidity at both monitored and unmonitored surfaces. The <strong>VTT mould growth model</strong> converts those conditions into a mould index, and a <strong>physics-informed XGBoost model (PIXGB)</strong>, trained on features that encode hygrothermal and mould-growth physics, forecasts the index from one hour to one week ahead.</p>
+        <p>Validated over ten months in an <strong>occupied 1970s duplex at Syracuse University</strong>, the framework revealed glazing-adjacent surfaces and a low-insulation concrete wall as hidden hotspots even while room-air humidity stayed moderate, and outperformed both an LSTM and pure physics-based extrapolation. The closing section sets out what this means for housing providers, including under the UK's Awaab's Law.</p>
+
+        <ul class="facts" aria-label="Key results">
+          <li><span class="n">R² = 0.999</span><span class="d">mould-index prediction one hour ahead on the unseen test period</span></li>
+          <li><span class="n">R² ≈ 0.90</span><span class="d">one full week (168 h) ahead, with RMSE never above 0.028</span></li>
+          <li><span class="n">−24% / −53%</span><span class="d">lower error than an LSTM and than VTT physics extrapolation at 24 h</span></li>
+          <li><span class="n">24 surfaces</span><span class="d">mapped for maximum mould index and cumulative growth hours from a handful of sensors</span></li>
+        </ul>
+      </div>
+
+      <aside>
+        <h2>Chapters</h2>
+        <ol class="chapters" id="chapters">
+          <li><button type="button" data-t="0"><span class="t">0:00</span><span>The hidden problem: dampness and mould</span></button></li>
+          <li><button type="button" data-t="28"><span class="t">0:28</span><span>Why visible mould is already too late</span></button></li>
+          <li><button type="button" data-t="59"><span class="t">0:59</span><span>The framework: four connected components</span></button></li>
+          <li><button type="button" data-t="86"><span class="t">1:26</span><span>IoT sensing in the physical building</span></button></li>
+          <li><button type="button" data-t="112"><span class="t">1:52</span><span>The digital twin: from BIM to a calibrated EnergyPlus model</span></button></li>
+          <li><button type="button" data-t="157"><span class="t">2:37</span><span>Surface microclimates and the VTT mould model</span></button></li>
+          <li><button type="button" data-t="198"><span class="t">3:18</span><span>PIXGB: physics-informed machine learning</span></button></li>
+          <li><button type="button" data-t="256"><span class="t">4:16</span><span>Case study: an occupied duplex in Syracuse, New York</span></button></li>
+          <li><button type="button" data-t="271"><span class="t">4:31</span><span>Where risk develops: surface-level mould maps</span></button></li>
+          <li><button type="button" data-t="302"><span class="t">5:02</span><span>Forecast accuracy from 1 hour to 1 week ahead</span></button></li>
+          <li><button type="button" data-t="321"><span class="t">5:21</span><span>Benchmarks against LSTM and VTT physics</span></button></li>
+          <li><button type="button" data-t="338"><span class="t">5:38</span><span>What the model learns: SHAP analysis</span></button></li>
+          <li><button type="button" data-t="357"><span class="t">5:57</span><span>From reactive remediation to proactive prevention</span></button></li>
+        </ol>
+      </aside>
+    </div>
+
+    <div class="credits">
+      <h2>Authors</h2>
+      <p><strong>Mehraban, Ghansah, Faraji, Zhong, Udeaja and Mirzabeigi</strong></p>
+      <p class="inst">London South Bank University, UK · Swansea University, UK · SUNY College of Environmental Science and Forestry, USA · Syracuse University, USA</p>
+      <p>Corresponding author: <a href="mailto:info@mehraban.uk">info@mehraban.uk</a></p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>© 2026 Mohammad H. Mehraban</span>
+    <span><a href="../">mehraban.uk</a></span>
+  </div>
+</footer>
+
+<script>
+  // Chapter list: click to jump; highlight the chapter currently playing.
+  const video = document.getElementById('demo');
+  const items = Array.from(document.querySelectorAll('#chapters li'));
+  const starts = items.map(li => Number(li.querySelector('button').dataset.t));
+  function highlight(t) {
+    let cur = -1;
+    for (let i = 0; i < starts.length; i++) if (t >= starts[i]) cur = i;
+    items.forEach((li, i) => li.classList.toggle('active', i === cur));
+  }
+  items.forEach((li, i) => li.querySelector('button').addEventListener('click', () => {
+    video.currentTime = starts[i];
+    highlight(starts[i]);
+    video.play().catch(() => {});
+    video.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }));
+  ['timeupdate', 'seeked'].forEach(ev => video.addEventListener(ev, () => highlight(video.currentTime)));
+</script>
+
+<!-- Visitor analytics - GoatCounter (cookieless). Dashboard: https://mehraban.goatcounter.com -->
+<script data-goatcounter="https://mehraban.goatcounter.com/count"
+        async src="https://gc.zgo.at/count.js"></script>
+
+</body>
+</html>
