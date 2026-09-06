@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Demo video — Physics-Informed AI Digital Twin for Early Mould Prediction | Mohammad H. Mehraban</title>
-<meta name="description" content="Seven-minute narrated demo of a physics-informed, AI-integrated digital twin that predicts mould growth on building surfaces up to one week ahead. IoT sensing, a calibrated EnergyPlus model, the VTT mould model and a physics-informed XGBoost forecaster, validated in an occupied building in Syracuse, New York.">
+<title>Video summary — Physics-Informed AI-Integrated Digital Twin Framework for Early and Real-Time Prediction of Mould Growth in Buildings | Mohammad H. Mehraban</title>
+<meta name="description" content="Seven-minute narrated video summary of the Building and Environment paper on a physics-informed, AI-integrated digital twin that predicts mould growth on building surfaces up to one week ahead. IoT sensing, a calibrated EnergyPlus model, the VTT mould model and a physics-informed XGBoost forecaster, validated in an occupied building in Syracuse, New York.">
 <meta name="author" content="Mohammad H. Mehraban">
-<link rel="canonical" href="https://mehraban.uk/mould-demo/">
+<link rel="canonical" href="https://mehraban.uk/mould-digital-twin/">
 <meta property="og:type" content="video.other">
-<meta property="og:title" content="Physics-Informed AI Digital Twin for Early Mould Prediction — demo video">
-<meta property="og:description" content="A 7-minute walkthrough of the framework, the case study and the results: mould risk predicted at the surface level up to one week before it becomes visible.">
-<meta property="og:url" content="https://mehraban.uk/mould-demo/">
-<meta property="og:image" content="https://mehraban.uk/mould-demo/poster.jpg">
-<meta property="og:video" content="https://mehraban.uk/mould-demo/mould-digital-twin-demo.mp4">
+<meta property="og:title" content="Physics-Informed AI-Integrated Digital Twin Framework for Early and Real-Time Prediction of Mould Growth in Buildings — video summary">
+<meta property="og:description" content="Seven-minute narrated summary of the paper (Building and Environment): mould risk predicted at the surface level up to one week before it becomes visible.">
+<meta property="og:url" content="https://mehraban.uk/mould-digital-twin/">
+<meta property="og:image" content="https://mehraban.uk/mould-digital-twin/poster.jpg">
+<meta property="og:video" content="https://mehraban.uk/mould-digital-twin/mould-digital-twin.mp4">
 <meta property="og:video:type" content="video/mp4">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" sizes="64x64" href="../favicon.png">
@@ -24,10 +24,10 @@
 {
   "@context": "https://schema.org",
   "@type": "VideoObject",
-  "name": "Physics-Informed AI Digital Twin for Early Mould Prediction — research demo",
-  "description": "Narrated demo of a digital-twin framework that combines IoT sensing, a calibrated EnergyPlus model, the VTT mould model and a physics-informed XGBoost forecaster to predict mould growth on building surfaces up to one week ahead.",
-  "thumbnailUrl": "https://mehraban.uk/mould-demo/poster.jpg",
-  "contentUrl": "https://mehraban.uk/mould-demo/mould-digital-twin-demo.mp4",
+  "name": "Physics-Informed AI-Integrated Digital Twin Framework for Early and Real-Time Prediction of Mould Growth in Buildings — video summary",
+  "description": "Narrated video summary of the Building and Environment paper: a digital-twin framework that combines IoT sensing, a calibrated EnergyPlus model, the VTT mould model and a physics-informed XGBoost forecaster to predict mould growth on building surfaces up to one week ahead.",
+  "thumbnailUrl": "https://mehraban.uk/mould-digital-twin/poster.jpg",
+  "contentUrl": "https://mehraban.uk/mould-digital-twin/mould-digital-twin.mp4",
   "duration": "PT7M2S",
   "uploadDate": "2026-09-06",
   "author": { "@type": "Person", "name": "Mohammad H. Mehraban", "url": "https://mehraban.uk" }
@@ -60,7 +60,9 @@
   .kicker{font-family:var(--sans);font-size:.74rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:14px;display:flex;align-items:center;gap:12px}
   .kicker::before{content:"";width:22px;height:3px;background:var(--accent)}
   h1{font-size:clamp(1.6rem,3.6vw,2.4rem);font-weight:700;line-height:1.15;letter-spacing:-.01em;max-width:22em}
-  .sub{font-size:1.1rem;color:var(--ink-soft);margin-top:14px;max-width:38em}
+  .journal{font-family:var(--sans);font-size:.92rem;color:var(--ink-soft);margin-top:14px}
+  .journal em{font-style:italic;color:var(--ink)}
+  .sub{font-size:1.1rem;color:var(--ink-soft);margin-top:12px;max-width:38em}
 
   .player{background:var(--navy);border-radius:12px;overflow:hidden;box-shadow:0 18px 40px rgba(11,29,51,.18)}
   .player video{display:block;width:100%;aspect-ratio:16/9;background:var(--navy)}
@@ -96,6 +98,9 @@
   .credits p{color:var(--ink-soft);margin-bottom:8px}
   .credits p strong{color:var(--ink);font-weight:600}
   .credits .inst{font-family:var(--sans);font-size:.85rem}
+  .credits sup{font-size:.68em;font-weight:500;color:var(--ink-soft)}
+  .affil{list-style:decimal inside;font-family:var(--sans);font-size:.85rem;color:var(--ink-soft);margin:0 0 12px}
+  .affil li{padding:2px 0}
 
   footer{border-top:1px solid var(--line);padding:30px 0 40px;font-size:.85rem;color:var(--ink-soft);font-family:var(--sans)}
   .foot{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
@@ -114,26 +119,27 @@
 <main>
   <div class="wrap">
     <div class="intro">
-      <p class="kicker">Research demo · 7 min</p>
-      <h1>Physics-Informed AI Digital Twin for Early Mould Prediction</h1>
-      <p class="sub">A narrated walkthrough of the framework, the case study and the results: mould risk assessed surface by surface and predicted up to one week before it becomes visible.</p>
+      <p class="kicker">Video summary · 7 min</p>
+      <h1>Physics-Informed AI-Integrated Digital Twin Framework for Early and Real-Time Prediction of Mould Growth in Buildings</h1>
+      <p class="journal">Mehraban, Ghansah, Faraji, Zhong, Udeaja &amp; Mirzabeigi · <em>Building and Environment</em>, forthcoming</p>
+      <p class="sub">A narrated summary of the paper: the framework, the case study and the results, with mould risk assessed surface by surface and predicted up to one week before it becomes visible.</p>
     </div>
 
     <div class="player">
       <video id="demo" controls preload="metadata" playsinline poster="poster.jpg">
-        <source src="mould-digital-twin-demo.mp4" type="video/mp4">
-        Your browser cannot play this video. <a href="mould-digital-twin-demo.mp4">Download the MP4</a> instead.
+        <source src="mould-digital-twin.mp4" type="video/mp4">
+        Your browser cannot play this video. <a href="mould-digital-twin.mp4">Download the MP4</a> instead.
       </video>
     </div>
     <div class="player-meta">
       <span>1080p · 7:02 · English narration</span>
-      <span><a href="mould-digital-twin-demo.mp4" download>Download MP4</a> · Short link: <a href="https://mehraban.uk/mould-demo">mehraban.uk/mould-demo</a></span>
+      <span><a href="mould-digital-twin.mp4" download>Download MP4</a> · Permanent link: <a href="https://mehraban.uk/mould-digital-twin">mehraban.uk/mould-digital-twin</a></span>
     </div>
 
     <div class="grid">
       <div class="about">
         <h2>What the video shows</h2>
-        <p>Most building management systems watch energy and comfort, while <strong>dampness and mould</strong> develop unseen on or beneath building surfaces, and are usually dealt with only once visible or reported. This demo presents a digital-twin framework that detects <strong>where</strong> mould risk is developing and predicts <strong>how it will progress</strong> before that point.</p>
+        <p>Most building management systems watch energy and comfort, while <strong>dampness and mould</strong> develop unseen on or beneath building surfaces, and are usually dealt with only once visible or reported. The paper presents a digital-twin framework that detects <strong>where</strong> mould risk is developing and predicts <strong>how it will progress</strong> before that point.</p>
         <p>An IoT sensor network measuring indoor, outdoor and envelope-surface conditions feeds a <strong>calibrated EnergyPlus model</strong> built from BIM, which estimates surface temperature and humidity at both monitored and unmonitored surfaces. The <strong>VTT mould growth model</strong> converts those conditions into a mould index, and a <strong>physics-informed XGBoost model (PIXGB)</strong>, trained on features that encode hygrothermal and mould-growth physics, forecasts the index from one hour to one week ahead.</p>
         <p>Validated over ten months in an <strong>occupied 1970s duplex at Syracuse University</strong>, the framework revealed glazing-adjacent surfaces and a low-insulation concrete wall as hidden hotspots even while room-air humidity stayed moderate, and outperformed both an LSTM and pure physics-based extrapolation. The closing section sets out what this means for housing providers, including under the UK's Awaab's Law.</p>
 
@@ -167,9 +173,15 @@
 
     <div class="credits">
       <h2>Authors</h2>
-      <p><strong>Mehraban, Ghansah, Faraji, Zhong, Udeaja and Mirzabeigi</strong></p>
-      <p class="inst">London South Bank University, UK · Swansea University, UK · SUNY College of Environmental Science and Forestry, USA · Syracuse University, USA</p>
-      <p>Corresponding author: <a href="mailto:info@mehraban.uk">info@mehraban.uk</a></p>
+      <p><strong>Mohammad H. Mehraban<sup>1,2,*</sup>, Frank Ato Ghansah<sup>1</sup>, Setare Faraji<sup>1</sup>, Hua Zhong<sup>1</sup>, Chika Udeaja<sup>1</sup> and Shayan Mirzabeigi<sup>3,4</sup></strong></p>
+      <ol class="affil">
+        <li>School of Construction, Property and Surveying, College of Technology and Environment, London South Bank University, London, UK</li>
+        <li>School of Management, Swansea University, Swansea, UK</li>
+        <li>Department of Sustainable Resources Management, State University of New York College of Environmental Science and Forestry, Syracuse, NY, USA</li>
+        <li>Department of Mechanical and Aerospace Engineering, Syracuse University, Syracuse, NY, USA</li>
+      </ol>
+      <p>* Corresponding author: Mohammad H. Mehraban, <a href="mailto:info@mehraban.uk">info@mehraban.uk</a></p>
+      <p class="inst">Published in <em>Building and Environment</em> (Elsevier). The article link will be added here once the DOI is issued.</p>
     </div>
   </div>
 </main>
