@@ -60,19 +60,14 @@
   .kicker{font-family:var(--sans);font-size:.74rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:14px;display:flex;align-items:center;gap:12px}
   .kicker::before{content:"";width:22px;height:3px;background:var(--accent)}
   h1{font-size:clamp(1.6rem,3.6vw,2.4rem);font-weight:700;line-height:1.15;letter-spacing:-.01em;max-width:22em}
-  .journal{font-family:var(--sans);font-size:.92rem;color:var(--ink-soft);margin-top:14px}
-  .journal em{font-style:italic;color:var(--ink)}
-  .sub{font-size:1.1rem;color:var(--ink-soft);margin-top:12px;max-width:38em}
 
   .player{background:var(--navy);border-radius:12px;overflow:hidden;box-shadow:0 18px 40px rgba(11,29,51,.18)}
   .player video{display:block;width:100%;aspect-ratio:16/9;background:var(--navy)}
-  .player-meta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-family:var(--sans);font-size:.85rem;color:var(--ink-soft);margin-top:12px}
-  .player-meta a{font-weight:500}
 
   .grid{display:grid;grid-template-columns:1.6fr 1fr;gap:48px;padding:40px 0 20px}
   @media (max-width:860px){.grid{grid-template-columns:1fr;gap:32px}}
   h2{font-size:1.24rem;font-weight:600;line-height:1.32;margin-bottom:14px}
-  .about p{margin-bottom:16px;color:var(--ink-soft)}
+  .about p{margin-bottom:16px;color:var(--ink-soft);text-align:justify;hyphens:auto}
   .about p strong{color:var(--ink);font-weight:600}
 
   .chapters{list-style:none;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
@@ -87,17 +82,11 @@
   .chapters li.active button{background:var(--panel);box-shadow:inset 3px 0 0 var(--accent)}
   .chapters .t{font-variant-numeric:tabular-nums;color:var(--accent);font-weight:600;flex:0 0 2.6em;font-size:.85rem}
 
-  .facts{list-style:none;margin-top:26px;border-top:1px solid var(--line)}
-  .facts li{display:grid;grid-template-columns:8.5em 1fr;gap:16px;padding:12px 0;border-bottom:1px dashed var(--line);font-size:.95rem}
-  .facts .n{font-weight:700;font-size:1.05rem;color:var(--ink)}
-  .facts .d{color:var(--ink-soft)}
-  @media (max-width:480px){.facts li{grid-template-columns:1fr;gap:2px}}
 
   .credits{border-top:1px solid var(--line);padding:32px 0 44px;font-size:.95rem}
   .credits h2{font-size:1.02rem}
   .credits p{color:var(--ink-soft);margin-bottom:8px}
   .credits p strong{color:var(--ink);font-weight:600}
-  .credits .inst{font-family:var(--sans);font-size:.85rem}
   .credits sup{font-size:.68em;font-weight:500;color:var(--ink-soft)}
   .affil{list-style:decimal inside;font-family:var(--sans);font-size:.85rem;color:var(--ink-soft);margin:0 0 12px}
   .affil li{padding:2px 0}
@@ -119,10 +108,8 @@
 <main>
   <div class="wrap">
     <div class="intro">
-      <p class="kicker">Video summary · 7½ min</p>
+      <p class="kicker">Video summary</p>
       <h1>Physics-Informed AI-Integrated Digital Twin Framework for Early and Real-Time Prediction of Mould Growth in Buildings</h1>
-      <p class="journal">Mehraban, Ghansah, Faraji, Zhong, Udeaja &amp; Mirzabeigi · <em>Building and Environment</em>, forthcoming</p>
-      <p class="sub">A narrated summary of the paper: the framework, the case study and the results, with mould risk assessed surface by surface and predicted up to one week before it becomes visible.</p>
     </div>
 
     <div class="player">
@@ -131,24 +118,11 @@
         Your browser cannot play this video. <a href="mould-digital-twin.mp4">Download the MP4</a> instead.
       </video>
     </div>
-    <div class="player-meta">
-      <span>1080p · 7:30 · English narration</span>
-      <span><a href="mould-digital-twin.mp4" download>Download MP4</a> (57 MB) · <a href="https://github.com/mehraban-smh/mehraban-smh.github.io/releases/download/video-v1/Mould.Digital.Twin.Demo.mp4">Original upload</a> (391 MB) · Permanent link: <a href="https://mehraban.uk/mould-digital-twin">mehraban.uk/mould-digital-twin</a></span>
-    </div>
 
     <div class="grid">
       <div class="about">
-        <h2>What the video shows</h2>
-        <p>Most building management systems watch energy and comfort, while <strong>dampness and mould</strong> develop unseen on or beneath building surfaces, and are usually dealt with only once visible or reported. The paper presents a digital-twin framework that detects <strong>where</strong> mould risk is developing and predicts <strong>how it will progress</strong> before that point.</p>
-        <p>An IoT sensor network measuring indoor, outdoor and envelope-surface conditions feeds a <strong>calibrated EnergyPlus model</strong> built from BIM, which estimates surface temperature and humidity at both monitored and unmonitored surfaces. The <strong>VTT mould growth model</strong> converts those conditions into a mould index, and a <strong>physics-informed XGBoost model (PIXGB)</strong>, trained on features that encode hygrothermal and mould-growth physics, forecasts the index from one hour to one week ahead.</p>
-        <p>Validated over ten months in an <strong>occupied 1970s duplex at Syracuse University</strong>, the framework revealed glazing-adjacent surfaces and a low-insulation concrete wall as hidden hotspots even while room-air humidity stayed moderate, and outperformed both an LSTM and pure physics-based extrapolation. The closing section sets out what this means for housing providers, including under the UK's Awaab's Law.</p>
-
-        <ul class="facts" aria-label="Key results">
-          <li><span class="n">R² = 0.999</span><span class="d">mould-index prediction one hour ahead on the unseen test period</span></li>
-          <li><span class="n">R² ≈ 0.90</span><span class="d">one full week (168 h) ahead, with RMSE never above 0.028</span></li>
-          <li><span class="n">−24% / −53%</span><span class="d">lower error than an LSTM and than VTT physics extrapolation at 24 h</span></li>
-          <li><span class="n">24 surfaces</span><span class="d">mapped for maximum mould index and cumulative growth hours from a handful of sensors</span></li>
-        </ul>
+        <h2>Abstract</h2>
+        <p>Indoor air quality issues, particularly mould and dampness, remain persistent public health concerns in residential buildings despite improvements in building standards and energy performance regulations. In current practice, mould management is largely reactive and relies on occupant complaints and visual inspection after mould has already become visible, at which occupants may have already experienced prolonged exposure to unhealthy indoor environment. To address this limitation, this study proposes a Digital Twin–based framework for continuous monitoring and predictive assessment of mould risk in buildings. The framework combines continuous environmental monitoring using an Internet of Things (IoT) sensor network with a calibrated Building Energy Model (BEM) that synchronizes real-time sensor data with simulation outputs to estimate surface hygrothermal condition across both monitored and unmonitored locations. These hygrothermal conditions are then used to evaluate mould development using the VTT mould growth model. Building upon this physics-based representation of mould dynamics, a Physics-Informed Machine Learning (PIML) model based on Extreme Gradient Boosting is developed to forecast mould growth across prediction horizons ranging from 1 hour to 1 week. The proposed framework was implemented and validated on a sensor-instrumented residential building case study located in Syracuse, New York, achieving high prediction accuracy of up to R² of 0.99 for short-term forecasts and approximately 0.90 for longer horizons up to one-week-ahead mould index prediction. The findings demonstrate reliable prediction of mould development under dynamically changing indoor environment. The framework provides a scalable approach for real-time monitoring and proactive mould risk assessment in new and existing building to improve operation and add a new automated layer for maintenance, enabling early smart decision-making and intervention.</p>
       </div>
 
       <aside>
@@ -173,15 +147,13 @@
 
     <div class="credits">
       <h2>Authors</h2>
-      <p><strong>Mohammad H. Mehraban<sup>1,2,*</sup>, Frank Ato Ghansah<sup>1</sup>, Setare Faraji<sup>1</sup>, Hua Zhong<sup>1</sup>, Chika Udeaja<sup>1</sup> and Shayan Mirzabeigi<sup>3,4</sup></strong></p>
+      <p><strong>Mohammad H. Mehraban<sup>1,2</sup>, Frank Ato Ghansah<sup>1</sup>, Setare Faraji<sup>1</sup>, Hua Zhong<sup>1</sup>, Chika Udeaja<sup>1</sup> and Shayan Mirzabeigi<sup>3,4</sup></strong></p>
       <ol class="affil">
         <li>School of Construction, Property and Surveying, College of Technology and Environment, London South Bank University, London, UK</li>
         <li>School of Management, Swansea University, Swansea, UK</li>
         <li>Department of Sustainable Resources Management, State University of New York College of Environmental Science and Forestry, Syracuse, NY, USA</li>
         <li>Department of Mechanical and Aerospace Engineering, Syracuse University, Syracuse, NY, USA</li>
       </ol>
-      <p>* Corresponding author: Mohammad H. Mehraban, <a href="mailto:info@mehraban.uk">info@mehraban.uk</a></p>
-      <p class="inst">Published in <em>Building and Environment</em> (Elsevier). The article link will be added here once the DOI is issued.</p>
     </div>
   </div>
 </main>
