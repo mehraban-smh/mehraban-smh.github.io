@@ -17,6 +17,9 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" sizes="64x64" href="../favicon.png">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -32,10 +35,23 @@
 </script>
 <style>
   html,body{height:100%;margin:0;background:#0B1D33}
-  video{position:fixed;inset:0;width:100%;height:100%;object-fit:contain;background:#0B1D33;outline:none}
+  body{display:flex;flex-direction:column;font-family:"Inter",-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .bar{flex:none;display:flex;justify-content:space-between;align-items:center;gap:16px 28px;flex-wrap:wrap;padding:12px 22px;font-size:.9rem;line-height:1.4;color:#B9C7D6;border-bottom:1px solid rgba(255,255,255,.08)}
+  .bar a{color:#B9C7D6;text-decoration:none;transition:color .15s ease}
+  .bar a:hover{color:#fff}
+  .bar a:focus-visible{outline:2px solid #8FB3D9;outline-offset:3px;border-radius:2px}
+  .bar b{font-weight:600;color:#fff}
+  .bar .dim{color:#7F93A8}
+  @media (max-width:520px){.bar{font-size:.84rem;padding:10px 16px}}
+  video{flex:1;min-height:0;width:100%;object-fit:contain;background:#0B1D33;outline:none}
 </style>
 </head>
 <body>
+
+<nav class="bar" aria-label="Site links">
+  <a href="https://mehraban.uk/">← <b>Mohammad H. Mehraban</b> <span class="dim">· mehraban.uk</span></a>
+  <a href="https://mehraban.uk/#contact">Interested in collaborating? <b>Get in touch →</b></a>
+</nav>
 
 <video controls playsinline preload="metadata" poster="poster.jpg"
        title="Physics-Informed AI-Integrated Digital Twin Framework for Early and Real-Time Prediction of Mould Growth in Buildings — video summary">
