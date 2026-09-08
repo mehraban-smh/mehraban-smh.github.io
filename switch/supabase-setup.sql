@@ -50,6 +50,61 @@ create policy "researchers can read everything"
   on public.comfort_votes for select to authenticated
   using (true);
 
+-- Six-point comfort score (1 very uncomfortable ... 6 very comfortable), added alongside the text label.
+alter table public.comfort_votes add column if not exists comfort_score smallint check (comfort_score between 1 and 6);
+
+-- One row per participant. Codes are assigned automatically by register_participant() below.
+-- Participants never read or write this table directly: the app only calls the function.
+create table if not exists public.participants (
+  code         text primary key,                -- P01, P02, ...
+  email        text unique not null,
+  name         text not null,
+  gender       text,
+  birth_year   integer,
+  height_cm    numeric(5,1),
+  weight_kg    numeric(5,1),
+  sensitivity  text,                            -- cold | average | warm  (feels the cold easily ... feels the warmth easily)
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+create sequence if not exists public.participant_seq start 1;
+alter table public.participants enable row level security;
+
+drop policy if exists "researchers can read participants" on public.participants;
+create policy "researchers can read participants"
+  on public.participants for select to authenticated
+  using (true);
+
+-- Called by the app with the public key. With an email only: returns the existing participant's code
+-- (the "I have registered before" path). With a name as well: creates the participant and assigns the
+-- next code. Returns only the code and first name, never the profile.
+create or replace function public.register_participant(
+  p_email text, p_name text default null, p_gender text default null, p_birth_year integer default null,
+  p_height_cm numeric default null, p_weight_kg numeric default null, p_sensitivity text default null)
+returns table(code text, name text, is_new boolean)
+language plpgsql security definer set search_path = public as $$
+declare
+  v_email text := lower(trim(p_email));
+  v_code text; v_name text;
+begin
+  if v_email !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' then
+    raise exception 'That does not look like an email address' using errcode = '22023';
+  end if;
+  select p.code, p.name into v_code, v_name from public.participants p where p.email = v_email;
+  if v_code is not null then
+    return query select v_code, v_name, false; return;
+  end if;
+  if p_name is null or length(trim(p_name)) = 0 then
+    raise exception 'No participant is registered with that email' using errcode = 'P0002';
+  end if;
+  v_code := 'P' || lpad(nextval('public.participant_seq')::text, 2, '0');
+  insert into public.participants (code, email, name, gender, birth_year, height_cm, weight_kg, sensitivity)
+    values (v_code, v_email, trim(p_name), p_gender, p_birth_year, p_height_cm, p_weight_kg, p_sensitivity);
+  return query select v_code, trim(p_name), true;
+end $$;
+revoke all on function public.register_participant(text, text, text, integer, numeric, numeric, text) from public;
+grant execute on function public.register_participant(text, text, text, integer, numeric, numeric, text) to anon, authenticated;
+
 -- One row per phone that has turned reminders on. The sender in switch/push/send.js reads these
 -- every half hour and decides who is due a reminder; the app updates the schedule columns.
 create table if not exists public.push_subscriptions (
