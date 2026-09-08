@@ -48,6 +48,7 @@
         room: row.room,
         acceptability: row.ta,
         comfort: row.tc,
+        comfort_score: row.tcs,
         air: row.air,
         air_pref: row.air_pref,
         humidity: row.hum,
@@ -88,6 +89,24 @@
       if (!live) return 'local';
       try { const r = await S.insert(record); if (r.ok) return 'synced'; } catch (e) {}
       S.queue(record); return 'queued';
+    },
+
+    /* ---- registration: the database assigns the participant code ---- */
+    async register(fields) {
+      if (!live) return null;
+      const body = { p_email: fields.email, p_name: fields.name || null, p_gender: fields.gender || null, p_birth_year: fields.birth_year ?? null,
+        p_height_cm: fields.height_cm ?? null, p_weight_kg: fields.weight_kg ?? null, p_sensitivity: fields.sensitivity || null };
+      const r = await fetch(rest('rpc/register_participant'), { method: 'POST', headers: headers(), body: JSON.stringify(body) });
+      const j = await r.json().catch(() => null);
+      if (!r.ok) throw new Error((j && (j.message || j.hint)) || ('Registration failed (' + r.status + ')'));
+      const row = Array.isArray(j) ? j[0] : j;
+      if (!row || !row.code) throw new Error('Registration failed');
+      return row; // { code, name, is_new }
+    },
+    async fetchParticipants(token) {
+      const r = await fetch(rest('participants') + '?select=*&order=code', { headers: headers({ Authorization: 'Bearer ' + token }) });
+      if (!r.ok) return [];
+      return r.json();
     },
 
     /* ---- reminders: one row per registered phone, keyed by the push endpoint ---- */

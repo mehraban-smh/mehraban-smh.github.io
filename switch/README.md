@@ -24,13 +24,17 @@ participant's browser, and the dashboard shows only the browser it is opened in.
 Open `https://mehraban.uk/switch/dashboard/`, sign in, and you should see an empty study. Submit a test check-in
 from `https://mehraban.uk/switch/checkin/?p=P99` and it should appear after **Refresh**.
 
-## Participant links
+## Participants and codes
 
-Each participant gets `https://mehraban.uk/switch/checkin/?p=CODE` where CODE is `P` followed by two or three digits
-(`P01` … `P999`). The code is remembered on the phone. If the app is opened without a code it asks for one.
+Everyone opens the same link, `https://mehraban.uk/switch/checkin/`. The first time, the app asks for a profile
+(name, email, gender, year of birth, height, weight, thermal sensitivity) and calls the database function
+`register_participant`, which stores the profile in the `participants` table and assigns the next code
+(`P01`, `P02`, ...). Only the code travels with the check-ins; the dashboard joins it back to the name.
 
-The study page explains how to add the app to the home screen. On iPhone this is required for notifications later,
-and the home-screen copy keeps its own storage, so the app will ask for the code once more inside it.
+The code is remembered on the phone. On a new phone, or inside the home-screen copy of the app on iPhone (which
+keeps its own storage), the participant chooses "I have registered before" and enters their email to continue.
+
+For testing, `?p=P99` in the URL still forces a code without a profile.
 
 ## Testing
 

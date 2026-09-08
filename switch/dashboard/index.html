@@ -92,6 +92,11 @@
   tr:last-child td{border-bottom:0}
   td.tsv{font-weight:600}
   .tnote{font-size:.8rem;color:var(--ink-soft)}
+  .profile{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 16px;border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--panel)}
+  .profile div span{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);font-weight:600}
+  .profile div b{font-weight:600;font-size:.95rem;word-break:break-word}
+  .profile .full{grid-column:1/-1;color:var(--ink-soft);font-size:.85rem}
+  @media (max-width:700px){.profile{grid-template-columns:repeat(2,1fr)}}
   .empty{padding:40px 20px;text-align:center;color:var(--ink-soft)}
   @media (max-width:900px){.layout{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line);flex-direction:row;flex-wrap:wrap;gap:4px}aside h2{width:100%}.p{width:auto;display:flex;gap:8px}.p small{display:none}.tiles{grid-template-columns:repeat(2,1fr)}.charts{grid-template-columns:1fr}}
 </style>
@@ -115,10 +120,25 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const TSV_WORDS = {'-3':'Cold','-2':'Cool','-1':'Slightly cool','0':'Neutral','1':'Slightly warm','2':'Warm','3':'Hot'};
 const TSV_COL = {'-3':'var(--d-3)','-2':'var(--d-2)','-1':'var(--d-1)','0':'var(--d0)','1':'var(--d1)','2':'var(--d2)','3':'var(--d3)'};
-const COLS = ['participant','local_time','ts','prompt','at_home','tsv','preference','clo','garments','met','activity','room','acceptability','comfort','air','air_pref','humidity','sun','actions','notes','same_as_last','seconds','app_version','client_id'];
+const COLS = ['participant','local_time','ts','prompt','at_home','tsv','preference','clo','garments','met','activity','room','acceptability','comfort','comfort_score','air','air_pref','humidity','sun','actions','notes','same_as_last','seconds','app_version','client_id'];
+const PCOLS = ['code','name','email','gender','birth_year','height_cm','weight_kg','sensitivity','created_at'];
+const GENDER = {woman:'Woman', man:'Man', non_binary:'Non-binary', prefer_not:'Prefer not to say'};
+const SENS = {cold:'Feels the cold easily', average:'About average', warm:'Feels the warmth easily'};
 const cell = v => Array.isArray(v) ? v.join('|') : v===null||v===undefined ? '' : typeof v==='boolean' ? (v?'yes':'no') : String(v);
 
-let rows = [], sel = 'ALL', mode = 'login', localMode = false;
+let rows = [], people = [], sel = 'ALL', mode = 'login', localMode = false, showInfo = false;
+const person = code => people.find(p => p.code === code);
+const label = code => { const p = person(code); return p ? `${code} &middot; ${esc(p.name)}` : esc(code); };
+function profileCard(p){
+  if(!p) return `<div class="notice"><div>No profile is stored for this code. It registered before profiles existed, or it is test data.</div></div>`;
+  const age = p.birth_year ? new Date().getFullYear() - p.birth_year : null;
+  const f = (k, v) => `<div><span>${k}</span><b>${v ?? '&ndash;'}</b></div>`;
+  return `<div class="profile">${f('Name', esc(p.name))}${f('Email', esc(p.email))}${f('Gender', GENDER[p.gender] || (p.gender ? esc(p.gender) : null))}${f('Age', age)}${f('Height', p.height_cm ? p.height_cm + ' cm' : null)}${f('Weight', p.weight_kg ? p.weight_kg + ' kg' : null)}${f('Thermal sensitivity', SENS[p.sensitivity] || null)}${f('Registered', (p.created_at||'').slice(0,10) || null)}</div>`;
+}
+function peopleTable(){
+  if(!people.length) return `<div class="notice"><div>No participants have registered yet.</div></div>`;
+  return `<div class="tablewrap"><table><thead><tr>${PCOLS.map(c=>`<th>${c}</th>`).join('')}<th>check-ins</th></tr></thead><tbody>${people.map(p=>`<tr>${PCOLS.map(c=>`<td>${esc(c==='created_at' ? (p[c]||'').slice(0,16).replace('T',' ') : cell(p[c]))}</td>`).join('')}<td>${rows.filter(r=>r.participant===p.code).length}</td></tr>`).join('')}</tbody></table></div>`;
+}
 const session = { get token(){ return sessionStorage.getItem('switch_token'); }, get email(){ return sessionStorage.getItem('switch_email'); },
   set(t,e){ sessionStorage.setItem('switch_token',t); sessionStorage.setItem('switch_email',e); }, clear(){ sessionStorage.removeItem('switch_token'); sessionStorage.removeItem('switch_email'); } };
 
@@ -150,7 +170,7 @@ function loginView(msg){
 }
 async function loadData(){
   $('#app').innerHTML = '<div class="empty">Loading check-ins&hellip;</div>';
-  try{ rows = await SWITCH.fetchAll(session.token); dataView(); }
+  try{ [rows, people] = await Promise.all([SWITCH.fetchAll(session.token), SWITCH.fetchParticipants(session.token)]); dataView(); }
   catch(err){ session.clear(); loginView(err.message); }
 }
 function dataView(){
@@ -160,20 +180,26 @@ function dataView(){
   $('#signout').addEventListener('click', () => { session.clear(); localMode = false; rows = []; loginView(); });
   const byP = {};
   rows.forEach(r => { (byP[r.participant] = byP[r.participant] || []).push(r); });
+  people.forEach(p => { byP[p.code] = byP[p.code] || []; });
   const codes = Object.keys(byP).sort((a,b) => a.localeCompare(b, undefined, {numeric:true}));
   if(sel !== 'ALL' && !byP[sel]) sel = 'ALL';
   const subset = sel === 'ALL' ? rows : byP[sel];
+  const p = sel === 'ALL' ? null : person(sel);
+  const infoBtn = `<button class="btn ghost" id="info">${showInfo ? 'Hide' : (sel==='ALL' ? 'Participants' : 'Profile')}</button>`;
+  const infoPanel = !showInfo ? '' : (sel === 'ALL' ? peopleTable() : profileCard(p));
   $('#app').innerHTML = `<div class="layout">
     <aside><h2>Participants</h2>
       <button class="p ${sel==='ALL'?'on':''}" data-p="ALL"><b>All participants</b><span>${rows.length}</span></button>
-      ${codes.map(c => { const last = byP[c][0]; return `<button class="p ${sel===c?'on':''}" data-p="${esc(c)}"><b>${esc(c)}</b><span>${byP[c].length}</span><small>last ${esc(last.local_time||'')}</small></button>`; }).join('')}
+      ${codes.map(c => { const last = byP[c][0]; return `<button class="p ${sel===c?'on':''}" data-p="${esc(c)}"><b>${label(c)}</b><span>${byP[c].length}</span><small>${last ? 'last ' + esc(last.local_time||'') : 'no check-ins yet'}</small></button>`; }).join('')}
     </aside>
     <section class="main">
-      <div class="toolbar"><div><h1>${sel==='ALL' ? 'All participants' : esc(sel)}</h1><div class="sub">${subset.length} check-ins${localMode ? ' &middot; stored in this browser only' : ''}</div></div>
-        <div class="tools">${localMode ? '' : '<button class="btn ghost" id="refresh">Refresh</button>'}<button class="btn ghost" id="csv">Download CSV</button><button class="btn" id="xlsx">Download Excel${sel==='ALL' ? ' (one sheet per participant)' : ''}</button></div></div>
+      <div class="toolbar"><div><h1>${sel==='ALL' ? 'All participants' : (p ? esc(p.name) + ' <span style="color:var(--ink-soft);font-weight:400">&middot; ' + esc(sel) + '</span>' : esc(sel))}</h1><div class="sub">${subset.length} check-ins${localMode ? ' &middot; stored in this browser only' : ''}</div></div>
+        <div class="tools">${localMode ? '' : '<button class="btn ghost" id="refresh">Refresh</button>'}${infoBtn}<button class="btn ghost" id="csv">Download CSV</button><button class="btn" id="xlsx">Download Excel${sel==='ALL' ? ' (one sheet per participant)' : ''}</button></div></div>
+      ${infoPanel}
       ${subset.length ? tiles(subset, codes.length) + charts(subset) + table(subset) : '<div class="empty">No check-ins yet for this selection.</div>'}
     </section></div>`;
-  document.querySelectorAll('.p').forEach(b => b.addEventListener('click', () => { sel = b.dataset.p; dataView(); }));
+  document.querySelectorAll('.p').forEach(b => b.addEventListener('click', () => { sel = b.dataset.p; showInfo = false; dataView(); }));
+  const ib = $('#info'); if(ib) ib.addEventListener('click', () => { showInfo = !showInfo; dataView(); });
   const rf = $('#refresh'); if(rf) rf.addEventListener('click', loadData);
   $('#csv').addEventListener('click', () => downloadCsv(subset));
   $('#xlsx').addEventListener('click', () => downloadXlsx(subset, byP));
@@ -246,10 +272,13 @@ function downloadXlsx(subset, byP){
   if(!window.XLSX){ alert('The spreadsheet library did not load. Check the connection and try again, or use Download CSV.'); return; }
   const wb = XLSX.utils.book_new();
   const sheet = list => { const ws = XLSX.utils.json_to_sheet(list.map(flat)); ws['!cols'] = COLS.map(c => ({wch: Math.max(10, c.length + 2)})); return ws; };
+  const psheet = list => { const ws = XLSX.utils.json_to_sheet(list.map(p => Object.fromEntries(PCOLS.map(c => [c, cell(p[c])])))); ws['!cols'] = PCOLS.map(c => ({wch: Math.max(12, c.length + 2)})); return ws; };
   if(sel === 'ALL'){
+    if(people.length) XLSX.utils.book_append_sheet(wb, psheet(people), 'Participants');
     XLSX.utils.book_append_sheet(wb, sheet(rows), 'All');
-    Object.keys(byP).sort((a,b) => a.localeCompare(b, undefined, {numeric:true})).forEach(p => XLSX.utils.book_append_sheet(wb, sheet(byP[p]), p.slice(0,31)));
+    Object.keys(byP).sort((a,b) => a.localeCompare(b, undefined, {numeric:true})).forEach(p => { if(byP[p].length) XLSX.utils.book_append_sheet(wb, sheet(byP[p]), p.slice(0,31)); });
   } else {
+    const p = person(sel); if(p) XLSX.utils.book_append_sheet(wb, psheet([p]), 'Profile');
     XLSX.utils.book_append_sheet(wb, sheet(subset), sel.slice(0,31));
   }
   XLSX.writeFile(wb, `switch-comfort-${sel==='ALL'?'all':sel}-${stamp()}.xlsx`);
