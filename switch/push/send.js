@@ -3,44 +3,57 @@
  * For every registered phone it decides whether a check-in reminder is due right now, and sends a
  * web push if so. All the "smart" rules live in decide() below.
  *
- * Environment (set as GitHub secrets, see switch/README.md):
- *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, VAPID_PRIVATE_KEY
+ * Secrets (GitHub repository secrets, see switch/README.md):
+ *   SUPABASE_SERVICE_ROLE_KEY  a Supabase secret key (sb_secret_...)
+ *   VAPID_PRIVATE_KEY          the 43-character private key that pairs with vapidPublicKey in config.js
+ * The project URL and the VAPID public key are public and are read from ../config.js.
  * Optional:
  *   FORCE_PARTICIPANT  send to this code right now, ignoring every rule (manual test run)
  *   DRY_RUN=1          decide and log, but send nothing
- * The VAPID public key is read from ../config.js so there is one copy of it.
  */
 const fs = require('fs');
 const path = require('path');
 const webpush = require('web-push');
 
+const config = fs.readFileSync(path.join(__dirname, '..', 'config.js'), 'utf8');
+const cfgVal = k => (config.match(new RegExp(k + ':\\s*"([^"]*)"')) || [])[1] || '';
+const PUB = cfgVal('vapidPublicKey');
+const TABLE = cfgVal('pushTable') || 'push_subscriptions';
+const cleanUrl = u => (u || '').trim().replace(/\/+$/, '').replace(/\/(rest|auth)\/v1$/, '');
+const looksLikeProject = u => /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(u);
+const envUrl = cleanUrl(process.env.SUPABASE_URL);
+const URL_ = looksLikeProject(envUrl) ? envUrl : cleanUrl(cfgVal('supabaseUrl'));
+
 // Secrets are trimmed and normalised so a copy-paste slip gives a clear message instead of a mystery.
-const URL_ = (process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '').replace(/\/(rest|auth)\/v1$/, '');
-const KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-const PRIV = ((process.env.VAPID_PRIVATE_KEY || '').split('\n').map(l => l.trim()).filter(l => /^[A-Za-z0-9_-]{40,50}$/.test(l)).pop()) || (process.env.VAPID_PRIVATE_KEY || '').trim();
+const rawKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+const KEY = (rawKey.match(/sb_secret_[A-Za-z0-9_-]+/) || rawKey.match(/eyJ[A-Za-z0-9_.-]+/) || [rawKey])[0];
+const rawPriv = process.env.VAPID_PRIVATE_KEY || '';
+const PRIV = rawPriv.split(/\s+/).filter(l => /^[A-Za-z0-9_-]{43}$/.test(l)).pop() || rawPriv.trim();
 const FORCE = (process.env.FORCE_PARTICIPANT || '').trim().toUpperCase();
 const DRY = process.env.DRY_RUN === '1';
 const SUBJECT = 'mailto:info@mehraban.uk';
 
-const config = fs.readFileSync(path.join(__dirname, '..', 'config.js'), 'utf8');
-const PUB = (config.match(/vapidPublicKey:\s*"([^"]+)"/) || [])[1] || '';
-const TABLE = (config.match(/pushTable:\s*"([^"]+)"/) || [])[1] || 'push_subscriptions';
-
 function fail(msg) { console.error('ERROR: ' + msg); process.exit(1); }
-const mask = s => s ? s.slice(0, 14) + '…(' + s.length + ' chars)' : '(empty)';
+const mask = s => s ? s.slice(0, 12) + '...(' + s.length + ' chars)' : '(empty)';
 console.log(`Supabase URL: ${URL_ || '(empty)'}`);
 console.log(`Secret key:   ${mask(KEY)}`);
 console.log(`VAPID key:    ${PRIV ? PRIV.length + ' chars' : '(empty)'}${DRY ? ' (dry run)' : ''}`);
-if (!URL_) fail('SUPABASE_URL secret is empty. It should look like https://kysovekezjdoxerykkmj.supabase.co');
-if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(URL_)) fail(`SUPABASE_URL does not look like a project URL: "${URL_}". Use just https://<project>.supabase.co`);
+if (!URL_) fail('supabaseUrl is empty in switch/config.js');
+if (!looksLikeProject(URL_)) fail(`supabaseUrl in switch/config.js does not look like a project URL: "${URL_}"`);
 if (!KEY) fail('SUPABASE_SERVICE_ROLE_KEY secret is empty. Create a secret key under Settings > API Keys > Secret keys');
 if (KEY.startsWith('sb_publishable_')) fail('SUPABASE_SERVICE_ROLE_KEY contains the publishable key. It needs a secret key (sb_secret_...) from Settings > API Keys > Secret keys');
 if (!PUB) fail('vapidPublicKey is empty in switch/config.js');
-if (!PRIV && !DRY) fail('VAPID_PRIVATE_KEY secret is empty. Paste the single 43-character line from switch-vapid-private-key.txt');
-if (!DRY && !/^[A-Za-z0-9_-]{43}$/.test(PRIV)) fail(`VAPID_PRIVATE_KEY should be exactly the 43-character key line from switch-vapid-private-key.txt, nothing else (got ${PRIV.length} characters)`);
+if (!PRIV && !DRY) fail('VAPID_PRIVATE_KEY secret is empty. Paste the whole content of switch-vapid-private-key.txt');
+if (!DRY && !/^[A-Za-z0-9_-]{43}$/.test(PRIV)) fail(`VAPID_PRIVATE_KEY should be the 43-character key from switch-vapid-private-key.txt (got ${PRIV.length} characters). Open the file, select all, copy, and paste it as the secret`);
 if (!DRY) {
-  try { webpush.setVapidDetails(SUBJECT, PUB, PRIV); }
-  catch (e) { fail('VAPID keys were rejected: ' + e.message + '. The private key must be the one generated together with the public key in switch/config.js'); }
+  // Derive the public key from the private one and compare, so a mismatched pair fails here, not at the push service.
+  try {
+    const ecdh = require('crypto').createECDH('prime256v1');
+    ecdh.setPrivateKey(Buffer.from(PRIV, 'base64url'));
+    const derived = ecdh.getPublicKey().toString('base64url');
+    if (derived !== PUB) fail('VAPID_PRIVATE_KEY does not match vapidPublicKey in switch/config.js. Paste the current content of switch-vapid-private-key.txt into the secret');
+    webpush.setVapidDetails(SUBJECT, PUB, PRIV);
+  } catch (e) { if (e && e.message && !/does not match/.test(e.message)) fail('VAPID keys were rejected: ' + e.message); }
 }
 
 // New-style secret keys (sb_secret_...) go in the apikey header only; legacy service_role JWTs also need Bearer.
@@ -101,6 +114,8 @@ async function main() {
         removed++;
         await fetch(rest(`?endpoint=eq.${encodeURIComponent(sub.endpoint)}`), { method: 'DELETE', headers });
         console.log(`removed a phone for ${sub.participant} that no longer accepts reminders`);
+      } else if (err.statusCode === 401 || err.statusCode === 403) {
+        console.error(`send failed for ${sub.participant}: the push service rejected the signature (${err.statusCode}). This phone registered with a different public key; ask them to turn reminders off and on again in the app`);
       } else {
         console.error(`send failed for ${sub.participant}: ${err.statusCode || ''} ${err.body || err.message}`);
       }
