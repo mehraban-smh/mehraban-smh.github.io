@@ -14,9 +14,10 @@ const fs = require('fs');
 const path = require('path');
 const webpush = require('web-push');
 
-const URL_ = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
-const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const PRIV = process.env.VAPID_PRIVATE_KEY || '';
+// Secrets are trimmed and normalised so a copy-paste slip gives a clear message instead of a mystery.
+const URL_ = (process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '').replace(/\/(rest|auth)\/v1$/, '');
+const KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+const PRIV = ((process.env.VAPID_PRIVATE_KEY || '').split('\n').map(l => l.trim()).filter(l => /^[A-Za-z0-9_-]{40,50}$/.test(l)).pop()) || (process.env.VAPID_PRIVATE_KEY || '').trim();
 const FORCE = (process.env.FORCE_PARTICIPANT || '').trim().toUpperCase();
 const DRY = process.env.DRY_RUN === '1';
 const SUBJECT = 'mailto:info@mehraban.uk';
@@ -26,10 +27,21 @@ const PUB = (config.match(/vapidPublicKey:\s*"([^"]+)"/) || [])[1] || '';
 const TABLE = (config.match(/pushTable:\s*"([^"]+)"/) || [])[1] || 'push_subscriptions';
 
 function fail(msg) { console.error('ERROR: ' + msg); process.exit(1); }
-if (!URL_ || !KEY) fail('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set');
+const mask = s => s ? s.slice(0, 14) + '…(' + s.length + ' chars)' : '(empty)';
+console.log(`Supabase URL: ${URL_ || '(empty)'}`);
+console.log(`Secret key:   ${mask(KEY)}`);
+console.log(`VAPID key:    ${PRIV ? PRIV.length + ' chars' : '(empty)'}${DRY ? ' (dry run)' : ''}`);
+if (!URL_) fail('SUPABASE_URL secret is empty. It should look like https://kysovekezjdoxerykkmj.supabase.co');
+if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(URL_)) fail(`SUPABASE_URL does not look like a project URL: "${URL_}". Use just https://<project>.supabase.co`);
+if (!KEY) fail('SUPABASE_SERVICE_ROLE_KEY secret is empty. Create a secret key under Settings > API Keys > Secret keys');
+if (KEY.startsWith('sb_publishable_')) fail('SUPABASE_SERVICE_ROLE_KEY contains the publishable key. It needs a secret key (sb_secret_...) from Settings > API Keys > Secret keys');
 if (!PUB) fail('vapidPublicKey is empty in switch/config.js');
-if (!PRIV && !DRY) fail('VAPID_PRIVATE_KEY must be set');
-if (!DRY) webpush.setVapidDetails(SUBJECT, PUB, PRIV);
+if (!PRIV && !DRY) fail('VAPID_PRIVATE_KEY secret is empty. Paste the single 43-character line from switch-vapid-private-key.txt');
+if (!DRY && !/^[A-Za-z0-9_-]{43}$/.test(PRIV)) fail(`VAPID_PRIVATE_KEY should be exactly the 43-character key line from switch-vapid-private-key.txt, nothing else (got ${PRIV.length} characters)`);
+if (!DRY) {
+  try { webpush.setVapidDetails(SUBJECT, PUB, PRIV); }
+  catch (e) { fail('VAPID keys were rejected: ' + e.message + '. The private key must be the one generated together with the public key in switch/config.js'); }
+}
 
 // New-style secret keys (sb_secret_...) go in the apikey header only; legacy service_role JWTs also need Bearer.
 const headers = KEY.startsWith('sb_secret_')
@@ -61,6 +73,8 @@ function decide(sub, now) {
 async function main() {
   const now = new Date();
   const r = await fetch(rest('?select=*&order=participant'), { headers });
+  if (r.status === 401 || r.status === 403) fail(`Supabase refused the secret key (${r.status}). Check the SUPABASE_SERVICE_ROLE_KEY secret: ${await r.text()}`);
+  if (r.status === 404) fail(`table ${TABLE} was not found. Run supabase-setup.sql again in the SQL editor: ${await r.text()}`);
   if (!r.ok) fail(`could not read subscriptions (${r.status}): ${await r.text()}`);
   const subs = await r.json();
   const summary = {};
