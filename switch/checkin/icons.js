@@ -109,7 +109,7 @@ function comfortFace(k){
       <g fill="none">${mouths[k]}</g></g></svg>`;
 }
 
-/* ---------- clothing: garments, presets, avatar ---------- */
+/* ---------- clothing: garments and the avatar ---------- */
 const GARMENTS = [
   {id:'tshirt',   n:'T-shirt',          clo:0.08, ic:'tshirt'},
   {id:'long',     n:'Long sleeves',     clo:0.25, ic:'long'},
@@ -123,12 +123,6 @@ const GARMENTS = [
   {id:'slippers', n:'Slippers',         clo:0.03, ic:'slippers'},
   {id:'blanket',  n:'Blanket',          clo:0.60, ic:'blanket', est:true},
   {id:'duvet',    n:'Duvet',            clo:2.00, ic:'bed',     est:true}
-];
-const PRESETS = [
-  {n:'Light',      g:['tshirt','shorts']},
-  {n:'Everyday',   g:['long','trousers','socks','slippers']},
-  {n:'Cosy',       g:['tshirt','jumper','joggers','socks','slippers']},
-  {n:'Wrapped up', g:['tshirt','hoodie','joggers','socks','blanket']}
 ];
 const cloOf = ids => Math.round(ids.reduce((s,id)=>s+(GARMENTS.find(g=>g.id===id)?.clo||0),0)*100)/100;
 

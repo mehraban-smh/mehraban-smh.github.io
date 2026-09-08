@@ -6,8 +6,8 @@
  * what is stored in the browser it is opened in.
  *
  * The anon key and the VAPID public key are designed to be public. What the anon key may do is
- * limited by the row-level security policies in supabase-setup.sql (insert check-ins, register a
- * phone for reminders, nothing else). The matching VAPID *private* key lives only in the GitHub
+ * limited by the row-level security policies in supabase-setup.sql (register, and for an approved
+ * participant code insert check-ins and register a phone for reminders, nothing else). The matching VAPID *private* key lives only in the GitHub
  * secret VAPID_PRIVATE_KEY.
  */
 self.SWITCH_CONFIG = {
@@ -16,7 +16,7 @@ self.SWITCH_CONFIG = {
   table: "comfort_votes",
   pushTable: "push_subscriptions",
   vapidPublicKey: "BONtfcqHLMr-1AEFJ9RN9ImsM4nsfJZNTvDrkfLE2htSmt5FUZGzZqa09n6VH6z8JK9DlgsvCtDSHsbXyO5OV6g",
-  reminderIntervalMin: 30,
+  reminderIntervalMin: 60,
   studyName: "SWITCH personal comfort study",
-  appVersion: "0.2.0"
+  appVersion: "0.3.0"
 };
