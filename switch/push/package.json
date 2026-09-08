@@ -1,0 +1,8 @@
+{
+  "name": "switch-push-reminders",
+  "private": true,
+  "description": "Sends the half-hourly comfort check-in reminders. Run by .github/workflows/push-reminders.yml.",
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

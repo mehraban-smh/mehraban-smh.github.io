@@ -555,7 +555,7 @@ function statsRow(){
 }
 const SCREENS = {
   start: () => `<div class="hero"><div class="eyebrow">SWITCH &middot; Personal comfort study</div><h1 class="h1">How does your home feel today?</h1><p class="sub">Short check-ins while you are at home teach the system what comfortable means for you.</p></div>` +
-    statusCard() + statsRow() +
+    statusCard() + reminderCard() + statsRow() +
     `<div class="actions"><button class="btn primary" data-act="start" data-mode="scheduled">${ic('bell')} Answer check-in</button><button class="btn secondary" data-act="start" data-mode="self">${ic('bolt')} Log how I feel right now</button><div class="foot">${footLine()}</div></div>`,
   home: () => qhead('Before we start', 'Are you at home right now?', 'We only ask about comfort once you have settled in.') +
     `<div class="rows">
@@ -772,7 +772,148 @@ async function syncVote(row){
 async function flushPending(){ try{ const n = await SWITCH.flush(); if(n && S.screen==='start') render(false); }catch(e){} }
 window.addEventListener('online', flushPending);
 flushPending();
+</script>
+<style>
+.rem{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid var(--line);border-radius:18px;width:100%;text-align:left}
+.rem .ic{width:26px;height:26px;color:var(--accent);flex:none}
+.rem b{display:block;font-weight:800;font-size:.95rem}
+.rem span{display:block;font-size:.82rem;color:var(--muted)}
+.rem .go{margin-left:auto;color:var(--muted)}
+.rem.on{border-color:var(--accent-line)}
+.hours{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hours label{display:flex;flex-direction:column;gap:5px;font-size:.8rem;font-weight:700;color:var(--muted)}
+.hours input{font:inherit;font-size:1.05rem;font-weight:700;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--card2);color:var(--text);width:100%}
+.hours input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-line)}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;counter-reset:s}
+.steps li{counter-increment:s;display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:start;font-size:.95rem}
+.steps li::before{content:counter(s);width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:800;font-size:.8rem;display:grid;place-items:center;margin-top:2px}
+.msg{padding:12px 14px;border-radius:14px;background:var(--card2);font-size:.92rem;display:flex;gap:10px;align-items:center}
+.msg.ok{background:var(--accent-soft)}
+.msg .ic{color:var(--accent)}
+</style>
+<script>
+/* ---------- reminders: service worker, push subscription, home hours ---------- */
+const HOURS_KEY = 'switch_hours';
+const DEFAULT_HOURS = { weekday_start:'17:00', weekday_end:'22:30', weekend_start:'09:00', weekend_end:'22:30' };
+function hours(){ try{ return Object.assign({}, DEFAULT_HOURS, JSON.parse(localStorage.getItem(HOURS_KEY)||'{}')); }catch(e){ return Object.assign({}, DEFAULT_HOURS); } }
+const PUSH = {
+  supported: 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window,
+  standalone: matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
+  ios: /iPhone|iPad|iPod/.test(navigator.userAgent),
+  configured: SWITCH.live && !!SWITCH.cfg.vapidPublicKey,
+  status(){
+    if(!this.configured) return 'unconfigured';
+    if(!this.supported) return (this.ios && !this.standalone) ? 'install' : 'unsupported';
+    if(Notification.permission === 'denied') return 'blocked';
+    let on = false; try{ on = localStorage.getItem('switch_push') === 'on'; }catch(e){}
+    return on ? 'on' : 'off';
+  },
+  async enable(){
+    const reg = await navigator.serviceWorker.ready;
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted') return 'blocked';
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: b64ToBytes(SWITCH.cfg.vapidPublicKey) });
+    const j = sub.toJSON();
+    const ok = await SWITCH.saveSubscription(Object.assign({ endpoint:j.endpoint, participant:PARTICIPANT, p256dh:j.keys.p256dh, auth:j.keys.auth,
+      tz_offset_min:-new Date().getTimezoneOffset(), interval_min:SWITCH.cfg.reminderIntervalMin||30, enabled:true, user_agent:navigator.userAgent.slice(0,200) }, hours()));
+    if(!ok) throw new Error('This phone could not be registered. Check the connection and try again.');
+    try{ localStorage.setItem('switch_push','on'); }catch(e){}
+    return 'on';
+  },
+  async disable(){
+    try{ const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription(); if(sub){ await SWITCH.disableSubscription(sub.endpoint); await sub.unsubscribe(); } }catch(e){}
+    try{ localStorage.setItem('switch_push','off'); }catch(e){}
+  }
+};
+function b64ToBytes(s){ const p = '='.repeat((4 - s.length % 4) % 4); const b = atob((s + p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(b, c => c.charCodeAt(0)); }
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+
+function reminderCard(){
+  const st = PUSH.status();
+  if(st === 'unconfigured') return '';
+  const h = hours();
+  const map = {
+    on:          ['bell',  'Reminders are on', `Weekdays ${h.weekday_start}&ndash;${h.weekday_end}, weekends ${h.weekend_start}&ndash;${h.weekend_end}`],
+    off:         ['bell',  'Turn on reminders', 'A nudge every half hour while you are at home'],
+    install:     ['pin',   'Add to your home screen', 'Reminders need the app on your home screen'],
+    blocked:     ['pause', 'Reminders are blocked', 'Allow notifications for this app to turn them on'],
+    unsupported: ['pause', 'Reminders not available here', 'Use Chrome on Android or Safari on iPhone']
+  };
+  const [icon, t, s] = map[st];
+  return `<button class="rem ${st==='on'?'on':''}" data-act="reminders">${ic(icon)}<div><b>${t}</b><span>${s}</span></div>${ic('chev','go')}</button>`;
+}
+SCREENS.reminders = () => {
+  const st = PUSH.status(), h = hours();
+  const form = `<div><div style="font-weight:700;font-size:.9rem;margin-bottom:8px">When are you usually at home?</div><div class="hours">
+      <label>Weekdays from<input type="time" id="h_ws" value="${h.weekday_start}"></label><label>until<input type="time" id="h_we" value="${h.weekday_end}"></label>
+      <label>Weekends from<input type="time" id="h_es" value="${h.weekend_start}"></label><label>until<input type="time" id="h_ee" value="${h.weekend_end}"></label></div>
+      <p class="note" style="margin-top:8px">Reminders only arrive inside these hours, and never within an hour of you saying you have just got home.</p></div>`;
+  const backBtn = `<button class="btn secondary" data-act="go" data-to="start">Back</button>`;
+  let body = '', actions = '';
+  if(st === 'install'){
+    body = `<ol class="steps"><li><div>Tap the <b>Share</b> button in Safari.</div></li><li><div>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</div></li><li><div>Open the app from your home screen and turn on reminders there.</div></li></ol>`;
+    actions = backBtn;
+  } else if(st === 'unsupported'){
+    body = `<div class="msg">This browser cannot show reminders. On Android use Chrome. On iPhone use Safari and add the app to your home screen.</div>`;
+    actions = backBtn;
+  } else if(st === 'blocked'){
+    body = `<div class="msg">Notifications are blocked for this app. Allow them in your phone's settings, then come back here.</div>`;
+    actions = backBtn;
+  } else if(st === 'off'){
+    body = form + `<div class="msg" id="remMsg" hidden></div>`;
+    actions = `<button class="btn primary" data-act="push-on">${ic('bell')} Turn on reminders</button><button class="btn link" data-act="go" data-to="start">Not now</button>`;
+  } else {
+    body = `<div class="msg ok">${ic('checkc')}<div>Reminders are on for this phone.</div></div>` + form + `<div class="msg" id="remMsg" hidden></div>`;
+    actions = `<button class="btn primary" data-act="save-hours">Save hours</button><button class="btn link" data-act="push-off">Turn off reminders</button>`;
+  }
+  return qhead('Reminders', st === 'on' ? 'Your reminder hours' : 'Half-hourly reminders while you are home', st === 'on' ? '' : 'Each one is a short check-in. Tell the app when you are out and it stays quiet.') + body + `<div class="actions">${actions}</div>`;
+};
+function readHours(){ return { weekday_start: $('#h_ws').value || DEFAULT_HOURS.weekday_start, weekday_end: $('#h_we').value || DEFAULT_HOURS.weekday_end, weekend_start: $('#h_es').value || DEFAULT_HOURS.weekend_start, weekend_end: $('#h_ee').value || DEFAULT_HOURS.weekend_end }; }
+function remMsg(t, ok){ const m = $('#remMsg'); if(!m) return; m.hidden = false; m.className = 'msg' + (ok ? ' ok' : ''); m.innerHTML = t; }
+$('#screen').addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]'); if(!b) return;
+  const act = b.dataset.act;
+  if(act === 'reminders'){ go('reminders'); }
+  else if(act === 'go'){ go(b.dataset.to); }
+  else if(act === 'push-on'){
+    try{ localStorage.setItem(HOURS_KEY, JSON.stringify(readHours())); }catch(err){}
+    b.disabled = true;
+    try{ const r = await PUSH.enable(); if(r === 'blocked'){ render(false); } else { go('reminders'); } }
+    catch(err){ b.disabled = false; remMsg(err.message || 'Something went wrong, please try again.'); }
+  }
+  else if(act === 'save-hours'){
+    const h = readHours(); try{ localStorage.setItem(HOURS_KEY, JSON.stringify(h)); }catch(err){}
+    let ok = false; try{ ok = await SWITCH.updateSchedule(PARTICIPANT, h); }catch(err){}
+    remMsg(ok ? 'Saved.' : 'Saved on this phone. The reminder service could not be reached right now and will pick this up when reminders are next turned on.', ok);
+  }
+  else if(act === 'push-off'){ await PUSH.disable(); render(false); }
+});
+/* keep the reminder service informed of what the participant told the app */
+const quiet = p => { try{ p.catch(()=>{}); }catch(e){} };
+const _onHome = onHome;
+onHome = function(v){
+  if(PUSH.status() === 'on'){
+    if(v === 'long') quiet(SWITCH.updateSchedule(PARTICIPANT, { paused_until:null, settled_at:null }));
+    if(v === 'recent') quiet(SWITCH.updateSchedule(PARTICIPANT, { settled_at:new Date().toISOString(), paused_until:null }));
+  }
+  _onHome(v);
+};
+const _setPause = setPause;
+setPause = function(v){
+  _setPause(v);
+  if(PUSH.status() === 'on'){
+    const until = store.paused || new Date(Date.now() + 12*3600000).toISOString();
+    quiet(SWITCH.updateSchedule(PARTICIPANT, { paused_until: until }));
+  }
+};
+const _submit = submit;
+submit = function(){
+  _submit();
+  if(PUSH.status() === 'on') quiet(SWITCH.updateSchedule(PARTICIPANT, { last_vote_at:new Date().toISOString(), paused_until:null }));
+};
 render(); if(DEBUG) renderTable();
+/* opened from a reminder: go straight to the home question */
+if(PARTICIPANT && new URL(location.href).searchParams.get('from') === 'push'){ startSession('scheduled'); history.replaceState(null, '', location.pathname); }
 </script>
 </body>
 </html>

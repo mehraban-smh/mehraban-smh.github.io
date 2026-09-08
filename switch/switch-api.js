@@ -86,6 +86,35 @@
       S.queue(record); return 'queued';
     },
 
+    /* ---- reminders: one row per registered phone, keyed by the push endpoint ---- */
+    async saveSubscription(record) {
+      if (!live) return false;
+      const r = await fetch(rest(cfg.pushTable || 'push_subscriptions') + '?on_conflict=endpoint', {
+        method: 'POST',
+        headers: headers({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
+        body: JSON.stringify(record)
+      });
+      return r.ok;
+    },
+    async updateSchedule(participant, patch) {
+      if (!live || !participant) return false;
+      const r = await fetch(rest(cfg.pushTable || 'push_subscriptions') + '?participant=eq.' + encodeURIComponent(participant), {
+        method: 'PATCH',
+        headers: headers({ Prefer: 'return=minimal' }),
+        body: JSON.stringify(Object.assign({ updated_at: new Date().toISOString() }, patch))
+      });
+      return r.ok;
+    },
+    async disableSubscription(endpoint) {
+      if (!live || !endpoint) return false;
+      const r = await fetch(rest(cfg.pushTable || 'push_subscriptions') + '?endpoint=eq.' + encodeURIComponent(endpoint), {
+        method: 'PATCH',
+        headers: headers({ Prefer: 'return=minimal' }),
+        body: JSON.stringify({ enabled: false, updated_at: new Date().toISOString() })
+      });
+      return r.ok;
+    },
+
     /* ---- researcher side ---- */
     async login(email, password) {
       const r = await fetch(auth('token?grant_type=password'), { method: 'POST', headers: headers(), body: JSON.stringify({ email, password }) });
