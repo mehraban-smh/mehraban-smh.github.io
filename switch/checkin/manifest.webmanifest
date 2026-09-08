@@ -1,7 +1,7 @@
 {
   "name": "SWITCH Comfort Check-in",
   "short_name": "Comfort",
-  "description": "Half-hourly thermal comfort check-ins for the SWITCH personal comfort study.",
+  "description": "Hourly thermal comfort check-ins for the SWITCH personal comfort study.",
   "start_url": "/switch/checkin/",
   "scope": "/switch/checkin/",
   "display": "standalone",

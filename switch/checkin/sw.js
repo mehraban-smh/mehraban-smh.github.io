@@ -1,5 +1,5 @@
 /* SWITCH comfort check-in - service worker.
- * Shows the half-hourly reminder when a push arrives and opens the app when it is tapped.
+ * Shows the hourly reminder when a push arrives and opens the app when it is tapped.
  * On Android the notification also has a "Not home" button, which pauses reminders for two hours
  * without opening the app. iPhone shows the notification without buttons.
  */

@@ -1,12 +1,20 @@
 /* SWITCH comfort study - reminder sender.
- * Runs every half hour from the GitHub Actions workflow in .github/workflows/push-reminders.yml.
+ * Runs at the top of every hour from the GitHub Actions workflow in .github/workflows/push-reminders.yml.
  * For every registered phone it decides whether a check-in reminder is due right now, and sends a
- * web push if so. All the "smart" rules live in decide() below.
+ * web push if so. All the "smart" rules live in decide() below. A phone is sent to when:
+ *   - reminders are on and not paused (the participant has not said they are out),
+ *   - at least an hour has passed since they said they had just got in (settled_at),
+ *   - at least 30 minutes have passed since their last check-in (last_vote_at),
+ *   - at least half an interval (30 minutes for the hourly interval) has passed since the last
+ *     reminder (last_prompt_at): the cron is not punctual and consecutive runs can be anywhere
+ *     from about 48 to 70 minutes apart, so a guard close to the full interval skipped whole hours,
+ *   - the phone's local time is inside the participant's home hours.
  *
  * Secrets (GitHub repository secrets, see switch/README.md):
  *   SUPABASE_SERVICE_ROLE_KEY  a Supabase secret key (sb_secret_...)
  *   VAPID_PRIVATE_KEY          the 43-character private key that pairs with vapidPublicKey in config.js
- * The project URL and the VAPID public key are public and are read from ../config.js.
+ * The project URL, the VAPID public key and the reminder interval (reminderIntervalMin) are public
+ * and are read from ../config.js.
  * Optional:
  *   FORCE_PARTICIPANT  send to this code right now, ignoring every rule (manual test run)
  *   DRY_RUN=1          decide and log, but send nothing
@@ -17,8 +25,10 @@ const webpush = require('web-push');
 
 const config = fs.readFileSync(path.join(__dirname, '..', 'config.js'), 'utf8');
 const cfgVal = k => (config.match(new RegExp(k + ':\\s*"([^"]*)"')) || [])[1] || '';
+const cfgNum = k => { const m = config.match(new RegExp(k + ':\\s*(\\d+)')); return m ? +m[1] : null; };
 const PUB = cfgVal('vapidPublicKey');
 const TABLE = cfgVal('pushTable') || 'push_subscriptions';
+const INTERVAL = cfgNum('reminderIntervalMin');   // minutes between reminders; the same value the app shows
 const cleanUrl = u => (u || '').trim().replace(/\/+$/, '').replace(/\/(rest|auth)\/v1$/, '');
 const looksLikeProject = u => /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(u);
 const envUrl = cleanUrl(process.env.SUPABASE_URL);
@@ -38,6 +48,7 @@ const mask = s => s ? s.slice(0, 12) + '...(' + s.length + ' chars)' : '(empty)'
 console.log(`Supabase URL: ${URL_ || '(empty)'}`);
 console.log(`Secret key:   ${mask(KEY)}`);
 console.log(`VAPID key:    ${PRIV ? PRIV.length + ' chars' : '(empty)'}${DRY ? ' (dry run)' : ''}`);
+console.log(`Interval:     ${INTERVAL ? INTERVAL + ' min (config.js)' : 'not in config.js, using each phone\'s interval_min'}`);
 if (!URL_) fail('supabaseUrl is empty in switch/config.js');
 if (!looksLikeProject(URL_)) fail(`supabaseUrl in switch/config.js does not look like a project URL: "${URL_}"`);
 if (!KEY) fail('SUPABASE_SERVICE_ROLE_KEY secret is empty. Create a secret key under Settings > API Keys > Secret keys');
@@ -71,9 +82,10 @@ function decide(sub, now) {
   if (!sub.enabled) return 'reminders off';
   if (sub.paused_until && new Date(sub.paused_until) > now) return 'paused (away)';
   if (sub.settled_at && now - new Date(sub.settled_at) < 60 * MIN) return 'settling in after arriving home';
-  if (sub.last_vote_at && now - new Date(sub.last_vote_at) < 20 * MIN) return 'checked in recently';
-  const interval = sub.interval_min || 30;
-  if (sub.last_prompt_at && now - new Date(sub.last_prompt_at) < (interval - 5) * MIN) return 'reminded recently';
+  if (sub.last_vote_at && now - new Date(sub.last_vote_at) < 30 * MIN) return 'checked in recently';
+  const interval = INTERVAL || sub.interval_min || 60;
+  // Half the interval, not "interval minus a few minutes": GitHub's cron jitter would otherwise skip hours.
+  if (sub.last_prompt_at && now - new Date(sub.last_prompt_at) < Math.round(interval / 2) * MIN) return 'reminded recently';
   const local = new Date(now.getTime() + (sub.tz_offset_min || 0) * MIN);
   const weekend = local.getUTCDay() === 0 || local.getUTCDay() === 6;
   const start = toMin(weekend ? sub.weekend_start : sub.weekday_start);

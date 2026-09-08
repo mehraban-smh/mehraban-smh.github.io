@@ -101,12 +101,52 @@
       if (!r.ok) throw new Error((j && (j.message || j.hint)) || ('Registration failed (' + r.status + ')'));
       const row = Array.isArray(j) ? j[0] : j;
       if (!row || !row.code) throw new Error('Registration failed');
-      return row; // { code, name, is_new }
+      return row; // { code, name, is_new, approved }
     },
+    // Asked by the app while it waits for the research team to let the participant in.
+    // Resolves to { approved } (nothing else: the function gives away no name for a guessed code),
+    // or null when the code is not registered (or was removed); rejects when the request itself
+    // fails. In local mode nobody has to wait.
+    async approval(code) {
+      if (!live) return { approved: true };
+      const r = await fetch(rest('rpc/participant_status'), { method: 'POST', headers: headers(), body: JSON.stringify({ p_code: String(code || '').trim().toUpperCase() }) });
+      if (!r.ok) throw new Error('Could not check the approval status (' + r.status + ')');
+      const j = await r.json().catch(() => null);
+      const row = Array.isArray(j) ? j[0] : j;
+      return row && typeof row.approved === 'boolean' ? { approved: row.approved } : null;
+    },
+
+    /* ---- researcher side: the participant list and the approval buttons on the dashboard ---- */
     async fetchParticipants(token) {
       const r = await fetch(rest('participants') + '?select=*&order=code', { headers: headers({ Authorization: 'Bearer ' + token }) });
       if (!r.ok) return [];
       return r.json();
+    },
+    // Both write functions ask PostgREST to return the rows it touched and resolve to true only when
+    // there was at least one: a 2xx with an empty array means the code no longer exists (someone
+    // else removed it, or the list is stale), which the dashboard reports rather than hides.
+    // They reject on a network failure.
+    async setApproval(token, code, approved) {
+      const r = await fetch(rest('participants') + '?code=eq.' + encodeURIComponent(code), {
+        method: 'PATCH',
+        headers: headers({ Authorization: 'Bearer ' + token, Prefer: 'return=representation' }),
+        body: JSON.stringify({ approved: !!approved, updated_at: new Date().toISOString() })
+      });
+      if (!r.ok) throw new Error(r.status === 401 ? 'Your session has expired, please sign in again' : 'Could not update the participant (' + r.status + ')');
+      const rows = await r.json().catch(() => null);
+      return Array.isArray(rows) && rows.length > 0;
+    },
+    // Deletes the participant's registered phones first, then the profile. Check-ins already
+    // submitted under the code are kept. False when the phones could not be deleted (the profile is
+    // then left alone, so nothing is half done) or when no profile row was deleted.
+    async removeParticipant(token, code) {
+      const h = headers({ Authorization: 'Bearer ' + token, Prefer: 'return=representation' });
+      const phones = await fetch(rest(cfg.pushTable || 'push_subscriptions') + '?participant=eq.' + encodeURIComponent(code), { method: 'DELETE', headers: h });
+      if (!phones.ok) throw new Error(phones.status === 401 ? 'Your session has expired, please sign in again' : 'Could not remove the registered phones (' + phones.status + ')');
+      const r = await fetch(rest('participants') + '?code=eq.' + encodeURIComponent(code), { method: 'DELETE', headers: h });
+      if (!r.ok) throw new Error(r.status === 401 ? 'Your session has expired, please sign in again' : 'Could not remove the participant (' + r.status + ')');
+      const rows = await r.json().catch(() => null);
+      return Array.isArray(rows) && rows.length > 0;
     },
 
     /* ---- reminders: one row per registered phone, keyed by the push endpoint ---- */

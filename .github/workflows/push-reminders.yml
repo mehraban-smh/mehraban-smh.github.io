@@ -1,10 +1,14 @@
 name: Comfort check-in reminders
 
-# Every half hour, decide who should get a check-in reminder and send it.
-# "Run workflow" with a participant code sends one straight away, ignoring home hours (for testing).
+# Every hour, on the hour: decide who should get a check-in reminder and send it (switch/push/send.js),
+# then, if anyone registered since the last run and is still waiting for approval, open one issue in this
+# repository listing them (switch/push/notify.js). GitHub emails the owner about the issue; approving happens on the
+# dashboard. The issue carries only the participant code, never a name or email.
+# "Run workflow" with a participant code sends one reminder straight away, ignoring home hours (for
+# testing). "Dry run" makes both steps log what they would do and change nothing.
 on:
   schedule:
-    - cron: "0,30 * * * *"
+    - cron: "0 * * * *"
   workflow_dispatch:
     inputs:
       participant:
@@ -12,9 +16,14 @@ on:
         required: false
         default: ""
       dry_run:
-        description: "Only log what would be sent"
+        description: "Only log what would be sent and which issues would be opened"
         type: boolean
         default: false
+
+# contents: read to check out the repository; issues: write so notify.js can open issues.
+permissions:
+  contents: read
+  issues: write
 
 concurrency:
   group: push-reminders
@@ -24,6 +33,8 @@ jobs:
   send:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -38,5 +49,13 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           FORCE_PARTICIPANT: ${{ github.event.inputs.participant }}
-          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
         run: node send.js
+      # Runs even when sending failed (a push problem should not delay an approval email).
+      - name: Notify about new participants
+        if: ${{ !cancelled() }}
+        working-directory: switch/push
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: node notify.js

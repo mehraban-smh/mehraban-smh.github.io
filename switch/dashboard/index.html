@@ -58,8 +58,26 @@
   .p b{font-weight:600}
   .p span{color:var(--ink-soft);font-size:.85rem}
   .p small{grid-column:1/-1;color:var(--ink-muted);font-size:.75rem}
+  .p .wait{grid-column:1/-1;font-style:normal;font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--warn)}
   .p:hover{background:var(--panel)}
   .p.on{background:var(--panel2)}
+  /* approval */
+  .pending{border:1px solid #EAD8A8;border-left:4px solid var(--warn);border-radius:12px;padding:14px 16px 6px;background:#FFF9EC;display:flex;flex-direction:column}
+  .pending .phead{padding-bottom:10px}
+  .pending .phead b{font-weight:600;font-size:1.05rem}
+  .pending .phead span{display:block;color:var(--ink-soft);font-size:.85rem}
+  .prow{display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;align-items:center;padding:9px 0;border-top:1px solid #EAD8A8;font-size:.9rem}
+  .prow code{font-family:var(--mono);font-weight:600;font-size:.9rem}
+  .prow .pwho b{font-weight:600}
+  .prow .pwho span{color:var(--ink-soft);display:block;font-size:.82rem;word-break:break-word}
+  .pbtns{display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center}
+  .btn.sm{padding:7px 12px;font-size:.85rem}
+  .btn.danger{color:var(--bad)}
+  .btn.danger:hover{background:#FBEDEA}
+  .status-ok{color:var(--teal);font-style:normal}
+  .status-wait{color:var(--warn);font-style:normal}
+  .profile .hint{font-style:normal}
+  @media (max-width:700px){.prow{grid-template-columns:auto 1fr}.prow .pbtns{grid-column:1/-1}}
   .main{padding:22px 26px 40px;display:flex;flex-direction:column;gap:22px;min-width:0}
   .toolbar{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
   .toolbar .sub{color:var(--ink-soft);font-size:.9rem;margin-top:4px}
@@ -121,7 +139,7 @@ const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const TSV_WORDS = {'-3':'Cold','-2':'Cool','-1':'Slightly cool','0':'Neutral','1':'Slightly warm','2':'Warm','3':'Hot'};
 const TSV_COL = {'-3':'var(--d-3)','-2':'var(--d-2)','-1':'var(--d-1)','0':'var(--d0)','1':'var(--d1)','2':'var(--d2)','3':'var(--d3)'};
 const COLS = ['participant','local_time','ts','prompt','at_home','tsv','preference','clo','garments','met','activity','room','acceptability','comfort','comfort_score','air','air_pref','humidity','sun','actions','notes','same_as_last','seconds','app_version','client_id'];
-const PCOLS = ['code','name','email','gender','birth_year','height_cm','weight_kg','sensitivity','created_at'];
+const PCOLS = ['code','name','email','gender','birth_year','height_cm','weight_kg','sensitivity','approved','created_at'];
 const GENDER = {woman:'Woman', man:'Man', non_binary:'Non-binary', prefer_not:'Prefer not to say'};
 const SENS = {cold:'Feels the cold easily', average:'About average', warm:'Feels the warmth easily'};
 const cell = v => Array.isArray(v) ? v.join('|') : v===null||v===undefined ? '' : typeof v==='boolean' ? (v?'yes':'no') : String(v);
@@ -129,11 +147,59 @@ const cell = v => Array.isArray(v) ? v.join('|') : v===null||v===undefined ? '' 
 let rows = [], people = [], sel = 'ALL', mode = 'login', localMode = false, showInfo = false;
 const person = code => people.find(p => p.code === code);
 const label = code => { const p = person(code); return p ? `${code} &middot; ${esc(p.name)}` : esc(code); };
+const fmtTs = s => (s || '').slice(0, 16).replace('T', ' ');
+/* Approve / Remove buttons for one participant. Approve disappears once they are in. */
+const approveBtns = p => `<div class="pbtns">${p.approved ? '' : `<button class="btn sm" data-approve="${esc(p.code)}">Approve</button>`}<button class="btn ghost sm danger" data-remove="${esc(p.code)}">Remove</button></div>`;
 function profileCard(p){
   if(!p) return `<div class="notice"><div>No profile is stored for this code. It registered before profiles existed, or it is test data.</div></div>`;
   const age = p.birth_year ? new Date().getFullYear() - p.birth_year : null;
   const f = (k, v) => `<div><span>${k}</span><b>${v ?? '&ndash;'}</b></div>`;
-  return `<div class="profile">${f('Name', esc(p.name))}${f('Email', esc(p.email))}${f('Gender', GENDER[p.gender] || (p.gender ? esc(p.gender) : null))}${f('Age', age)}${f('Height', p.height_cm ? p.height_cm + ' cm' : null)}${f('Weight', p.weight_kg ? p.weight_kg + ' kg' : null)}${f('Thermal sensitivity', SENS[p.sensitivity] || null)}${f('Registered', (p.created_at||'').slice(0,10) || null)}</div>`;
+  const status = p.approved ? '<i class="status-ok">Approved</i>' : '<i class="status-wait">Awaiting approval</i>';
+  const actions = localMode ? '' : `<div class="full" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${approveBtns(p)}<i class="hint">${p.approved ? 'Remove deletes the profile and any registered phones; check-ins already submitted are kept under the code.' : 'They cannot check in until approved. Remove anyone you do not recognise.'}</i></div>`;
+  return `<div class="profile">${f('Name', esc(p.name))}${f('Email', esc(p.email))}${f('Gender', GENDER[p.gender] || (p.gender ? esc(p.gender) : null))}${f('Age', age)}${f('Height', p.height_cm ? p.height_cm + ' cm' : null)}${f('Weight', p.weight_kg ? p.weight_kg + ' kg' : null)}${f('Thermal sensitivity', SENS[p.sensitivity] || null)}${f('Registered', (p.created_at||'').slice(0,10) || null)}${f('Status', status)}${actions}</div>`;
+}
+/* Shown at the top of "All participants" while anyone is waiting to be let in. */
+function pendingBlock(){
+  const pend = localMode ? [] : people.filter(p => !p.approved);
+  if(!pend.length) return '';
+  return `<div class="pending"><div class="phead"><b>${pend.length} waiting for approval</b><span>New registrations cannot check in until you approve them. Approve the people you expect and remove anyone you do not recognise.</span></div>
+    ${pend.map(p => `<div class="prow"><code>${esc(p.code)}</code><div class="pwho"><b>${esc(p.name)}</b><span>${esc(p.email)} &middot; registered ${esc(fmtTs(p.created_at))}</span></div>${approveBtns(p)}</div>`).join('')}</div>`;
+}
+/* Runs one of the SWITCH write calls. They resolve to true when a row changed, false when nothing did
+   (the code is gone, or the list on screen is stale) and reject when the request itself failed.
+   Shows a short message next to the button in the first case and a fuller one in the second. */
+async function writeAction(btn, code, verb, call){
+  btn.disabled = true;
+  let ok, why = '';
+  try{ ok = await call(); }
+  catch(e){ ok = null; why = (e && e.message) ? e.message + '. ' : ''; }
+  if(ok === true) return true;
+  btn.disabled = false;
+  if(ok === false){ rowError(btn, 'Nothing changed, refresh and try again'); return false; }
+  alert('Could not ' + verb + ' ' + code + '. ' + why + 'Check the connection, and that supabase-setup.sql has been run again since the approval step was added, then try again.');
+  return false;
+}
+/* A short error after the Approve/Remove buttons of one row (replaced, not stacked, on a retry). */
+function rowError(btn, msg){
+  const box = btn.closest('.pbtns') || btn.parentElement;
+  let el = box && box.querySelector('.err');
+  if(!el){ el = document.createElement('span'); el.className = 'err'; el.setAttribute('role', 'alert'); box.appendChild(el); }
+  el.textContent = msg;
+}
+async function approveParticipant(code, btn){
+  if(localMode) return;
+  if(!(await writeAction(btn, code, 'approve', () => SWITCH.setApproval(session.token, code, true)))) return;
+  await loadData();
+}
+async function removeParticipant(code, btn){
+  if(localMode) return;
+  const p = person(code);
+  const n = rows.filter(r => r.participant === code).length;
+  if(!confirm(`Remove ${p ? p.name + ' (' + code + ')' : code} from the study?\n\nTheir profile and any phones registered for reminders are deleted, and they can no longer check in.${n ? ` The ${n} check-in${n===1?'':'s'} already submitted stay in the database under the code.` : ''}`)) return;
+  if(!(await writeAction(btn, code, 'remove', () => SWITCH.removeParticipant(session.token, code)))) return;
+  if(sel === code) sel = 'ALL';
+  showInfo = false;
+  await loadData();
 }
 function peopleTable(){
   if(!people.length) return `<div class="notice"><div>No participants have registered yet.</div></div>`;
@@ -166,7 +232,7 @@ function loginView(msg){
     try{ const j = await SWITCH.login(f.email.value.trim(), f.password.value); session.set(j.access_token, j.user?.email || f.email.value.trim()); localMode = false; await loadData(); }
     catch(err){ $('#loginErr').textContent = err.message; b.disabled = false; }
   });
-  $('#localBtn').addEventListener('click', () => { localMode = true; rows = SWITCH.localRows(); sel = 'ALL'; dataView(); });
+  $('#localBtn').addEventListener('click', () => { localMode = true; rows = SWITCH.localRows(); people = []; sel = 'ALL'; showInfo = false; dataView(); });
 }
 async function loadData(){
   $('#app').innerHTML = '<div class="empty">Loading check-ins&hellip;</div>';
@@ -177,7 +243,7 @@ function dataView(){
   $('#who').innerHTML = localMode
     ? `<span>Local mode</span><button id="signout">Back to sign-in</button>`
     : `<span>${esc(session.email)}</span><button id="signout">Sign out</button>`;
-  $('#signout').addEventListener('click', () => { session.clear(); localMode = false; rows = []; loginView(); });
+  $('#signout').addEventListener('click', () => { session.clear(); localMode = false; rows = []; people = []; sel = 'ALL'; showInfo = false; loginView(); });
   const byP = {};
   rows.forEach(r => { (byP[r.participant] = byP[r.participant] || []).push(r); });
   people.forEach(p => { byP[p.code] = byP[p.code] || []; });
@@ -190,15 +256,18 @@ function dataView(){
   $('#app').innerHTML = `<div class="layout">
     <aside><h2>Participants</h2>
       <button class="p ${sel==='ALL'?'on':''}" data-p="ALL"><b>All participants</b><span>${rows.length}</span></button>
-      ${codes.map(c => { const last = byP[c][0]; return `<button class="p ${sel===c?'on':''}" data-p="${esc(c)}"><b>${label(c)}</b><span>${byP[c].length}</span><small>${last ? 'last ' + esc(last.local_time||'') : 'no check-ins yet'}</small></button>`; }).join('')}
+      ${codes.map(c => { const last = byP[c][0], pp = person(c); return `<button class="p ${sel===c?'on':''}" data-p="${esc(c)}"><b>${label(c)}</b><span>${byP[c].length}</span>${pp && !pp.approved ? '<i class="wait">Awaiting approval</i>' : ''}<small>${last ? 'last ' + esc(last.local_time||'') : 'no check-ins yet'}</small></button>`; }).join('')}
     </aside>
     <section class="main">
-      <div class="toolbar"><div><h1>${sel==='ALL' ? 'All participants' : (p ? esc(p.name) + ' <span style="color:var(--ink-soft);font-weight:400">&middot; ' + esc(sel) + '</span>' : esc(sel))}</h1><div class="sub">${subset.length} check-ins${localMode ? ' &middot; stored in this browser only' : ''}</div></div>
+      <div class="toolbar"><div><h1>${sel==='ALL' ? 'All participants' : (p ? esc(p.name) + ' <span style="color:var(--ink-soft);font-weight:400">&middot; ' + esc(sel) + '</span>' : esc(sel))}</h1><div class="sub">${subset.length} check-ins${localMode ? ' &middot; stored in this browser only' : ''}${p && !p.approved ? ' &middot; <span class="status-wait">awaiting approval</span>' : ''}</div></div>
         <div class="tools">${localMode ? '' : '<button class="btn ghost" id="refresh">Refresh</button>'}${infoBtn}<button class="btn ghost" id="csv">Download CSV</button><button class="btn" id="xlsx">Download Excel${sel==='ALL' ? ' (one sheet per participant)' : ''}</button></div></div>
+      ${sel === 'ALL' ? pendingBlock() : ''}
       ${infoPanel}
       ${subset.length ? tiles(subset, codes.length) + charts(subset) + table(subset) : '<div class="empty">No check-ins yet for this selection.</div>'}
     </section></div>`;
   document.querySelectorAll('.p').forEach(b => b.addEventListener('click', () => { sel = b.dataset.p; showInfo = false; dataView(); }));
+  document.querySelectorAll('[data-approve]').forEach(b => b.addEventListener('click', () => approveParticipant(b.dataset.approve, b)));
+  document.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', () => removeParticipant(b.dataset.remove, b)));
   const ib = $('#info'); if(ib) ib.addEventListener('click', () => { showInfo = !showInfo; dataView(); });
   const rf = $('#refresh'); if(rf) rf.addEventListener('click', loadData);
   $('#csv').addEventListener('click', () => downloadCsv(subset));
