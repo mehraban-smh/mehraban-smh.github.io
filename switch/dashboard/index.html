@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>SWITCH comfort study dashboard</title>
+<link rel="icon" type="image/png" sizes="64x64" href="../../favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="../config.js"></script>
+<script src="../switch-api.js"></script>
+<style>
+  :root{
+    --paper:#FFFFFF; --panel:#F5F7F9; --panel2:#EDF1F4; --ink:#1C2A35; --ink-soft:#5A6B77; --ink-muted:#8A97A3; --line:#E5EAEE;
+    --accent:#1F4E79; --accent-dark:#163A5B; --teal:#0E7B72; --bad:#B83A2C; --warn:#C98A12;
+    --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+    --sans:"Inter",-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --d-3:#1F4E79; --d-2:#4A86C5; --d-1:#9DBEE0; --d0:#C5CCD3; --d1:#F0B27A; --d2:#E07B39; --d3:#B83A2C;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  [hidden]{display:none!important}
+  body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.5;font-size:15px;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline;text-underline-offset:3px}
+  button{font:inherit;color:inherit;cursor:pointer;background:none;border:0}
+  a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+  .bar{display:flex;justify-content:space-between;align-items:center;gap:12px 24px;flex-wrap:wrap;padding:12px 22px;font-size:.9rem;border-bottom:1px solid var(--line);background:var(--paper)}
+  .bar b{font-weight:600}
+  .bar .dim{color:var(--ink-soft)}
+  .bar .who{display:flex;align-items:center;gap:14px;color:var(--ink-soft)}
+  .bar .who button{color:var(--accent);font-weight:500}
+  h1{font-family:var(--serif);font-weight:600;font-size:1.6rem;letter-spacing:-.01em;line-height:1.2}
+  h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-soft);font-weight:600}
+  /* login */
+  .login{flex:1;display:grid;place-items:center;padding:40px 20px}
+  .card{width:100%;max-width:400px;border:1px solid var(--line);border-radius:14px;padding:28px;display:flex;flex-direction:column;gap:16px;background:var(--paper)}
+  .card .eyebrow{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
+  label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:500;color:var(--ink-soft)}
+  input{font:inherit;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--ink);font-size:1rem}
+  input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(31,78,121,.15)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:9px;background:var(--accent);color:#fff;font-weight:600;border:1px solid transparent}
+  .btn:hover{background:var(--accent-dark)}
+  .btn.ghost{background:var(--paper);color:var(--ink);border-color:var(--line)}
+  .btn.ghost:hover{background:var(--panel)}
+  .btn:disabled{opacity:.5;cursor:wait}
+  .err{color:var(--bad);font-size:.9rem}
+  .notice{background:var(--panel);border-radius:10px;padding:12px 14px;font-size:.9rem;color:var(--ink-soft);display:flex;gap:10px;align-items:flex-start}
+  .notice.warn{border-left:3px solid var(--warn)}
+  .notice code{font-family:var(--mono);font-size:.85em;background:var(--paper);padding:1px 5px;border-radius:4px}
+  /* data layout */
+  .layout{flex:1;display:grid;grid-template-columns:230px 1fr;min-height:0}
+  aside{border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:6px;background:var(--paper)}
+  aside h2{padding:0 10px 6px}
+  .p{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;text-align:left;padding:8px 10px;border-radius:9px;width:100%;font-variant-numeric:tabular-nums}
+  .p b{font-weight:600}
+  .p span{color:var(--ink-soft);font-size:.85rem}
+  .p small{grid-column:1/-1;color:var(--ink-muted);font-size:.75rem}
+  .p:hover{background:var(--panel)}
+  .p.on{background:var(--panel2)}
+  .main{padding:22px 26px 40px;display:flex;flex-direction:column;gap:22px;min-width:0}
+  .toolbar{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+  .toolbar .sub{color:var(--ink-soft);font-size:.9rem;margin-top:4px}
+  .tools{display:flex;gap:8px;flex-wrap:wrap}
+  .tools .btn{padding:9px 13px;font-size:.9rem}
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .tile{padding:14px 16px;border:1px solid var(--line);border-radius:12px}
+  .tile b{font-family:var(--serif);font-weight:600;font-size:1.7rem;display:block;line-height:1.1;font-variant-numeric:tabular-nums}
+  .tile span{font-size:.78rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;font-weight:500}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  figure{border:1px solid var(--line);border-radius:12px;padding:16px 18px 12px;min-width:0}
+  figure figcaption{font-weight:600;font-size:.95rem;margin-bottom:2px}
+  figure .fsub{color:var(--ink-soft);font-size:.8rem;margin-bottom:14px}
+  .plot{position:relative;height:170px;display:flex;align-items:flex-end;gap:6px;border-bottom:1px solid var(--line);padding-bottom:0}
+  .plot .grid{position:absolute;left:0;right:0;border-top:1px dashed var(--line);font-size:.7rem;color:var(--ink-muted);padding-left:2px;line-height:1;pointer-events:none}
+  .col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0;position:relative}
+  .col .v{font-size:.72rem;color:var(--ink-soft);font-variant-numeric:tabular-nums;margin-bottom:3px}
+  .col .b{width:100%;max-width:36px;border-radius:4px 4px 0 0;background:var(--accent);min-height:0;transition:opacity .12s}
+  .col:hover .b{opacity:.8}
+  .col.day .b{max-width:18px}
+  .xl{display:flex;gap:6px;margin-top:6px}
+  .xl div{flex:1;text-align:center;font-size:.72rem;color:var(--ink-soft);line-height:1.2;min-width:0}
+  .xl div b{display:block;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+  .xl.days div{text-align:left;font-size:.68rem;white-space:nowrap}
+  .tip{position:fixed;z-index:20;background:var(--ink);color:#fff;font-size:.8rem;padding:6px 9px;border-radius:7px;pointer-events:none;white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+  .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:12px;max-height:520px}
+  table{border-collapse:collapse;font-size:.8rem;font-family:var(--mono);white-space:nowrap;font-variant-numeric:tabular-nums;width:100%}
+  th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left}
+  th{background:var(--panel);position:sticky;top:0;font-weight:600;color:var(--ink-soft);z-index:1}
+  tr:last-child td{border-bottom:0}
+  td.tsv{font-weight:600}
+  .tnote{font-size:.8rem;color:var(--ink-soft)}
+  .empty{padding:40px 20px;text-align:center;color:var(--ink-soft)}
+  @media (max-width:900px){.layout{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line);flex-direction:row;flex-wrap:wrap;gap:4px}aside h2{width:100%}.p{width:auto;display:flex;gap:8px}.p small{display:none}.tiles{grid-template-columns:repeat(2,1fr)}.charts{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav class="bar" aria-label="Site links">
+  <a href="https://mehraban.uk/">&larr; <b>Mohammad H. Mehraban</b> <span class="dim">&middot; mehraban.uk</span></a>
+  <span><b>SWITCH comfort study</b> <span class="dim">&middot; research dashboard</span></span>
+  <span class="who" id="who"></span>
+</nav>
+<div id="app"></div>
+<div class="tip" id="tip" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const dayKey = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const TSV_WORDS = {'-3':'Cold','-2':'Cool','-1':'Slightly cool','0':'Neutral','1':'Slightly warm','2':'Warm','3':'Hot'};
+const TSV_COL = {'-3':'var(--d-3)','-2':'var(--d-2)','-1':'var(--d-1)','0':'var(--d0)','1':'var(--d1)','2':'var(--d2)','3':'var(--d3)'};
+const COLS = ['participant','local_time','ts','prompt','at_home','tsv','preference','clo','garments','met','activity','room','acceptability','comfort','air','air_pref','humidity','sun','actions','notes','same_as_last','seconds','app_version','client_id'];
+const cell = v => Array.isArray(v) ? v.join('|') : v===null||v===undefined ? '' : typeof v==='boolean' ? (v?'yes':'no') : String(v);
+
+let rows = [], sel = 'ALL', mode = 'login', localMode = false;
+const session = { get token(){ return sessionStorage.getItem('switch_token'); }, get email(){ return sessionStorage.getItem('switch_email'); },
+  set(t,e){ sessionStorage.setItem('switch_token',t); sessionStorage.setItem('switch_email',e); }, clear(){ sessionStorage.removeItem('switch_token'); sessionStorage.removeItem('switch_email'); } };
+
+/* ---------- views ---------- */
+function loginView(msg){
+  $('#who').innerHTML = '';
+  const live = SWITCH.live;
+  $('#app').innerHTML = `<section class="login"><div class="card">
+    <div><div class="eyebrow">Research team</div><h1>Sign in</h1></div>
+    ${live ? '' : `<div class="notice warn"><div>No database is configured yet, so this page can only show check-ins stored in <b>this browser</b>. Fill in <code>switch/config.js</code> following the README to connect the study database.</div></div>`}
+    <form id="loginForm" ${live?'':'hidden'}>
+      <div style="display:flex;flex-direction:column;gap:12px">
+      <label>Email<input type="email" name="email" autocomplete="username" required></label>
+      <label>Password<input type="password" name="password" autocomplete="current-password" required></label>
+      <button class="btn" type="submit">Sign in</button>
+      <div class="err" id="loginErr">${esc(msg||'')}</div>
+      </div>
+    </form>
+    <button class="btn ghost" id="localBtn">View check-ins stored in this browser</button>
+  </div></section>`;
+  const f = $('#loginForm');
+  if(f) f.addEventListener('submit', async e => {
+    e.preventDefault();
+    const b = f.querySelector('button'); b.disabled = true; $('#loginErr').textContent = '';
+    try{ const j = await SWITCH.login(f.email.value.trim(), f.password.value); session.set(j.access_token, j.user?.email || f.email.value.trim()); localMode = false; await loadData(); }
+    catch(err){ $('#loginErr').textContent = err.message; b.disabled = false; }
+  });
+  $('#localBtn').addEventListener('click', () => { localMode = true; rows = SWITCH.localRows(); sel = 'ALL'; dataView(); });
+}
+async function loadData(){
+  $('#app').innerHTML = '<div class="empty">Loading check-ins&hellip;</div>';
+  try{ rows = await SWITCH.fetchAll(session.token); dataView(); }
+  catch(err){ session.clear(); loginView(err.message); }
+}
+function dataView(){
+  $('#who').innerHTML = localMode
+    ? `<span>Local mode</span><button id="signout">Back to sign-in</button>`
+    : `<span>${esc(session.email)}</span><button id="signout">Sign out</button>`;
+  $('#signout').addEventListener('click', () => { session.clear(); localMode = false; rows = []; loginView(); });
+  const byP = {};
+  rows.forEach(r => { (byP[r.participant] = byP[r.participant] || []).push(r); });
+  const codes = Object.keys(byP).sort((a,b) => a.localeCompare(b, undefined, {numeric:true}));
+  if(sel !== 'ALL' && !byP[sel]) sel = 'ALL';
+  const subset = sel === 'ALL' ? rows : byP[sel];
+  $('#app').innerHTML = `<div class="layout">
+    <aside><h2>Participants</h2>
+      <button class="p ${sel==='ALL'?'on':''}" data-p="ALL"><b>All participants</b><span>${rows.length}</span></button>
+      ${codes.map(c => { const last = byP[c][0]; return `<button class="p ${sel===c?'on':''}" data-p="${esc(c)}"><b>${esc(c)}</b><span>${byP[c].length}</span><small>last ${esc(last.local_time||'')}</small></button>`; }).join('')}
+    </aside>
+    <section class="main">
+      <div class="toolbar"><div><h1>${sel==='ALL' ? 'All participants' : esc(sel)}</h1><div class="sub">${subset.length} check-ins${localMode ? ' &middot; stored in this browser only' : ''}</div></div>
+        <div class="tools">${localMode ? '' : '<button class="btn ghost" id="refresh">Refresh</button>'}<button class="btn ghost" id="csv">Download CSV</button><button class="btn" id="xlsx">Download Excel${sel==='ALL' ? ' (one sheet per participant)' : ''}</button></div></div>
+      ${subset.length ? tiles(subset, codes.length) + charts(subset) + table(subset) : '<div class="empty">No check-ins yet for this selection.</div>'}
+    </section></div>`;
+  document.querySelectorAll('.p').forEach(b => b.addEventListener('click', () => { sel = b.dataset.p; dataView(); }));
+  const rf = $('#refresh'); if(rf) rf.addEventListener('click', loadData);
+  $('#csv').addEventListener('click', () => downloadCsv(subset));
+  $('#xlsx').addEventListener('click', () => downloadXlsx(subset, byP));
+  bindTips();
+}
+
+/* ---------- summary tiles ---------- */
+function median(a){ if(!a.length) return null; const s=[...a].sort((x,y)=>x-y); const m=s.length>>1; return s.length%2 ? s[m] : Math.round((s[m-1]+s[m])/2); }
+function tiles(subset, nP){
+  const now = Date.now();
+  const week = subset.filter(r => now - new Date(r.ts) < 7*864e5).length;
+  const days = new Set(subset.map(r => (r.local_time||'').slice(0,10))).size;
+  const med = median(subset.map(r => r.seconds).filter(x => typeof x === 'number'));
+  const same = subset.filter(r => r.same_as_last).length;
+  const first = sel==='ALL' ? `<div class="tile"><b>${nP}</b><span>participants</span></div>` : `<div class="tile"><b>${days}</b><span>days with check-ins</span></div>`;
+  return `<div class="tiles">${first}<div class="tile"><b>${subset.length}</b><span>check-ins</span></div><div class="tile"><b>${week}</b><span>last 7 days</span></div><div class="tile"><b>${med===null?'&ndash;':med+'&thinsp;s'}</b><span>median time &middot; ${subset.length?Math.round(100*same/subset.length):0}% one-tap</span></div></div>`;
+}
+
+/* ---------- charts ---------- */
+function charts(subset){
+  // thermal sensation distribution
+  const counts = {}; let nT = 0;
+  subset.forEach(r => { if(typeof r.tsv === 'number'){ counts[r.tsv] = (counts[r.tsv]||0)+1; nT++; } });
+  const maxT = Math.max(1, ...Object.values(counts));
+  const tsvCols = [-3,-2,-1,0,1,2,3].map(v => { const c = counts[v]||0; const h = Math.round(100*c/maxT);
+    return `<div class="col" data-tip="${esc(TSV_WORDS[v])} (${v>0?'+':''}${v}): ${c} check-in${c===1?'':'s'}${nT?` &middot; ${Math.round(100*c/nT)}%`:''}"><div class="v">${c||''}</div><div class="b" style="height:${c?Math.max(h,2):0}%;background:${TSV_COL[v]}"></div></div>`; }).join('');
+  const tsvX = [-3,-2,-1,0,1,2,3].map(v => `<div><b>${v>0?'+':''}${v}</b>${TSV_WORDS[v].replace('Slightly ','sl. ')}</div>`).join('');
+  // check-ins per day, last 28 days
+  const per = {}; subset.forEach(r => { const k = (r.local_time||'').slice(0,10); if(k) per[k] = (per[k]||0)+1; });
+  const days = []; const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-27);
+  for(let i=0;i<28;i++){ const k = dayKey(d); days.push({k, c: per[k]||0, d: new Date(d)}); d.setDate(d.getDate()+1); }
+  const maxD = Math.max(1, ...days.map(x => x.c));
+  const dayCols = days.map(x => `<div class="col day" data-tip="${DAYS[x.d.getDay()]} ${x.d.getDate()} ${MONTHS[x.d.getMonth()]}: ${x.c} check-in${x.c===1?'':'s'}"><div class="b" style="height:${x.c?Math.max(Math.round(100*x.c/maxD),2):0}%"></div></div>`).join('');
+  const dayX = days.map((x,i) => `<div>${i%7===0 ? `${x.d.getDate()} ${MONTHS[x.d.getMonth()]}` : ''}</div>`).join('');
+  return `<div class="charts">
+    <figure><figcaption>Thermal sensation</figcaption><div class="fsub">ASHRAE seven-point vote, ${nT} answers</div>
+      <div class="plot">${tsvCols}</div><div class="xl">${tsvX}</div></figure>
+    <figure><figcaption>Check-ins per day</figcaption><div class="fsub">Last 28 days, peak ${maxD} in a day</div>
+      <div class="plot"><div class="grid" style="top:0">${maxD}</div>${dayCols}</div><div class="xl days">${dayX}</div></figure>
+  </div>`;
+}
+function bindTips(){
+  const tip = $('#tip');
+  document.querySelectorAll('[data-tip]').forEach(el => {
+    el.addEventListener('mouseenter', () => { tip.innerHTML = el.dataset.tip; tip.hidden = false; });
+    el.addEventListener('mousemove', e => { tip.style.left = (e.clientX + 12) + 'px'; tip.style.top = (e.clientY - 34) + 'px'; });
+    el.addEventListener('mouseleave', () => { tip.hidden = true; });
+  });
+}
+
+/* ---------- table ---------- */
+function table(subset){
+  const shown = subset.slice(0, 400);
+  const head = COLS.map(c => `<th>${c}</th>`).join('');
+  const body = shown.map(r => `<tr>${COLS.map(c => `<td class="${c==='tsv'?'tsv':''}" ${c==='tsv'&&typeof r.tsv==='number'?`style="color:${r.tsv===0?'var(--ink)':TSV_COL[r.tsv]}"`:''}>${esc(cell(r[c]))}</td>`).join('')}</tr>`).join('');
+  return `<div><h2 style="margin-bottom:8px">Check-ins, newest first</h2><div class="tablewrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
+    ${subset.length > shown.length ? `<p class="tnote">Showing the latest ${shown.length} of ${subset.length}. The downloads include everything.</p>` : ''}</div>`;
+}
+
+/* ---------- exports ---------- */
+const flat = r => Object.fromEntries(COLS.map(c => [c, cell(r[c])]));
+const stamp = () => dayKey(new Date());
+function saveBlob(blob, name){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800); }
+function downloadCsv(subset){
+  const q = s => /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  const lines = [COLS.join(','), ...subset.map(r => COLS.map(c => q(cell(r[c]))).join(','))];
+  saveBlob(new Blob([lines.join('\n')], {type:'text/csv'}), `switch-comfort-${sel==='ALL'?'all':sel}-${stamp()}.csv`);
+}
+function downloadXlsx(subset, byP){
+  if(!window.XLSX){ alert('The spreadsheet library did not load. Check the connection and try again, or use Download CSV.'); return; }
+  const wb = XLSX.utils.book_new();
+  const sheet = list => { const ws = XLSX.utils.json_to_sheet(list.map(flat)); ws['!cols'] = COLS.map(c => ({wch: Math.max(10, c.length + 2)})); return ws; };
+  if(sel === 'ALL'){
+    XLSX.utils.book_append_sheet(wb, sheet(rows), 'All');
+    Object.keys(byP).sort((a,b) => a.localeCompare(b, undefined, {numeric:true})).forEach(p => XLSX.utils.book_append_sheet(wb, sheet(byP[p]), p.slice(0,31)));
+  } else {
+    XLSX.utils.book_append_sheet(wb, sheet(subset), sel.slice(0,31));
+  }
+  XLSX.writeFile(wb, `switch-comfort-${sel==='ALL'?'all':sel}-${stamp()}.xlsx`);
+}
+
+/* ---------- start ---------- */
+if(SWITCH.live && session.token) loadData(); else loginView();
+</script>
+</body>
+</html>

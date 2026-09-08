@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Half-hourly comfort check-ins for participants in the SWITCH personal thermal comfort study.">
+<meta name="theme-color" content="#0E7B72">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Comfort">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<script src="../config.js"></script>
+<script src="../switch-api.js"></script>
+<script>const DEBUG = new URL(location.href).searchParams.get('debug') === '1';</script>
+<title>SWITCH Comfort Check-in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Nunito+Sans:wght@400;600;700;800&display=swap">
+<style>
+:root{
+  --bg:#E9EDF1; --card:#FFFFFF; --card2:#F3F5F8; --line:#D6DCE3; --text:#18202A; --muted:#5F6B78;
+  --accent:#0E7B72; --accent-ink:#FFFFFF; --accent-soft:#D6EFEB; --accent-line:#8FD0C6;
+  --silhouette:#C6CFD9; --face-ink:#132033; --face-ink-light:#F6FAFF;
+  --c-3:#1E5CC8; --c-2:#3D8CE6; --c-1:#8BC5EE; --c0:#5CB68B; --c1:#F2BB52; --c2:#EE8A3E; --c3:#D64530;
+  --good:#2E8B57; --bad:#C2413A;
+  --shadow:0 18px 40px rgba(24,32,42,.12);
+  --g-tshirt:#7CB9E8; --g-long:#9DC3B5; --g-jumper:#C98A5B; --g-hoodie:#6B7A8F; --g-shorts:#8FA3B8; --g-trousers:#4F6B8F; --g-joggers:#7A8797; --g-skirt:#B07AA1; --g-socks:#E8D9A6; --g-slippers:#A67C52; --g-blanket:#D9A066; --g-duvet:#E3E8F0;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1319; --card:#171D25; --card2:#1F2731; --line:#2C3541; --text:#E7ECF2; --muted:#98A4B2;
+    --accent:#3CC6B5; --accent-ink:#0A1917; --accent-soft:#16332F; --accent-line:#2A7F75;
+    --silhouette:#4A5563; --shadow:0 18px 40px rgba(0,0,0,.45); --g-duvet:#B8C2CF;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1319; --card:#171D25; --card2:#1F2731; --line:#2C3541; --text:#E7ECF2; --muted:#98A4B2;
+  --accent:#3CC6B5; --accent-ink:#0A1917; --accent-soft:#16332F; --accent-line:#2A7F75;
+  --silhouette:#4A5563; --shadow:0 18px 40px rgba(0,0,0,.45); --g-duvet:#B8C2CF;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Nunito Sans',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;padding:0;margin:0;text-align:inherit}
+button:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--accent-line);outline-offset:2px}
+.stage{min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:24px}
+.phone{width:100%;max-width:430px;min-height:100vh;background:var(--card);display:flex;flex-direction:column;position:relative;overflow:hidden}
+@media (min-width:640px){
+  .stage{padding:28px 16px 48px}
+  .phone{min-height:780px;height:780px;border-radius:34px;box-shadow:var(--shadow);border:1px solid var(--line)}
+}
+.top{display:flex;align-items:center;gap:12px;padding:16px 18px 6px;min-height:56px}
+.top .back{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--muted);flex:none}
+.top .back:hover{background:var(--card2);color:var(--text)}
+.top .back[hidden]{display:none}
+.progress{flex:1;height:6px;background:var(--card2);border-radius:99px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .35s ease}
+.top .count{font-size:.8rem;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums;min-width:38px;text-align:right}
+.screen{flex:1;overflow-y:auto;padding:8px 20px 28px;display:flex;flex-direction:column;gap:18px}
+.screen.in{animation:slide .28s ease}
+@keyframes slide{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.screen.in{animation:none}.progress i{transition:none}}
+.eyebrow{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.q h1,.h1{font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:1.7rem;line-height:1.18;text-wrap:balance;margin:0;letter-spacing:-.01em}
+.q p,.sub{color:var(--muted);margin:6px 0 0;font-size:.95rem}
+.ic{width:1.25em;height:1.25em;flex:none}
+/* tiles */
+.tiles{display:grid;gap:10px}
+.tiles.c2{grid-template-columns:repeat(2,1fr)}
+.tiles.c3{grid-template-columns:repeat(3,1fr)}
+.tile{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 10px 13px;border:1.5px solid var(--line);border-radius:18px;background:var(--card);transition:transform .12s,border-color .12s,background .12s;text-align:center}
+.tile .ic{width:34px;height:34px;color:var(--accent)}
+.tile b{font-weight:700;font-size:.95rem;line-height:1.2}
+.tile small{color:var(--muted);font-size:.75rem;font-variant-numeric:tabular-nums}
+.tile:hover{border-color:var(--accent-line)}
+.tile.on{border-color:var(--accent);background:var(--accent-soft);transform:scale(1.02)}
+.rows{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid var(--line);border-radius:18px;background:var(--card);width:100%}
+.row .ic{width:30px;height:30px;color:var(--accent)}
+.row b{display:block;font-weight:700}
+.row span{display:block;color:var(--muted);font-size:.85rem}
+.row:hover{border-color:var(--accent-line)}
+.row.on{border-color:var(--accent);background:var(--accent-soft)}
+.row .go{margin-left:auto;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:9px 13px 9px 10px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-weight:600;font-size:.9rem;transition:background .12s,border-color .12s}
+.chip .ic{width:20px;height:20px;color:var(--accent)}
+.chip small{color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
+.chip:hover{border-color:var(--accent-line)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip.on .ic,.chip.on small{color:var(--accent-ink)}
+.chip.ghost{border-style:dashed}
+/* thermal strip */
+.strip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;position:relative;padding:14px 4px 10px;border-radius:20px;background:linear-gradient(90deg,var(--c-3),var(--c-1) 33%,var(--c0) 50%,var(--c1) 67%,var(--c3))}
+.strip::before{content:"";position:absolute;inset:0;border-radius:20px;background:var(--card);opacity:.82}
+.face{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 0;border-radius:14px;transition:transform .15s}
+.face svg{width:44px;height:44px;transition:transform .15s}
+.face b{font-size:.78rem;font-weight:800;font-variant-numeric:tabular-nums;color:var(--muted)}
+.face.on svg{transform:scale(1.22)}
+.face.on b{color:var(--text)}
+.face:hover svg{transform:scale(1.1)}
+.readout{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:18px;background:var(--card2);min-height:70px}
+.readout svg{width:40px;height:40px}
+.readout b{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:1.25rem;display:block;line-height:1.1}
+.readout span{color:var(--muted);font-size:.85rem}
+.readout.empty{color:var(--muted);justify-content:center;font-size:.95rem}
+/* clothing */
+.wardrobe{display:grid;grid-template-columns:118px 1fr;gap:14px;align-items:start}
+.avatar{border-radius:18px;background:var(--card2);padding:8px 6px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;position:sticky;top:0}
+.avatar svg{width:100%;height:auto}
+.clo{font-variant-numeric:tabular-nums;text-align:center;line-height:1.1;padding-bottom:4px}
+.clo b{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:1.35rem;display:block}
+.clo span{font-size:.7rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:800}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.presets .chip{padding:7px 11px;font-size:.82rem}
+.garments .chip{width:100%;justify-content:flex-start}
+.garments{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.note{font-size:.78rem;color:var(--muted)}
+/* air two rows */
+.duo{display:flex;flex-direction:column;gap:14px}
+.duo .lab{font-weight:700;font-size:.9rem;margin-bottom:8px}
+/* buttons */
+.actions{display:flex;flex-direction:column;gap:10px;margin-top:auto;padding-top:8px}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px 18px;border-radius:16px;font-weight:800;font-size:1rem;border:1.5px solid transparent;transition:transform .1s,background .12s}
+.btn:active{transform:scale(.985)}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.primary:disabled{opacity:.45;cursor:not-allowed}
+.btn.secondary{border-color:var(--line);color:var(--text);background:var(--card)}
+.btn.secondary:hover{border-color:var(--accent-line)}
+.btn.link{color:var(--muted);font-weight:700;padding:10px}
+/* start screen */
+.hero{display:flex;flex-direction:column;gap:6px;padding-top:6px}
+.status{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:18px;background:var(--accent-soft);color:var(--text)}
+.status .ic{width:26px;height:26px;color:var(--accent)}
+.status b{display:block;font-weight:800}
+.status span{font-size:.85rem;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{padding:12px 10px;border-radius:16px;background:var(--card2);text-align:center}
+.stat b{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:1.5rem;display:block;line-height:1;font-variant-numeric:tabular-nums}
+.stat span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+.stat .ic{width:18px;height:18px;color:var(--c2);vertical-align:-3px}
+.foot{font-size:.78rem;color:var(--muted);text-align:center}
+/* same-as-last card */
+.last{border:1.5px solid var(--line);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--card2)}
+.last .when{font-size:.78rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.last ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.last li{display:flex;align-items:center;gap:10px}
+.last li svg{width:26px;height:26px;flex:none}
+.last li .ic{color:var(--accent)}
+/* review */
+.review{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border:1.5px solid var(--line);border-radius:18px;overflow:hidden}
+.review li{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line);font-size:.92rem}
+.review li:last-child{border-bottom:0}
+.review li .k{color:var(--muted);width:92px;flex:none;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.review li .v{flex:1;font-weight:600}
+.review li .edit{color:var(--accent);font-weight:800;font-size:.8rem}
+/* done */
+.done{align-items:center;text-align:center;justify-content:center;gap:14px;position:relative}
+.done .big{width:96px;height:96px;border-radius:50%;background:var(--accent-soft);display:grid;place-items:center;color:var(--accent)}
+.done .big .ic{width:52px;height:52px}
+.done h1{font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:2rem;margin:0}
+.insight{display:flex;gap:12px;align-items:flex-start;text-align:left;padding:14px 16px;border-radius:18px;background:var(--card2);font-size:.92rem}
+.insight .ic{color:var(--c1);width:26px;height:26px}
+canvas.confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+/* researcher panel */
+.panel{width:100%;max-width:980px;padding:0 16px 40px;display:flex;flex-direction:column;gap:14px}
+.panel h2{font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:1.35rem;margin:0}
+.panel .sub{margin:0}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.controls select{font:inherit;padding:8px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);color:var(--text)}
+.controls .chip{cursor:pointer}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+table{border-collapse:collapse;font-size:.78rem;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:nowrap;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}
+th{background:var(--card2);position:sticky;top:0;font-weight:700;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.ex{color:var(--muted)}
+.empty{padding:18px;color:var(--muted);font-size:.9rem}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone">
+    <div class="top">
+      <button class="back" id="back" aria-label="Back" hidden></button>
+      <div class="progress" id="progress"><i></i></div>
+      <div class="count" id="count"></div>
+    </div>
+    <div class="screen" id="screen"></div>
+    <canvas class="confetti" id="confetti" hidden></canvas>
+  </div>
+
+  <section class="panel" hidden>
+    <h2>What gets stored</h2>
+    <p class="sub">Every submitted check-in becomes one row. In the real study these rows go to a database keyed by participant ID and are exported to one Excel file per participant. In this prototype they are kept in this browser only. Rows marked <em>example</em> were seeded so the flow can be tried straight away.</p>
+    <div class="controls">
+      <label>Extended questions
+        <select id="extMode">
+          <option value="rotate">Rotate (recommended)</option>
+          <option value="all">Ask all every time</option>
+          <option value="none">Core only</option>
+        </select>
+      </label>
+      <button class="chip" id="copyCsv">COPY_ICON Copy as CSV</button>
+      <button class="chip" id="reseed">RESET_ICON Reset to example data</button>
+      <button class="chip ghost" id="clearAll">Clear everything</button>
+    </div>
+    <div class="tablewrap" id="table"></div>
+  </section>
+</div>
+
+<script>
+/* ---------- icons ---------- */
+const P = {
+  back:'<path d="M15 5l-7 7 7 7"/>',
+  home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  out:'<path d="M13 4h6v16h-6"/><path d="M3 12h10"/><path d="M10 9l3 3-3 3"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  snow:'<path d="M12 3v18M3 12h18M6 6l12 12M18 6L6 18"/><path d="M12 3l-2 2.5M12 3l2 2.5M12 21l-2-2.5M12 21l2-2.5M3 12l2.5-2M3 12l2.5 2M21 12l-2.5-2M21 12l-2.5 2"/>',
+  check:'<path d="M5 12l5 5L20 7"/>',
+  flame:'<path d="M12 3c.5 3.5 4.5 5 4.5 9.5a4.5 4.5 0 0 1-9 0c0-2 1-3.5 2-4.5 0 1.5 1 2.5 2 2.5.5-2-.5-4 .5-7.5z"/>',
+  tshirt:'<path d="M8 4l4 1.5L16 4l4 3-2 3-2-1v11H8V9l-2 1-2-3z"/>',
+  long:'<path d="M8 4l4 1.5L16 4l4 3-1 8h-1v5H6v-5H5L4 7z"/>',
+  jumper:'<path d="M8 4l4 1.5L16 4l4 3-1 8h-1v5H6v-5H5L4 7z"/><path d="M6 17h12"/><path d="M10 5.5c1 1 3 1 4 0"/>',
+  hoodie:'<path d="M8 5l4 1.5L16 5l4 3-1 8h-1v4H6v-4H5L4 8z"/><path d="M9 5.5a3 3 0 0 1 6 0"/><path d="M9 14h6v3H9z"/>',
+  shorts:'<path d="M6 4h12l1 9h-6l-1-4-1 4H5z"/>',
+  trousers:'<path d="M7 3h10l1 18h-5l-1-9-1 9H6z"/>',
+  joggers:'<path d="M7 3h10l1 18h-5l-1-9-1 9H6z"/><path d="M8 6h8"/><path d="M13 19h5M6 19h5"/>',
+  skirt:'<path d="M8 4h8l3 14H5z"/><path d="M8 7h8"/>',
+  socks:'<path d="M9 3h6v9l3 3a3 3 0 0 1-4 4l-5-4z"/><path d="M9 6h6"/>',
+  slippers:'<path d="M3 16c0-2 2-3 5-3h8c3 0 5 1 5 3v1H3z"/><path d="M8 13V9a3 3 0 0 1 6 0v4"/>',
+  blanket:'<path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3H4z"/><path d="M4 10h16v8H4z"/><path d="M4 14h16"/>',
+  bed:'<path d="M3 19v-9"/><path d="M3 13h18v6"/><path d="M7 13V9h4v4"/><path d="M11 13v-2h7a3 3 0 0 1 3 2"/>',
+  sleep:'<path d="M3 20v-8M3 15h18v5M7 15v-4h4v4M11 15v-2h7a3 3 0 0 1 3 2"/><path d="M14 3h4l-4 4h4"/>',
+  lying:'<circle cx="6" cy="10" r="2"/><path d="M9 13h9l2 3"/><path d="M3 16h18"/><path d="M4 16v-3a2 2 0 0 1 2-2"/><path d="M3 16v3M21 16v3"/>',
+  sofa:'<path d="M5 11V8a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v3"/><path d="M3 13a2 2 0 0 1 4 0v3h10v-3a2 2 0 0 1 4 0v5H3z"/>',
+  laptop:'<rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/>',
+  stand:'<circle cx="12" cy="4.5" r="2"/><path d="M12 7v7"/><path d="M8 10l4-2 4 2"/><path d="M12 14l-3 7M12 14l3 7"/>',
+  pan:'<circle cx="10" cy="13" r="6"/><path d="M16 13h6"/><path d="M8 4c0 1.5 1 1.5 1 3M11 3c0 1.5 1 1.5 1 3"/>',
+  walk:'<circle cx="13" cy="4" r="2"/><path d="M12 7l-3 5 2 2v6"/><path d="M12 7l3 3 3 1"/><path d="M9 12l-3 2"/><path d="M11 14l4 3 1 4"/>',
+  gym:'<path d="M6 8v8M18 8v8M3 10v4M21 10v4M6 12h12"/>',
+  door:'<path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17"/><path d="M3 21h18"/><circle cx="15" cy="12" r="1"/>',
+  up:'<path d="M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1z"/><path d="M7 11l4-7c1.5 0 2.5 1 2.5 2.5L13 10h5a2 2 0 0 1 2 2.3l-1 6a2 2 0 0 1-2 1.7H7"/>',
+  down:'<g transform="rotate(180 12 12)"><path d="M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1z"/><path d="M7 11l4-7c1.5 0 2.5 1 2.5 2.5L13 10h5a2 2 0 0 1 2 2.3l-1 6a2 2 0 0 1-2 1.7H7"/></g>',
+  still:'<path d="M4 12h16"/><path d="M8 8h8M8 16h8" opacity=".35"/>',
+  slight:'<path d="M4 12h10a2 2 0 1 0-2-2"/>',
+  draught:'<path d="M3 8h9a2 2 0 1 0-2-2"/><path d="M3 12h14a2 2 0 1 1-2 2"/><path d="M3 16h7a2 2 0 1 1-2 2"/>',
+  drop:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+  dry:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/><path d="M4 4l16 16"/>',
+  muggy:'<path d="M12 2s5 5.5 5 9.5a5 5 0 0 1-10 0C7 7.5 12 2 12 2z"/><path d="M3 19c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  cloud:'<path d="M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9z"/>',
+  moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+  window:'<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M12 3v18M4 12h16"/>',
+  radiator:'<rect x="3" y="7" width="18" height="10" rx="1"/><path d="M7 7v10M10.5 7v10M14 7v10M17.5 7v10"/>',
+  fan:'<circle cx="12" cy="12" r="2"/><path d="M12 10c0-4-2-6-5-6 0 3 2 5 5 6zM14 12c4 0 6-2 6-5-3 0-5 2-6 5zM12 14c0 4 2 6 5 6 0-3-2-5-5-6zM10 12c-4 0-6 2-6 5 3 0 5-2 6-5z"/>',
+  mug:'<path d="M4 8h12v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M16 10h2a2 2 0 0 1 0 4h-2"/><path d="M7 3c0 1.5 1 1.5 1 3M11 3c0 1.5 1 1.5 1 3"/>',
+  glass:'<path d="M6 3h12l-1.5 17a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1z"/><path d="M7 9h10"/><rect x="10" y="12" width="4" height="4"/>',
+  curtain:'<path d="M3 3h18"/><path d="M5 3c3 5 3 13 0 18M19 3c-3 5-3 13 0 18"/><path d="M5 21h14"/>',
+  layerOn:'<path d="M8 4l4 1.5L16 4l4 3-2 3-2-1v11H8V9l-2 1-2-3z"/><path d="M12 12v6M9 15h6"/>',
+  layerOff:'<path d="M8 4l4 1.5L16 4l4 3-2 3-2-1v11H8V9l-2 1-2-3z"/><path d="M9 15h6"/>',
+  zzz:'<path d="M4 8h5l-5 6h5"/><path d="M13 4h4l-4 5h4"/><path d="M14 14h6l-6 6h6"/>',
+  thermo:'<path d="M10 4a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 9v6"/>',
+  fork:'<path d="M7 3v18"/><path d="M5 3v5a2 2 0 0 0 4 0V3"/><path d="M17 3c-2 0-3 3-3 6a3 3 0 0 0 3 3v9"/>',
+  checkc:'<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
+  refresh:'<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/>',
+  copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  bolt:'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
+  bulb:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.6 1 1.5 1 2.5h6c0-1 .3-1.9 1-2.5A6 6 0 0 0 12 3z"/>',
+  chev:'<path d="M9 5l7 7-7 7"/>',
+  pause:'<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  pin:'<path d="M12 21s7-6.5 7-11.5a7 7 0 0 0-14 0C5 14.5 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'
+};
+const ic = (n, cls='') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+
+/* ---------- thermal sensation faces, drawn from the vote value ---------- */
+const TSV = [
+  {v:-3, w:'Cold'}, {v:-2, w:'Cool'}, {v:-1, w:'Slightly cool'}, {v:0, w:'Neutral'},
+  {v:1, w:'Slightly warm'}, {v:2, w:'Warm'}, {v:3, w:'Hot'}
+];
+function face(v, o={}){
+  const fill = o.fill || `var(--c${v<0?'-'+(-v):v})`;
+  const ink = o.ink || (Math.abs(v)>=2 ? 'var(--face-ink-light)' : 'var(--face-ink)');
+  let mouth, extra='';
+  if(v===-3){ mouth='<path d="M16 32l2.5-2 2.5 2 2.5-2 2.5 2 2.5-2 2.5 2"/>'; if(!o.plain) extra='<path d="M6 12l-3 1M7 20H3M6 28l-3-1" stroke="var(--c-2)" stroke-width="2" stroke-linecap="round"/><path d="M42 12l3 1M41 20h4M42 28l3-1" stroke="var(--c-2)" stroke-width="2" stroke-linecap="round"/>'; }
+  else if(v===3){ mouth='<ellipse cx="24" cy="32.5" rx="5" ry="4" fill="'+ink+'" stroke="none"/>'; if(!o.plain) extra='<path d="M41 8s4 4.5 4 7.5a4 4 0 0 1-8 0c0-3 4-7.5 4-7.5z" fill="var(--c-1)" stroke="none"/>'; }
+  else if(Math.abs(v)===2){ mouth='<path d="M17 33.5Q24 27.5 31 33.5"/>'; }
+  else if(Math.abs(v)===1){ mouth='<path d="M17.5 32Q24 29.5 30.5 32"/>'; }
+  else { mouth='<path d="M17 30Q24 36.5 31 30"/>'; }
+  let brows='';
+  const wantBrows = o.brows!==undefined ? o.brows : Math.abs(v)>=2;
+  if(wantBrows && v<0) brows='<path d="M15 16.5l6 1.5M33 16.5l-6 1.5"/>';
+  if(wantBrows && v>0) brows='<path d="M15 18l6-1.5M33 18l-6-1.5"/>';
+  return `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="${fill}"/>
+    <g fill="${ink}" stroke="${ink}" stroke-width="2.2" stroke-linecap="round" fill-opacity="1">
+      <circle cx="18" cy="22.5" r="2.2" stroke="none"/><circle cx="30" cy="22.5" r="2.2" stroke="none"/>
+      <g fill="none">${mouth}${brows}</g></g>${extra}</svg>`;
+}
+
+/* ---------- clothing: garments, presets, avatar ---------- */
+const GARMENTS = [
+  {id:'tshirt',   n:'T-shirt',            clo:0.08, ic:'tshirt',   layer:'top'},
+  {id:'long',     n:'Long-sleeve top',    clo:0.25, ic:'long',     layer:'top'},
+  {id:'jumper',   n:'Thick jumper',       clo:0.36, ic:'jumper',   layer:'mid'},
+  {id:'hoodie',   n:'Hoodie or fleece',   clo:0.34, ic:'hoodie',   layer:'mid'},
+  {id:'shorts',   n:'Shorts',             clo:0.08, ic:'shorts',   layer:'legs'},
+  {id:'trousers', n:'Jeans or trousers',  clo:0.24, ic:'trousers', layer:'legs'},
+  {id:'joggers',  n:'Joggers',            clo:0.28, ic:'joggers',  layer:'legs'},
+  {id:'skirt',    n:'Skirt or dress',     clo:0.23, ic:'skirt',    layer:'legs'},
+  {id:'socks',    n:'Socks',              clo:0.03, ic:'socks',    layer:'feet'},
+  {id:'slippers', n:'Slippers',           clo:0.03, ic:'slippers', layer:'feet'},
+  {id:'blanket',  n:'Blanket',            clo:0.60, ic:'blanket',  layer:'wrap', est:true},
+  {id:'duvet',    n:'Duvet',              clo:2.00, ic:'bed',      layer:'wrap', est:true}
+];
+const PRESETS = [
+  {n:'Light',      g:['tshirt','shorts']},
+  {n:'Everyday',   g:['long','trousers','socks','slippers']},
+  {n:'Cosy',       g:['tshirt','jumper','joggers','socks','slippers']},
+  {n:'Wrapped up', g:['tshirt','hoodie','joggers','socks','blanket']}
+];
+const cloOf = ids => Math.round(ids.reduce((s,id)=>s+(GARMENTS.find(g=>g.id===id)?.clo||0),0)*100)/100;
+function avatar(ids){
+  const has = id => ids.includes(id);
+  const R = (x,y,w,h,rx,c,extra='') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${c}" ${extra}/>`;
+  let s = '';
+  // body
+  s += `<circle cx="60" cy="28" r="16" fill="var(--silhouette)"/>` + R(54,40,12,14,4,'var(--silhouette)');
+  s += R(38,50,44,62,12,'var(--silhouette)') + R(22,54,15,64,7,'var(--silhouette)') + R(83,54,15,64,7,'var(--silhouette)');
+  s += R(42,108,16,84,7,'var(--silhouette)') + R(62,108,16,84,7,'var(--silhouette)');
+  s += `<ellipse cx="50" cy="194" rx="10" ry="5" fill="var(--silhouette)"/><ellipse cx="70" cy="194" rx="10" ry="5" fill="var(--silhouette)"/>`;
+  // legs
+  if(has('shorts')) s += R(40,104,40,38,8,'var(--g-shorts)') + `<path d="M60 112v30" stroke="rgba(0,0,0,.18)" stroke-width="2"/>`;
+  if(has('trousers')) s += R(41,104,17,88,7,'var(--g-trousers)') + R(62,104,17,88,7,'var(--g-trousers)');
+  if(has('joggers')) s += R(41,104,17,88,7,'var(--g-joggers)') + R(62,104,17,88,7,'var(--g-joggers)') + `<path d="M42 184h15M63 184h15" stroke="rgba(0,0,0,.25)" stroke-width="2"/>`;
+  if(has('skirt')) s += `<path d="M40 104h40l10 58H30z" fill="var(--g-skirt)"/>`;
+  // feet
+  if(has('socks')) s += R(43,176,14,16,5,'var(--g-socks)') + R(63,176,14,16,5,'var(--g-socks)');
+  if(has('slippers')) s += `<ellipse cx="50" cy="194" rx="11" ry="6" fill="var(--g-slippers)"/><ellipse cx="70" cy="194" rx="11" ry="6" fill="var(--g-slippers)"/>`;
+  // tops
+  if(has('tshirt')) s += R(36,48,48,56,12,'var(--g-tshirt)') + R(20,52,19,28,8,'var(--g-tshirt)') + R(81,52,19,28,8,'var(--g-tshirt)');
+  if(has('long')) s += R(36,48,48,56,12,'var(--g-long)') + R(20,52,19,64,8,'var(--g-long)') + R(81,52,19,64,8,'var(--g-long)');
+  if(has('jumper')) s += R(34,47,52,60,13,'var(--g-jumper)') + R(19,51,21,66,9,'var(--g-jumper)') + R(80,51,21,66,9,'var(--g-jumper)') + `<path d="M36 100h48" stroke="rgba(0,0,0,.18)" stroke-width="3"/>`;
+  if(has('hoodie')) s += `<path d="M42 44a18 18 0 0 1 36 0v10H42z" fill="var(--g-hoodie)"/>` + R(33,46,54,63,14,'var(--g-hoodie)') + R(18,50,22,68,9,'var(--g-hoodie)') + R(80,50,22,68,9,'var(--g-hoodie)') + R(44,84,32,16,5,'rgba(0,0,0,.15)');
+  // wraps
+  if(has('blanket')) s += `<path d="M22 66Q60 46 98 66L104 200H16z" fill="var(--g-blanket)"/><path d="M28 100h64M26 130h68M24 160h72" stroke="rgba(0,0,0,.14)" stroke-width="3"/>`;
+  if(has('duvet')) s += R(12,58,96,150,22,'var(--g-duvet)','stroke="rgba(0,0,0,.12)" stroke-width="2"') + `<path d="M12 110h96M12 160h96M60 58v150" stroke="rgba(0,0,0,.12)" stroke-width="2"/>`;
+  return `<svg viewBox="0 0 120 204" aria-hidden="true">${s}</svg>`;
+}
+</script>
+<style>
+.ic.good{color:var(--good)}.ic.bad{color:var(--bad)}.ic.warn{color:var(--c1)}
+.done{display:flex;flex-direction:column;flex:1}
+.mood svg{width:30px;height:30px;flex:none}
+</style>
+<script>
+/* ---------- answer options ---------- */
+const ACTS = [
+  {id:'sleep',    n:'Sleeping',              met:0.7, ic:'sleep'},
+  {id:'lying',    n:'Lying down',            met:0.8, ic:'lying'},
+  {id:'sit',      n:'Sitting relaxed',       met:1.0, ic:'sofa'},
+  {id:'desk',     n:'Desk work',             met:1.1, ic:'laptop'},
+  {id:'stand',    n:'Standing',              met:1.2, ic:'stand'},
+  {id:'house',    n:'Cooking or housework',  met:1.8, ic:'pan'},
+  {id:'walk',     n:'Walking about',         met:1.7, ic:'walk'},
+  {id:'exercise', n:'Exercising',            met:3.5, ic:'gym'}
+];
+const ROOMS = [
+  {id:'living',n:'Living room',ic:'sofa'},{id:'bedroom',n:'Bedroom',ic:'bed'},{id:'kitchen',n:'Kitchen',ic:'pan'},
+  {id:'office',n:'Home office',ic:'laptop'},{id:'bathroom',n:'Bathroom',ic:'drop'},{id:'other',n:'Somewhere else',ic:'door'}
+];
+const TP  = [{id:'cooler',n:'Cooler',ic:'snow'},{id:'same',n:'No change',ic:'check'},{id:'warmer',n:'Warmer',ic:'flame'}];
+const TA  = [
+  {id:'clearly_acc',n:'Clearly acceptable',s:'Happy to stay like this',ic:'up',cls:'good'},
+  {id:'just_acc',n:'Just acceptable',s:'Fine, but only just',ic:'up',cls:''},
+  {id:'just_unacc',n:'Just unacceptable',s:'Starting to bother me',ic:'down',cls:''},
+  {id:'clearly_unacc',n:'Clearly unacceptable',s:'I want this to change',ic:'down',cls:'bad'}
+];
+const TC  = [
+  {id:'comfortable',n:'Comfortable',m:0},{id:'slightly',n:'Slightly uncomfortable',m:1},
+  {id:'uncomfortable',n:'Uncomfortable',m:2},{id:'very',n:'Very uncomfortable',m:3}
+];
+const AIR  = [{id:'still',n:'Still',ic:'still'},{id:'slight',n:'Slight breeze',ic:'slight'},{id:'draughty',n:'Draughty',ic:'draught'}];
+const AIRP = [{id:'more',n:'More air',ic:'draught'},{id:'same',n:'Fine as is',ic:'check'},{id:'less',n:'Less air',ic:'still'}];
+const HUM  = [{id:'dry',n:'Dry',ic:'dry'},{id:'ok',n:'Fine',ic:'drop'},{id:'muggy',n:'Muggy',ic:'muggy'}];
+const SUN  = [{id:'yes',n:'Sun on me',ic:'sun'},{id:'no',n:'No direct sun',ic:'cloud'},{id:'dark',n:"It's dark",ic:'moon'}];
+const ACTIONS = [
+  {id:'win_open',n:'Opened a window',ic:'window'},{id:'win_close',n:'Closed a window',ic:'window'},
+  {id:'heat_up',n:'Heating up',ic:'radiator'},{id:'heat_down',n:'Heating down or off',ic:'radiator'},
+  {id:'fan',n:'Fan on',ic:'fan'},{id:'layer_on',n:'Put on a layer',ic:'layerOn'},{id:'layer_off',n:'Took off a layer',ic:'layerOff'},
+  {id:'blanket',n:'Got a blanket',ic:'blanket'},{id:'curtains',n:'Drew the curtains',ic:'curtain'},{id:'moved',n:'Moved room',ic:'door'}
+];
+const NOTES = [
+  {id:'hot_drink',n:'Hot drink',ic:'mug'},{id:'cold_drink',n:'Cold drink',ic:'glass'},{id:'ate',n:'Just ate',ic:'fork'},
+  {id:'tired',n:'Tired',ic:'zzz'},{id:'unwell',n:'Feeling unwell',ic:'thermo'}
+];
+const CORE = ['tsv','tp','clo','act','room'];
+const EXT_A = ['ta','tc','actions'];
+const EXT_B = ['air','hum','sun','notes'];
+const byId = (list,id) => list.find(x=>x.id===id);
+function mood(m){ // comfort faces: neutral colours, expression only
+  return face(m===3?2:m, {fill:'var(--line)', ink:'var(--text)', plain:true, brows:m>=2});
+}
+
+/* ---------- storage ---------- */
+const KEY = 'switch_comfort_proto_v1';
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2,'0');
+const fmt = d => pad(d.getHours())+':'+pad(d.getMinutes());
+const dayKey = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+let store = {votes:[], paused:null, pausedWhy:''};
+function load(){ try{ const s=JSON.parse(localStorage.getItem(KEY)||'null'); if(s&&Array.isArray(s.votes)) store=s; }catch(e){} }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} }
+function seed(){
+  const now = Date.now(), m = 60000;
+  const mk = (ago, o) => Object.assign({ id:'ex'+ago, ts:new Date(now-ago*m).toISOString(), type:'scheduled', home:'long', example:true, same:false }, o);
+  store = { votes:[
+    mk(26*60, {tsv:-1,tp:'warmer',garments:['long','trousers','socks','slippers'],clo:0.55,act:'desk',met:1.1,room:'office',ta:'just_acc',tc:'slightly',actions:['heat_up'],secs:31}),
+    mk(25*60+20, {tsv:0,tp:'same',garments:['long','trousers','socks','slippers'],clo:0.55,act:'desk',met:1.1,room:'office',air:'still',air_pref:'same',hum:'ok',sun:'no',notes:[],secs:19,same:true}),
+    mk(100, {tsv:1,tp:'cooler',garments:['tshirt','joggers','socks'],clo:0.39,act:'house',met:1.8,room:'kitchen',ta:'just_acc',tc:'slightly',actions:['win_open'],secs:27}),
+    mk(40, {tsv:1,tp:'cooler',garments:['tshirt','joggers','socks'],clo:0.39,act:'sit',met:1.0,room:'living',air:'slight',air_pref:'same',hum:'ok',sun:'no',notes:['hot_drink'],secs:22})
+  ], paused:null, pausedWhy:'' };
+  save();
+}
+const votes = () => store.votes.slice().sort((a,b)=>a.ts<b.ts?1:-1);
+const lastVote = () => votes()[0] || null;
+function streak(){
+  const days = new Set(store.votes.map(v=>dayKey(new Date(v.ts))));
+  let n=0, d=new Date();
+  while(days.has(dayKey(d))){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+function insight(){
+  const week = store.votes.filter(v => Date.now()-new Date(v.ts) < 7*864e5 && typeof v.tsv==='number');
+  if(week.length<2) return 'Keep going, after a few more check-ins we can show what your comfort looks like.';
+  const count={}; week.forEach(v=>count[v.tsv]=(count[v.tsv]||0)+1);
+  const top = Object.entries(count).sort((a,b)=>b[1]-a[1])[0];
+  const w = byId(TSV.map(t=>({id:String(t.v),n:t.w})), top[0]).n.toLowerCase();
+  const rooms={}; week.forEach(v=>{ if(v.room) rooms[v.room]=(rooms[v.room]||0)+1; });
+  const r = Object.entries(rooms).sort((a,b)=>b[1]-a[1])[0];
+  return `This week you have mostly felt <b>${w}</b>${r?` in the ${byId(ROOMS,r[0]).n.toLowerCase()}`:''}. Once the room sensor is linked, this will show the temperature you feel best at.`;
+}
+
+/* ---------- session state ---------- */
+let S = { screen:'start', flow:[], i:0, a:{}, t0:null, mode:'scheduled', same:false, lock:false };
+const extMode = () => $('#extMode').value;
+function buildFlow(){
+  const m = extMode(), n = store.votes.length;
+  const ext = m==='none' ? [] : m==='all' ? [...EXT_A, ...EXT_B] : (n%2===0 ? EXT_A : EXT_B);
+  return ext;
+}
+function startSession(mode){
+  S = { screen:'home', flow:[], i:0, a:{}, t0:Date.now(), mode, same:false, lock:false };
+  render();
+}
+function beginQuestions(same){
+  const last = lastVote();
+  S.same = same;
+  if(same && last){
+    Object.assign(S.a, { tsv:last.tsv, tp:last.tp, clo:[...last.garments], act:last.act, room:last.room });
+    S.flow = buildFlow();
+    if(!S.flow.length){ go('review'); return; }
+  } else {
+    if(last){ Object.assign(S.a, { tsv:last.tsv, tp:last.tp, clo:[...last.garments], act:last.act, room:last.room }); }
+    S.flow = [...CORE, ...buildFlow()];
+  }
+  S.i = 0; go('q');
+}
+function go(screen){ S.screen = screen; render(); }
+function next(){
+  if(S.i < S.flow.length-1){ S.i++; go('q'); } else { go('review'); }
+}
+function back(){
+  const s = S.screen;
+  if(s==='home'){ go('start'); }
+  else if(s==='same' || s==='away' || s==='recent'){ go('home'); }
+  else if(s==='q'){ if(S.i>0){ S.i--; go('q'); } else { go(lastVote()?'same':'home'); } }
+  else if(s==='review'){ if(S.flow.length){ S.i=S.flow.length-1; go('q'); } else { go('same'); } }
+}
+
+/* ---------- pieces ---------- */
+const tile = (q, o, on, extra='') => `<button class="tile ${on?'on':''}" data-act="pick" data-q="${q}" data-v="${o.id}">${ic(o.ic, o.cls||'')}<b>${o.n}</b>${extra}</button>`;
+const rowBtn = (q, o, on, inner) => `<button class="row ${on?'on':''}" data-act="pick" data-q="${q}" data-v="${o.id}">${inner}<div><b>${o.n}</b>${o.s?`<span>${o.s}</span>`:''}</div>${ic('chev','go')}</button>`;
+const chip = (q, o, on, extra='') => `<button class="chip ${on?'on':''}" data-act="toggle" data-q="${q}" data-v="${o.id}">${ic(o.ic)}${o.n}${extra}</button>`;
+const qhead = (eyebrow, h, p='') => `<div class="q"><div class="eyebrow">${eyebrow}</div><h1>${h}</h1>${p?`<p>${p}</p>`:''}</div>`;
+const nextBtn = ok => `<div class="actions"><button class="btn primary" data-act="next" ${ok?'':'disabled'}>Next ${ic('chev')}</button></div>`;
+const tsvWord = v => (byId(TSV.map(t=>({id:t.v,n:t.w})), v)||{}).n || '';
+const signed = v => v>0?'+'+v:String(v);
+const garmentNames = ids => ids.map(id=>byId(GARMENTS,id)?.n).filter(Boolean).join(', ');
+
+/* ---------- question screens ---------- */
+const Q = {
+  tsv: () => {
+    const v = S.a.tsv, has = typeof v==='number';
+    return qhead('Right now', 'How do you feel, temperature-wise?', 'Just how it feels, not what you would prefer.') +
+      `<div class="strip">${TSV.map(t=>`<button class="face ${has&&v===t.v?'on':''}" data-act="pick" data-q="tsv" data-v="${t.v}" aria-label="${t.w}">${face(t.v)}<b>${signed(t.v)}</b></button>`).join('')}</div>` +
+      `<div class="readout ${has?'':'empty'}">${has ? face(v)+`<div><b>${tsvWord(v)}</b><span>Thermal sensation ${signed(v)}</span></div>` : 'Tap a face'}</div>`;
+  },
+  tp: () => qhead('Preference', 'Would you like to be&hellip;') +
+    `<div class="tiles c3">${TP.map(o=>tile('tp',o,S.a.tp===o.id)).join('')}</div>`,
+  clo: () => {
+    const ids = S.a.clo || [];
+    return qhead('Clothing', 'What are you wearing?', 'Tap everything that applies, or start from a preset.') +
+      `<div class="presets">${PRESETS.map((p,i)=>`<button class="chip ${p.g.every(g=>ids.includes(g))&&p.g.length===ids.length?'on':''}" data-act="preset" data-i="${i}">${p.n}</button>`).join('')}</div>` +
+      `<div class="wardrobe"><div class="avatar">${avatar(ids)}<div class="clo"><b>${cloOf(ids).toFixed(2)}</b><span>clo</span></div></div>` +
+      `<div class="garments">${GARMENTS.map(g=>chip('clo',g,ids.includes(g.id),`<small>${g.est?'&asymp;':''}${g.clo.toFixed(2)}</small>`)).join('')}</div></div>` +
+      `<p class="note">Values follow the ASHRAE 55 garment table. Blanket and duvet are placeholders until calibrated.</p>` + nextBtn(ids.length>0);
+  },
+  act: () => qhead('Activity', 'What have you been doing for the last 15 minutes?') +
+    `<div class="tiles c2">${ACTS.map(o=>tile('act',o,S.a.act===o.id,`<small>${o.met.toFixed(1)} met</small>`)).join('')}</div>`,
+  room: () => qhead('Location', 'Which room are you in?', 'The sensor is in the living room, so this matters.') +
+    `<div class="tiles c3">${ROOMS.map(o=>tile('room',o,S.a.room===o.id)).join('')}</div>`,
+  ta: () => qhead('Acceptability', 'Is the temperature acceptable to you?') +
+    `<div class="rows">${TA.map(o=>rowBtn('ta',o,S.a.ta===o.id, ic(o.ic,o.cls))).join('')}</div>`,
+  tc: () => qhead('Comfort', 'How comfortable are you overall?') +
+    `<div class="rows">${TC.map(o=>rowBtn('tc',o,S.a.tc===o.id, `<span class="mood">${mood(o.m)}</span>`)).join('')}</div>`,
+  air: () => qhead('Air', 'How is the air movement?') +
+    `<div class="duo"><div><div class="lab">It feels&hellip;</div><div class="tiles c3">${AIR.map(o=>tile('air',o,S.a.air===o.id)).join('')}</div></div>` +
+    `<div><div class="lab">And I would like&hellip;</div><div class="tiles c3">${AIRP.map(o=>tile('air_pref',o,S.a.air_pref===o.id)).join('')}</div></div></div>`,
+  hum: () => qhead('Humidity', 'Does the air feel dry or muggy?') +
+    `<div class="tiles c3">${HUM.map(o=>tile('hum',o,S.a.hum===o.id)).join('')}</div>`,
+  sun: () => qhead('Sunlight', 'Is the sun shining on you?') +
+    `<div class="tiles c3">${SUN.map(o=>tile('sun',o,S.a.sun===o.id)).join('')}</div>`,
+  actions: () => {
+    const ids = S.a.actions;
+    return qhead('Since last time', 'Have you changed anything?', 'Tap all that apply.') +
+      `<div class="chips">${ACTIONS.map(o=>chip('actions',o,ids&&ids.includes(o.id))).join('')}<button class="chip ghost ${ids&&ids.length===0?'on':''}" data-act="none" data-q="actions">${ic('check')}Nothing changed</button></div>` + nextBtn(!!ids);
+  },
+  notes: () => {
+    const ids = S.a.notes;
+    return qhead('Anything else', 'Anything worth noting?', 'In the last half hour.') +
+      `<div class="chips">${NOTES.map(o=>chip('notes',o,ids&&ids.includes(o.id))).join('')}<button class="chip ghost ${ids&&ids.length===0?'on':''}" data-act="none" data-q="notes">${ic('check')}Nothing to note</button></div>` + nextBtn(!!ids);
+  }
+};
+</script>
+<script>
+/* ---------- non-question screens ---------- */
+let PARTICIPANT = SWITCH.participant() || '';
+function statusCard(){
+  const now = Date.now();
+  if(store.pausedWhy==='manual') return `<div class="status">${ic('pause')}<div><b>Paused until you are back</b><span>Tap &ldquo;Answer check-in&rdquo; when you are home again.</span></div></div>`;
+  if(store.paused && new Date(store.paused) > now){
+    const t = fmt(new Date(store.paused));
+    return `<div class="status">${ic(store.pausedWhy==='settling'?'clock':'pause')}<div><b>${store.pausedWhy==='settling'?'Settling in, next check-in at '+t:'Paused until '+t}</b><span>${store.pausedWhy==='settling'?'An hour at home before the first question.':'No notifications while you are out.'}</span></div></div>`;
+  }
+  const nxt = new Date(now + 30*60000);
+  return `<div class="status">${ic('bell')}<div><b>Next check-in about ${fmt(nxt)}</b><span>Every half hour, only while you are at home.</span></div></div>`;
+}
+function statsRow(){
+  const today = store.votes.filter(v=>dayKey(new Date(v.ts))===dayKey(new Date())).length;
+  return `<div class="stats"><div class="stat"><b>${ic('flame')}${streak()}</b><span>day streak</span></div><div class="stat"><b>${today}</b><span>today</span></div><div class="stat"><b>${store.votes.length}</b><span>check-ins</span></div></div>`;
+}
+const SCREENS = {
+  start: () => `<div class="hero"><div class="eyebrow">SWITCH &middot; Personal comfort study</div><h1 class="h1">How does your home feel today?</h1><p class="sub">Short check-ins while you are at home teach the system what comfortable means for you.</p></div>` +
+    statusCard() + statsRow() +
+    `<div class="actions"><button class="btn primary" data-act="start" data-mode="scheduled">${ic('bell')} Answer check-in</button><button class="btn secondary" data-act="start" data-mode="self">${ic('bolt')} Log how I feel right now</button><div class="foot">${footLine()}</div></div>`,
+  home: () => qhead('Before we start', 'Are you at home right now?', 'We only ask about comfort once you have settled in.') +
+    `<div class="rows">
+      <button class="row" data-act="home" data-v="long">${ic('home')}<div><b>Yes, for over an hour</b><span>Let's do the check-in</span></div>${ic('chev','go')}</button>
+      <button class="row" data-act="home" data-v="recent">${ic('clock')}<div><b>Yes, I just got in</b><span>We will ask again in about an hour</span></div>${ic('chev','go')}</button>
+      <button class="row" data-act="home" data-v="out">${ic('out')}<div><b>No, I'm out</b><span>Pause check-ins for a while</span></div>${ic('chev','go')}</button>
+    </div>`,
+  recent: () => `<div class="done"><div class="big">${ic('clock')}</div><h1>No rush</h1><p class="sub">Your body takes a while to adjust after coming indoors. We will check back at <b>${fmt(new Date(store.paused))}</b>.</p><div class="actions"><button class="btn primary" data-act="ok">OK</button></div></div>`,
+  away: () => qhead('Out and about', 'When should we check again?', 'You will get no notifications until then.') +
+    `<div class="rows">
+      <button class="row" data-act="pause" data-v="60">${ic('clock')}<div><b>In an hour</b></div>${ic('chev','go')}</button>
+      <button class="row" data-act="pause" data-v="180">${ic('clock')}<div><b>In three hours</b></div>${ic('chev','go')}</button>
+      <button class="row" data-act="pause" data-v="evening">${ic('moon')}<div><b>This evening</b><span>From 19:00</span></div>${ic('chev','go')}</button>
+      <button class="row" data-act="pause" data-v="manual">${ic('pin')}<div><b>I'll tell you when I'm back</b></div>${ic('chev','go')}</button>
+    </div>`,
+  same: () => {
+    const l = lastVote(), d = new Date(l.ts), mins = Math.round((Date.now()-d)/60000);
+    return qhead('Quick check', 'Still the same as last time?', `Logged at ${fmt(d)}, ${mins<60?mins+' minutes':Math.round(mins/60)+' hours'} ago.`) +
+      `<div class="last"><div class="when">Last check-in</div><ul>
+        <li>${face(l.tsv)}<div><b>${tsvWord(l.tsv)} (${signed(l.tsv)})</b> &middot; would like ${byId(TP,l.tp)?.n.toLowerCase()}</div></li>
+        <li>${ic('tshirt')}<div>${garmentNames(l.garments)} &middot; ${l.clo.toFixed(2)} clo</div></li>
+        <li>${ic(byId(ACTS,l.act)?.ic||'sofa')}<div>${byId(ACTS,l.act)?.n} &middot; ${byId(ROOMS,l.room)?.n.toLowerCase()}</div></li>
+      </ul></div>
+      <div class="actions"><button class="btn primary" data-act="same">${ic('check')} Yes, still the same</button><button class="btn secondary" data-act="changed">Something has changed</button></div>`;
+  },
+  q: () => Q[S.flow[S.i]](),
+  review: () => {
+    const a = S.a, li = (k, v, q) => v===undefined||v===null ? '' : `<li><span class="k">${k}</span><span class="v">${v}</span>${q&&S.flow.includes(q)?`<button class="edit" data-act="edit" data-q="${q}">Edit</button>`:''}</li>`;
+    const names = (list, ids) => ids && (ids.length ? ids.map(id=>byId(list,id)?.n).join(', ') : 'Nothing');
+    return qhead('Almost done', 'Here is what we will log') +
+      `<ul class="review">
+        ${li('Feeling', typeof a.tsv==='number' ? `${tsvWord(a.tsv)} (${signed(a.tsv)})` : undefined, 'tsv')}
+        ${li('Prefer', byId(TP,a.tp)?.n, 'tp')}
+        ${li('Wearing', a.clo && `${garmentNames(a.clo)} &middot; ${cloOf(a.clo).toFixed(2)} clo`, 'clo')}
+        ${li('Activity', byId(ACTS,a.act)?.n, 'act')}
+        ${li('Room', byId(ROOMS,a.room)?.n, 'room')}
+        ${li('Acceptable', byId(TA,a.ta)?.n, 'ta')}
+        ${li('Comfort', byId(TC,a.tc)?.n, 'tc')}
+        ${li('Air', a.air && `${byId(AIR,a.air)?.n}, ${byId(AIRP,a.air_pref)?.n.toLowerCase()||'no preference yet'}`, 'air')}
+        ${li('Humidity', byId(HUM,a.hum)?.n, 'hum')}
+        ${li('Sun', byId(SUN,a.sun)?.n, 'sun')}
+        ${li('Changed', names(ACTIONS, a.actions), 'actions')}
+        ${li('Notes', names(NOTES, a.notes), 'notes')}
+      </ul>
+      <div class="actions"><button class="btn primary" data-act="submit">${ic('checkc')} Submit check-in</button></div>`;
+  },
+  done: () => {
+    const l = lastVote();
+    return `<div class="done"><div class="big">${ic('checkc')}</div><h1>Thank you!</h1><p class="sub">Logged at ${fmt(new Date(l.ts))} &middot; took ${l.secs} seconds</p>` +
+      statsRow() + `<div class="insight">${ic('bulb')}<div>${insight()}</div></div>` +
+      `<div class="actions"><button class="btn primary" data-act="done">Done</button></div></div>`;
+  }
+};
+
+/* ---------- render + events ---------- */
+function updateTop(){
+  const inFlow = S.screen==='q' || S.screen==='review';
+  $('#back').hidden = S.screen==='start' || S.screen==='done' || S.screen==='recent';
+  const total = S.flow.length + 1, step = S.screen==='review' ? total : S.i + 1;
+  $('#progress').style.visibility = inFlow ? 'visible' : 'hidden';
+  $('#progress i').style.width = inFlow ? (step/total*100).toFixed(1)+'%' : '0%';
+  $('#count').textContent = inFlow ? `${step} / ${total}` : '';
+}
+function render(anim=true){
+  const el = $('#screen');
+  el.innerHTML = SCREENS[S.screen==='start' && !PARTICIPANT ? 'code' : S.screen]();
+  if(anim){ el.classList.remove('in'); void el.offsetWidth; el.classList.add('in'); el.scrollTop = 0; }
+  updateTop();
+}
+function pick(q, raw){
+  const v = q==='tsv' ? Number(raw) : raw;
+  S.a[q] = v;
+  render(false);
+  const cur = S.flow[S.i];
+  if(cur==='air' && !(S.a.air && S.a.air_pref)) return;
+  S.lock = true;
+  setTimeout(()=>{ S.lock=false; next(); }, 460);
+}
+function toggle(q, v){
+  const arr = S.a[q] ? [...S.a[q]] : [];
+  const i = arr.indexOf(v);
+  if(i>=0) arr.splice(i,1); else arr.push(v);
+  S.a[q] = arr;
+  render(false);
+}
+function onHome(v){
+  S.a.home = v;
+  if(v==='long'){ store.paused=null; store.pausedWhy=''; save(); lastVote() ? go('same') : beginQuestions(false); }
+  else if(v==='recent'){ store.paused = new Date(Date.now()+60*60000).toISOString(); store.pausedWhy='settling'; save(); go('recent'); }
+  else { go('away'); }
+}
+function setPause(v){
+  if(v==='manual'){ store.paused=null; store.pausedWhy='manual'; }
+  else if(v==='evening'){ const d=new Date(); if(d.getHours()>=19) d.setDate(d.getDate()+1); d.setHours(19,0,0,0); store.paused=d.toISOString(); store.pausedWhy='away'; }
+  else { store.paused = new Date(Date.now()+Number(v)*60000).toISOString(); store.pausedWhy='away'; }
+  save(); go('start');
+}
+function submit(){
+  const a = S.a;
+  const row = { id:'v'+Date.now(), ts:new Date().toISOString(), type:S.mode, home:a.home||'long',
+    tsv:a.tsv, tp:a.tp, garments:a.clo||[], clo:cloOf(a.clo||[]), act:a.act, met:byId(ACTS,a.act)?.met, room:a.room,
+    ta:a.ta, tc:a.tc, air:a.air, air_pref:a.air_pref, hum:a.hum, sun:a.sun, actions:a.actions, notes:a.notes,
+    same:S.same, secs:Math.max(1, Math.round((Date.now()-S.t0)/1000)) };
+  store.votes.push(row); store.paused=null; store.pausedWhy=''; save(); syncVote(row);
+  renderTable(); go('done'); confetti();
+}
+$('#screen').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if(!b || S.lock) return;
+  const d = b.dataset;
+  switch(d.act){
+    case 'start': startSession(d.mode); break;
+    case 'home': onHome(d.v); break;
+    case 'pause': setPause(d.v); break;
+    case 'ok': go('start'); break;
+    case 'same': beginQuestions(true); break;
+    case 'changed': beginQuestions(false); break;
+    case 'pick': pick(d.q, d.v); break;
+    case 'toggle': toggle(d.q, d.v); break;
+    case 'none': S.a[d.q] = []; render(false); break;
+    case 'preset': S.a.clo = [...PRESETS[+d.i].g]; render(false); break;
+    case 'next': next(); break;
+    case 'edit': { const i = S.flow.indexOf(d.q); if(i>=0){ S.i=i; go('q'); } break; }
+    case 'submit': submit(); break;
+    case 'done': go('start'); break;
+  }
+});
+$('#back').addEventListener('click', back);
+
+/* ---------- celebration ---------- */
+function confetti(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c = $('#confetti'); c.hidden = false;
+  const r = c.parentElement.getBoundingClientRect(); c.width = r.width; c.height = r.height;
+  const ctx = c.getContext('2d');
+  const cols = ['#1E5CC8','#3D8CE6','#5CB68B','#F2BB52','#EE8A3E','#D64530','#0E7B72'];
+  const ps = Array.from({length:90}, () => ({ x:c.width/2+(Math.random()-.5)*80, y:c.height*.33, vx:(Math.random()-.5)*10, vy:-Math.random()*10-3,
+    w:6+Math.random()*5, h:3+Math.random()*4, a:Math.random()*6, va:(Math.random()-.5)*.3, col:cols[Math.floor(Math.random()*cols.length)] }));
+  const t0 = performance.now();
+  (function tick(t){
+    const dt = (t-t0)/1000; ctx.clearRect(0,0,c.width,c.height);
+    ps.forEach(p => { p.vy+=.28; p.x+=p.vx; p.y+=p.vy; p.a+=p.va; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.globalAlpha=Math.max(0,1-dt/1.9); ctx.fillStyle=p.col; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore(); });
+    if(dt<2) requestAnimationFrame(tick); else { ctx.clearRect(0,0,c.width,c.height); c.hidden = true; }
+  })(t0);
+}
+
+/* ---------- researcher table ---------- */
+const COLS = [
+  ['participant', () => PARTICIPANT], ['timestamp_utc', v=>v.ts], ['local_time', v=>{const d=new Date(v.ts); return dayKey(d)+' '+fmt(d);}],
+  ['prompt', v=>v.type], ['at_home', v=>v.home], ['tsv', v=>v.tsv], ['preference', v=>v.tp], ['clo', v=>v.clo?.toFixed(2)],
+  ['garments', v=>(v.garments||[]).join('|')], ['met', v=>v.met], ['activity', v=>v.act], ['room', v=>v.room],
+  ['acceptability', v=>v.ta], ['comfort', v=>v.tc], ['air', v=>v.air], ['air_pref', v=>v.air_pref], ['humidity', v=>v.hum], ['sun', v=>v.sun],
+  ['actions', v=>(v.actions||[]).join('|')], ['notes', v=>(v.notes||[]).join('|')], ['same_as_last', v=>v.same?'yes':'no'], ['seconds', v=>v.secs], ['', v=>v.example?'example':'']
+];
+const cell = x => x===undefined||x===null ? '' : String(x);
+function renderTable(){
+  const rows = votes();
+  if(!rows.length){ $('#table').innerHTML = '<div class="empty">No check-ins stored yet. Complete one above and it will appear here.</div>'; return; }
+  $('#table').innerHTML = `<table><thead><tr>${COLS.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${
+    rows.map(v=>`<tr>${COLS.map(c=>`<td class="${v.example?'ex':''}">${cell(c[1](v))}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+function toCsv(){
+  const esc = s => /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  const head = COLS.map(c=>c[0]||'flag').join(',');
+  return [head, ...votes().map(v=>COLS.map(c=>esc(cell(c[1](v)))).join(','))].join('\n');
+}
+
+/* ---------- init ---------- */
+load();
+if(DEBUG && !localStorage.getItem(KEY)) seed();
+$('#copyCsv').innerHTML = ic('copy') + ' Copy as CSV';
+$('#reseed').innerHTML = ic('refresh') + ' Reset to example data';
+$('#copyCsv').addEventListener('click', async () => {
+  const b = $('#copyCsv');
+  try{ await navigator.clipboard.writeText(toCsv()); b.innerHTML = ic('check')+' Copied'; }
+  catch(e){ b.innerHTML = ic('copy')+' Copy blocked here'; }
+  setTimeout(()=>{ b.innerHTML = ic('copy')+' Copy as CSV'; }, 1600);
+});
+$('#reseed').addEventListener('click', () => { seed(); renderTable(); S.screen='start'; render(); });
+$('#clearAll').addEventListener('click', () => { store = {votes:[], paused:null, pausedWhy:''}; save(); renderTable(); S.screen='start'; render(); });
+</script>
+<style>
+.codebox{display:flex;flex-direction:column;gap:10px}
+.codebox input{font:inherit;font-size:1.6rem;font-weight:800;letter-spacing:.12em;text-align:center;padding:14px;border-radius:16px;border:1.5px solid var(--line);background:var(--card2);color:var(--text);width:100%;text-transform:uppercase}
+.codebox input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-line)}
+.codebox .err{color:var(--bad);font-size:.9rem}
+.sync{display:inline-flex;align-items:center;gap:6px}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--good);display:inline-block}
+.sync.wait i{background:var(--c1)}
+.sync.local i{background:var(--muted)}
+</style>
+<script>
+/* ---------- site integration: participant code, database sync, debug panel ---------- */
+if(DEBUG){ $('.panel').hidden = false; }
+function footLine(){
+  const n = SWITCH.pending().length;
+  const cls = !SWITCH.live ? 'local' : n ? 'wait' : '';
+  const txt = !SWITCH.live ? 'stored on this phone only' : n ? n + ' waiting to sync' : 'synced';
+  return `Participant ${PARTICIPANT} &middot; <span class="sync ${cls}"><i></i>${txt}</span>`;
+}
+SCREENS.code = () => `<div class="hero"><div class="eyebrow">SWITCH &middot; Personal comfort study</div><h1 class="h1">Welcome</h1><p class="sub">Enter the participant code from your welcome sheet, for example P07. You only need to do this once on this phone.</p></div>
+  <div class="codebox"><input id="codeInput" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="4" placeholder="P07" aria-label="Participant code"><div class="err" id="codeErr" hidden>That does not look right. A code is the letter P followed by two or three digits.</div></div>
+  <div class="actions"><button class="btn primary" data-act="code">Continue ${ic('chev')}</button><div class="foot">Questions about the study? Email info@mehraban.uk</div></div>`;
+$('#screen').addEventListener('click', e => {
+  const b = e.target.closest('[data-act="code"]'); if(!b) return;
+  const v = ($('#codeInput').value || '').trim().toUpperCase();
+  if(!SWITCH.validCode(v)){ $('#codeErr').hidden = false; $('#codeInput').focus(); return; }
+  SWITCH.setParticipant(v); PARTICIPANT = v; go('start');
+});
+$('#screen').addEventListener('keydown', e => { if(e.key==='Enter' && e.target.id==='codeInput'){ e.preventDefault(); $('[data-act="code"]').click(); } });
+async function syncVote(row){
+  try{ await SWITCH.save(SWITCH.toRecord(row, PARTICIPANT)); }catch(e){}
+  if(S.screen==='start') render(false);
+}
+async function flushPending(){ try{ const n = await SWITCH.flush(); if(n && S.screen==='start') render(false); }catch(e){} }
+window.addEventListener('online', flushPending);
+flushPending();
+render(); if(DEBUG) renderTable();
+</script>
+</body>
+</html>
