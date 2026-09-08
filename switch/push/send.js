@@ -46,8 +46,14 @@ if (!PUB) fail('vapidPublicKey is empty in switch/config.js');
 if (!PRIV && !DRY) fail('VAPID_PRIVATE_KEY secret is empty. Paste the whole content of switch-vapid-private-key.txt');
 if (!DRY && !/^[A-Za-z0-9_-]{43}$/.test(PRIV)) fail(`VAPID_PRIVATE_KEY should be the 43-character key from switch-vapid-private-key.txt (got ${PRIV.length} characters). Open the file, select all, copy, and paste it as the secret`);
 if (!DRY) {
-  try { webpush.setVapidDetails(SUBJECT, PUB, PRIV); }
-  catch (e) { fail('VAPID keys were rejected: ' + e.message + '. The private key must be the one generated together with the public key in switch/config.js'); }
+  // Derive the public key from the private one and compare, so a mismatched pair fails here, not at the push service.
+  try {
+    const ecdh = require('crypto').createECDH('prime256v1');
+    ecdh.setPrivateKey(Buffer.from(PRIV, 'base64url'));
+    const derived = ecdh.getPublicKey().toString('base64url');
+    if (derived !== PUB) fail('VAPID_PRIVATE_KEY does not match vapidPublicKey in switch/config.js. Paste the current content of switch-vapid-private-key.txt into the secret');
+    webpush.setVapidDetails(SUBJECT, PUB, PRIV);
+  } catch (e) { if (e && e.message && !/does not match/.test(e.message)) fail('VAPID keys were rejected: ' + e.message); }
 }
 
 // New-style secret keys (sb_secret_...) go in the apikey header only; legacy service_role JWTs also need Bearer.
@@ -108,6 +114,8 @@ async function main() {
         removed++;
         await fetch(rest(`?endpoint=eq.${encodeURIComponent(sub.endpoint)}`), { method: 'DELETE', headers });
         console.log(`removed a phone for ${sub.participant} that no longer accepts reminders`);
+      } else if (err.statusCode === 401 || err.statusCode === 403) {
+        console.error(`send failed for ${sub.participant}: the push service rejected the signature (${err.statusCode}). This phone registered with a different public key; ask them to turn reminders off and on again in the app`);
       } else {
         console.error(`send failed for ${sub.participant}: ${err.statusCode || ''} ${err.body || err.message}`);
       }
