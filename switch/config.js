@@ -15,7 +15,7 @@ self.SWITCH_CONFIG = {
   supabaseAnonKey: "sb_publishable_cz0_-SSTWy6KkwFjj4jEXQ_YSJJZMh8",   // Settings > API Keys > Publishable key (sb_publishable_...); a legacy "anon" key also works
   table: "comfort_votes",
   pushTable: "push_subscriptions",
-  vapidPublicKey: "BAtT_sPFKWVz0SlKv_T4PbD2yv4EqpGCrXNZfHX23RQnJuQQZ2qCcHWifbEQfjKz2H7wc88wcMSS18MxyrxUTnw",
+  vapidPublicKey: "BONtfcqHLMr-1AEFJ9RN9ImsM4nsfJZNTvDrkfLE2htSmt5FUZGzZqa09n6VH6z8JK9DlgsvCtDSHsbXyO5OV6g",
   reminderIntervalMin: 30,
   studyName: "SWITCH personal comfort study",
   appVersion: "0.2.0"

@@ -52,14 +52,13 @@ without opening the app. On iPhone the notification opens the app, which asks "A
 One-time setup, after the database setup above:
 
 1. Run `supabase-setup.sql` again in the Supabase SQL editor. It now also creates `push_subscriptions`.
-2. In the GitHub repository open **Settings → Secrets and variables → Actions** and add three repository secrets:
-   - `SUPABASE_URL`: the Project URL, the same value as in `config.js`.
-   - `SUPABASE_SERVICE_ROLE_KEY`: a **secret key** from Settings → API Keys → Secret keys → "Create new secret key"
+2. In the GitHub repository open **Settings -> Secrets and variables -> Actions** and add two repository secrets:
+   - `SUPABASE_SERVICE_ROLE_KEY`: a **secret key** from Settings -> API Keys -> Secret keys -> "Create new secret key"
      (`sb_secret_...`, shown once). It bypasses row-level security, so it must only ever live in this secret, never
      in the site. A legacy `service_role` key works too.
-   - `VAPID_PRIVATE_KEY`: the key in `Documents\switch-vapid-private-key.txt` on the machine where the pages
-     were built. The matching public key is already in `config.js`. Keep the file somewhere safe, then delete it
-     from Documents.
+   - `VAPID_PRIVATE_KEY`: the whole content of `Documents\switch-vapid-private-key.txt` on the machine where the
+     pages were built (one 43-character line). The matching public key is already in `config.js`.
+   The project URL is not a secret; the sender reads it from `config.js`.
 3. Test it: **Actions → Comfort check-in reminders → Run workflow**, type a participant code that has turned
    reminders on, and the phone should buzz within a minute. Tick "dry run" to only see the decisions in the log.
 
