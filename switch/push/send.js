@@ -31,7 +31,10 @@ if (!PUB) fail('vapidPublicKey is empty in switch/config.js');
 if (!PRIV && !DRY) fail('VAPID_PRIVATE_KEY must be set');
 if (!DRY) webpush.setVapidDetails(SUBJECT, PUB, PRIV);
 
-const headers = { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' };
+// New-style secret keys (sb_secret_...) go in the apikey header only; legacy service_role JWTs also need Bearer.
+const headers = KEY.startsWith('sb_secret_')
+  ? { apikey: KEY, 'Content-Type': 'application/json' }
+  : { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' };
 const rest = q => `${URL_}/rest/v1/${TABLE}${q}`;
 const MIN = 60000;
 

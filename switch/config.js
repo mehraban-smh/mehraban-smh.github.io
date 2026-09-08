@@ -11,8 +11,8 @@
  * secret VAPID_PRIVATE_KEY.
  */
 self.SWITCH_CONFIG = {
-  supabaseUrl: "",       // e.g. "https://abcdefghijklmnop.supabase.co"  (Project Settings > API > Project URL)
-  supabaseAnonKey: "",   // Project Settings > API > Project API keys > anon public
+  supabaseUrl: "",       // e.g. "https://abcdefghijklmnop.supabase.co"  (Settings > Data API > Project URL)
+  supabaseAnonKey: "",   // Settings > API Keys > Publishable key (sb_publishable_...); a legacy "anon" key also works
   table: "comfort_votes",
   pushTable: "push_subscriptions",
   vapidPublicKey: "BAtT_sPFKWVz0SlKv_T4PbD2yv4EqpGCrXNZfHX23RQnJuQQZ2qCcHWifbEQfjKz2H7wc88wcMSS18MxyrxUTnw",

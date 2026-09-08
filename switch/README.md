@@ -17,9 +17,9 @@ participant's browser, and the dashboard shows only the browser it is opened in.
 
 1. Create a Supabase account and a new project. Pick the **London (eu-west-2)** region and a strong database password (you will not need it again).
 2. In the project, open **SQL Editor → New query**, paste the whole of `supabase-setup.sql`, and click **Run**. This creates the `comfort_votes` table, a `sensor_readings` table for later, and the row-level security policies.
-3. **Authentication → Providers → Email**: keep Email enabled, and turn **off** "Allow new users to sign up" so nobody else can create a dashboard login. Turn off "Confirm email" too, or the researcher user will need to confirm.
-4. **Authentication → Users → Add user**: create the research team login (email + password). This is what the dashboard sign-in uses.
-5. **Project Settings → API**: copy the **Project URL** and the **anon public** key into `config.js`, commit, and push. The anon key is meant to be public; the policies from step 2 limit it to inserting check-ins for a valid participant code.
+3. **Authentication → Sign In / Providers → Email**: keep Email enabled and turn **off** "Confirm email". Then under **Authentication → Sign In / Up** turn **off** "Allow new users to sign up", so nobody else can create a dashboard login.
+4. **Authentication → Users → Add user → Create new user**: the research team login (email + password, tick "Auto confirm user"). This is what the dashboard sign-in uses.
+5. **Settings → API Keys**: copy the **Publishable key** (`sb_publishable_...`) into `supabaseAnonKey` in `config.js`, and the **Project URL** from **Settings → Data API** into `supabaseUrl`. Commit and push. The publishable key is meant to be public; the policies from step 2 limit it to inserting check-ins for a valid participant code. (Older projects show legacy `anon` and `service_role` keys instead; those work too.)
 
 Open `https://mehraban.uk/switch/dashboard/`, sign in, and you should see an empty study. Submit a test check-in
 from `https://mehraban.uk/switch/checkin/?p=P99` and it should appear after **Refresh**.
@@ -54,8 +54,9 @@ One-time setup, after the database setup above:
 1. Run `supabase-setup.sql` again in the Supabase SQL editor. It now also creates `push_subscriptions`.
 2. In the GitHub repository open **Settings → Secrets and variables → Actions** and add three repository secrets:
    - `SUPABASE_URL`: the Project URL, the same value as in `config.js`.
-   - `SUPABASE_SERVICE_ROLE_KEY`: Project Settings → API → **service_role** key. This key bypasses row-level
-     security, so it must only ever live in this secret, never in the site.
+   - `SUPABASE_SERVICE_ROLE_KEY`: a **secret key** from Settings → API Keys → Secret keys → "Create new secret key"
+     (`sb_secret_...`, shown once). It bypasses row-level security, so it must only ever live in this secret, never
+     in the site. A legacy `service_role` key works too.
    - `VAPID_PRIVATE_KEY`: the key in `Documents\switch-vapid-private-key.txt` on the machine where the pages
      were built. The matching public key is already in `config.js`. Keep the file somewhere safe, then delete it
      from Documents.
