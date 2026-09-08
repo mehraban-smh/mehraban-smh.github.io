@@ -1,0 +1,43 @@
+name: Comfort check-in reminders
+
+# Every half hour, decide who should get a check-in reminder and send it.
+# "Run workflow" with a participant code sends one straight away, ignoring home hours (for testing).
+on:
+  schedule:
+    - cron: "0,30 * * * *"
+  workflow_dispatch:
+    inputs:
+      participant:
+        description: "Send a test reminder now to this participant code, e.g. P07"
+        required: false
+        default: ""
+      dry_run:
+        description: "Only log what would be sent"
+        type: boolean
+        default: false
+
+concurrency:
+  group: push-reminders
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install web-push
+        working-directory: switch/push
+        run: npm install --no-audit --no-fund --loglevel=error
+      - name: Send reminders
+        working-directory: switch/push
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          FORCE_PARTICIPANT: ${{ github.event.inputs.participant }}
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
+        run: node send.js

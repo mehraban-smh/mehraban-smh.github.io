@@ -50,6 +50,48 @@ create policy "researchers can read everything"
   on public.comfort_votes for select to authenticated
   using (true);
 
+-- One row per phone that has turned reminders on. The sender in switch/push/send.js reads these
+-- every half hour and decides who is due a reminder; the app updates the schedule columns.
+create table if not exists public.push_subscriptions (
+  endpoint        text primary key,              -- the phone's push address, unique per browser install
+  participant     text not null,
+  p256dh          text not null,                 -- encryption keys that belong to this subscription
+  auth            text not null,
+  tz_offset_min   integer not null default 0,    -- the phone's offset from UTC when it registered
+  weekday_start   text not null default '17:00', -- home hours, on the phone's clock
+  weekday_end     text not null default '22:30',
+  weekend_start   text not null default '09:00',
+  weekend_end     text not null default '22:30',
+  interval_min    integer not null default 30,
+  enabled         boolean not null default true,
+  paused_until    timestamptz,                   -- set when the participant says they are out
+  settled_at      timestamptz,                   -- set when they say they have just got home
+  last_prompt_at  timestamptz,                   -- written by the sender
+  last_vote_at    timestamptz,                   -- written by the app on every submitted check-in
+  user_agent      text,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+create index if not exists push_subscriptions_participant on public.push_subscriptions (participant);
+
+alter table public.push_subscriptions enable row level security;
+
+drop policy if exists "participants can register a phone" on public.push_subscriptions;
+create policy "participants can register a phone"
+  on public.push_subscriptions for insert to anon
+  with check (participant ~ '^P[0-9]{2,3}$');
+
+drop policy if exists "participants can update their reminders" on public.push_subscriptions;
+create policy "participants can update their reminders"
+  on public.push_subscriptions for update to anon
+  using (participant ~ '^P[0-9]{2,3}$')
+  with check (participant ~ '^P[0-9]{2,3}$');
+
+drop policy if exists "researchers can see registered phones" on public.push_subscriptions;
+create policy "researchers can see registered phones"
+  on public.push_subscriptions for select to authenticated
+  using (true);
+
 -- For the next phase: 5-minute room readings from the Tapo T315 exports, one row per participant per timestamp.
 create table if not exists public.sensor_readings (
   participant    text not null,

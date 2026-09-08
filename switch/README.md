@@ -37,6 +37,34 @@ and the home-screen copy keeps its own storage, so the app will ask for the code
 Add `?debug=1` to the check-in URL to see a "What gets stored" panel under the phone with every row, a copy-as-CSV
 button, and controls to seed or clear example data. Example rows are marked as such and are never synced.
 
+## Reminders (push notifications)
+
+Every half hour a GitHub Actions workflow (`.github/workflows/push-reminders.yml`) runs `switch/push/send.js`,
+which reads the registered phones from the `push_subscriptions` table and sends a web push to each one that is due.
+A phone is due when reminders are on, the participant has not said they are out, at least an hour has passed
+since they said they had just got home, no check-in was submitted in the last twenty minutes, and the phone's
+local time is inside the participant's home hours (weekdays 17:00–22:30 and weekends 09:00–22:30 unless they
+change it in the app). The push expires after 25 minutes, so an offline phone never receives a backlog.
+
+On Android the notification has "I'm home" and "Not home" buttons; "Not home" pauses reminders for two hours
+without opening the app. On iPhone the notification opens the app, which asks "Are you at home?" first.
+
+One-time setup, after the database setup above:
+
+1. Run `supabase-setup.sql` again in the Supabase SQL editor. It now also creates `push_subscriptions`.
+2. In the GitHub repository open **Settings → Secrets and variables → Actions** and add three repository secrets:
+   - `SUPABASE_URL`: the Project URL, the same value as in `config.js`.
+   - `SUPABASE_SERVICE_ROLE_KEY`: Project Settings → API → **service_role** key. This key bypasses row-level
+     security, so it must only ever live in this secret, never in the site.
+   - `VAPID_PRIVATE_KEY`: the key in `Documents\switch-vapid-private-key.txt` on the machine where the pages
+     were built. The matching public key is already in `config.js`. Keep the file somewhere safe, then delete it
+     from Documents.
+3. Test it: **Actions → Comfort check-in reminders → Run workflow**, type a participant code that has turned
+   reminders on, and the phone should buzz within a minute. Tick "dry run" to only see the decisions in the log.
+
+Participants turn reminders on from the "Turn on reminders" card on the app's start screen. On iPhone this only
+works inside the home-screen copy of the app, and the app says so.
+
 ## Exports
 
 The dashboard's **Download Excel** button builds one workbook with one sheet per participant (plus an "All" sheet),
