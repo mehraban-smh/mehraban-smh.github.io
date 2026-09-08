@@ -63,12 +63,16 @@
     /* ---- participant side: save with an offline queue ---- */
     async insert(record) {
       if (!live) return { ok: false, status: 0 };
-      const r = await fetch(rest(table) + '?on_conflict=client_id', {
+      // A plain insert. The public key cannot read rows, so an "upsert" (which compares against the
+      // existing row) is refused by row-level security. A retry of a row that already exists comes
+      // back as 409 from the unique client_id, which counts as success.
+      const r = await fetch(rest(table), {
         method: 'POST',
-        headers: headers({ Prefer: 'resolution=ignore-duplicates,return=minimal' }),
+        headers: headers({ Prefer: 'return=minimal' }),
         body: JSON.stringify(record)
       });
-      return { ok: r.ok, status: r.status, text: r.ok ? '' : await r.text() };
+      const ok = r.ok || r.status === 409;
+      return { ok, status: r.status, text: ok ? '' : await r.text() };
     },
     pending() { try { return JSON.parse(LS.get('switch_pending', '[]')); } catch (e) { return []; } },
     queue(record) { const q = S.pending(); q.push(record); LS.set('switch_pending', JSON.stringify(q)); },
@@ -89,12 +93,15 @@
     /* ---- reminders: one row per registered phone, keyed by the push endpoint ---- */
     async saveSubscription(record) {
       if (!live) return false;
-      const r = await fetch(rest(cfg.pushTable || 'push_subscriptions') + '?on_conflict=endpoint', {
-        method: 'POST',
-        headers: headers({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
-        body: JSON.stringify(record)
-      });
-      return r.ok;
+      // Insert first; if this phone is already registered (409 on the endpoint), update its row instead.
+      const t = rest(cfg.pushTable || 'push_subscriptions');
+      const r = await fetch(t, { method: 'POST', headers: headers({ Prefer: 'return=minimal' }), body: JSON.stringify(record) });
+      if (r.ok) return true;
+      if (r.status !== 409) return false;
+      const patch = Object.assign({}, record, { updated_at: new Date().toISOString() });
+      delete patch.endpoint;
+      const u = await fetch(t + '?endpoint=eq.' + encodeURIComponent(record.endpoint), { method: 'PATCH', headers: headers({ Prefer: 'return=minimal' }), body: JSON.stringify(patch) });
+      return u.ok;
     },
     async updateSchedule(participant, patch) {
       if (!live || !participant) return false;
