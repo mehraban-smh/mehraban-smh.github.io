@@ -184,6 +184,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .wd .dc{font-size:.82rem;font-weight:800;font-variant-numeric:tabular-nums}
 .wd .dc.zero{color:var(--muted);font-weight:600}
 .wd.today{background:var(--accent-soft)}
+.wd.future{opacity:.45}
 .wd.today .dn{color:var(--accent)}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .stat{padding:10px 8px 9px;border-radius:14px;background:var(--card2);text-align:center}

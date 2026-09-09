@@ -45,7 +45,8 @@ function seed(){
 const votes = () => store.votes.slice().sort((a,b)=>a.ts<b.ts?1:-1);
 const lastVote = () => votes()[0] || null;
 /* midnight at the start of the 7-day window that ends today */
-function weekStart(){ const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-6); return d; }
+/* Monday 00:00 of the current calendar week (the week strip and the "this week" figures use it). */
+function weekStart(){ const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; }
 function insight(){
   const week = store.votes.filter(v => new Date(v.ts) >= weekStart() && typeof v.tsv==='number');
   if(week.length<2) return 'After a few more check-ins this will show what comfortable looks like for you.';
@@ -168,14 +169,17 @@ function weekStrip(){
   const byDay = {};
   store.votes.forEach(v => { const k = dayKey(new Date(v.ts)); (byDay[k] = byDay[k] || []).push(v); });
   const today = new Date(); today.setHours(0,0,0,0);
+  const monday = weekStart();
   let cols = '', total = 0;
-  for(let i=6; i>=0; i--){
-    const d = new Date(today); d.setDate(d.getDate()-i);
-    const list = byDay[dayKey(d)] || [];
+  for(let i=0; i<7; i++){                       // Monday to Sunday of this week; days still to come are dimmed
+    const d = new Date(monday); d.setDate(d.getDate()+i);
+    const future = d > today;
+    const list = future ? [] : (byDay[dayKey(d)] || []);
     total += list.length;
     const count = {}; list.forEach(v => { if(typeof v.tsv==='number') count[v.tsv] = (count[v.tsv]||0)+1; });
     const top = Object.entries(count).sort((a,b) => b[1]-a[1] || Math.abs(+a[0])-Math.abs(+b[0]))[0];
-    cols += `<div class="wd ${i===0?'today':''}" title="${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}"><span class="dn">${DAYS[d.getDay()][0]}</span>${top ? face(Number(top[0]), {plain:true}) : '<span class="none"></span>'}<span class="dc ${list.length?'':'zero'}">${list.length}</span></div>`;
+    const isToday = d.getTime() === today.getTime();
+    cols += `<div class="wd ${isToday?'today':''} ${future?'future':''}" title="${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}"><span class="dn">${DAYS[d.getDay()][0]}</span>${top ? face(Number(top[0]), {plain:true}) : '<span class="none"></span>'}<span class="dc ${list.length?'':'zero'}">${future ? '&middot;' : list.length}</span></div>`;
   }
   return `<div class="week"><div class="wk-head"><span class="eyebrow">This week</span><span>${total} check-in${total===1?'':'s'}</span></div><div class="wk-days">${cols}</div></div>`;
 }
