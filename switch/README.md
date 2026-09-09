@@ -52,6 +52,9 @@ The link is public, so a registration has to be approved before it counts:
 
 After you run the new `supabase-setup.sql` on an existing project, everyone already registered shows as waiting;
 approve them on the dashboard (one issue listing them is opened on the next hourly run unless you get there first).
+Until you have run it, the dashboard shows the notice "The database has not been updated yet: run supabase-setup.sql
+again in Supabase, then Refresh" instead of the waiting list (there is no `approved` column to set yet), and the
+Approve and Remove buttons say the same if the database refuses them.
 
 **What the email protects, and what it does not.** The email address is the participant's only credential: "I have
 registered before" returns the code and first name for any email that is on the list, so anyone who knows an approved
@@ -61,6 +64,16 @@ for), nobody can read another participant's data through the app, and a password
 participants than it would protect. The only thing that leaks to a guessed *code* is whether it has been approved
 (`participant_status` returns nothing else). If you ever suspect misuse, remove the participant on the dashboard and
 ask them to register again.
+
+## The check-in
+
+Every check-in asks the **same twelve questions in the same order** (on a repeat check-in, answering "Yes, still the same" copies the five core answers from the last check-in and asks the remaining seven; the stored row is still the full twelve, marked `same_as_last`): thermal sensation, preference, clothing,
+activity, room, acceptability, overall comfort, what has changed since last time, air movement (and what they would
+like), humidity, sunlight, and anything else worth noting. There are no alternating sets: two check-ins from the same
+participant, or from two participants, always hold the same fields, so the rows in `comfort_votes` compare directly.
+
+**My check-ins** on the start screen lists everything submitted from that phone, with three small charts at the top.
+Tapping a row opens a pop-up summary of that check-in; the list itself is the only part of the app that scrolls.
 
 ## Testing
 
@@ -80,7 +93,11 @@ Every hour, on the hour, a GitHub Actions workflow (`.github/workflows/push-remi
   is due. At the top of every hour a phone is sent to when reminders are on and not paused (the participant has not
   said they are out), at least an hour has passed since they said they had just got in, at least 30 minutes have
   passed since their last check-in, and the phone's local time is inside the participant's home hours (weekdays
-  17:00–22:30 and weekends 09:00–22:30 unless they change it in the app). The interval is `reminderIntervalMin`
+  17:00–22:30 and weekends 09:00–22:30 unless they change it in the app). Anyone who wants a more customised
+  schedule can add a **second window** for weekdays and for weekends on the reminder-hours screen (say 06:00–09:00
+  as well as 17:00–22:30); a reminder is then due inside either window. The second window is stored in
+  `weekday2_start/end` and `weekend2_start/end` in `push_subscriptions`, empty when unused, and the sender ignores
+  it unless both times are set and the start is before the end. The interval is `reminderIntervalMin`
   in `config.js` (60), the same number the app shows; GitHub's hourly schedule is not punctual (consecutive runs
   can be 48 to 70 minutes apart), so the sender only refuses to remind the same phone again within half an
   interval (30 minutes), which stops a late run followed by an early one from sending two in a row without ever
@@ -94,8 +111,8 @@ without opening the app. On iPhone the notification opens the app, which asks "A
 
 One-time setup, after the database setup above:
 
-1. Run `supabase-setup.sql` again in the Supabase SQL editor. It also creates `push_subscriptions` and the
-   approval columns and functions.
+1. Run `supabase-setup.sql` again in the Supabase SQL editor. It also creates `push_subscriptions`, the
+   approval columns and functions, and the columns for the optional second reminder window.
 2. In the GitHub repository open **Settings -> Secrets and variables -> Actions** and add two repository secrets:
    - `SUPABASE_SERVICE_ROLE_KEY`: a **secret key** from Settings -> API Keys -> Secret keys -> "Create new secret key"
      (`sb_secret_...`, shown once). It bypasses row-level security, so it must only ever live in this secret, never
@@ -106,7 +123,9 @@ One-time setup, after the database setup above:
    secret: the workflow uses its own `GITHUB_TOKEN`, which the workflow file grants `issues: write`.
 3. Test it: **Actions → Comfort check-in reminders → Run workflow**, type a participant code that has turned
    reminders on, and the phone should buzz within a minute. Tick "dry run" to only see the decisions and the
-   issue that would be opened in the log, without sending or changing anything.
+   issue that would be opened in the log, without sending or changing anything. On your own machine,
+   `SELFTEST=1 node send.js` (Git Bash, macOS, Linux) or `$env:SELFTEST=1; node send.js` (PowerShell) in `switch/push` checks the decision rules (home hours, the second window, pauses)
+   against known cases with no secrets and no network.
 
 Participants turn reminders on from the "Turn on reminders" card on the app's start screen. On iPhone this only
 works inside the home-screen copy of the app, and the app says so.
