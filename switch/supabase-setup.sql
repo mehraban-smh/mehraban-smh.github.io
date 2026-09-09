@@ -188,6 +188,10 @@ create table if not exists public.push_subscriptions (
   weekday_end     text not null default '22:30',
   weekend_start   text not null default '09:00',
   weekend_end     text not null default '22:30',
+  weekday2_start  text,                          -- optional second window for participants who want a more
+  weekday2_end    text,                          --   customised schedule, "HH:MM" on the phone's clock,
+  weekend2_start  text,                          --   null when unused. The sender reminds inside either
+  weekend2_end    text,                          --   window; a second window with start >= end is ignored.
   interval_min    integer not null default 60,   -- informational; the sender uses reminderIntervalMin from config.js
   enabled         boolean not null default true,
   paused_until    timestamptz,                   -- set when the participant says they are out
@@ -199,6 +203,11 @@ create table if not exists public.push_subscriptions (
   updated_at      timestamptz not null default now()
 );
 alter table public.push_subscriptions alter column interval_min set default 60;
+-- Projects set up before the second reminder window existed get its four columns here.
+alter table public.push_subscriptions add column if not exists weekday2_start text;
+alter table public.push_subscriptions add column if not exists weekday2_end text;
+alter table public.push_subscriptions add column if not exists weekend2_start text;
+alter table public.push_subscriptions add column if not exists weekend2_end text;
 create index if not exists push_subscriptions_participant on public.push_subscriptions (participant);
 
 alter table public.push_subscriptions enable row level security;

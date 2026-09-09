@@ -15,6 +15,25 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   };
   const pad = n => String(n).padStart(2, '0');
+  const SECOND_WINDOW = ['weekday2_start', 'weekday2_end', 'weekend2_start', 'weekend2_end'];
+  const stripSecondWindow = o => { const c = Object.assign({}, o); SECOND_WINDOW.forEach(k => { delete c[k]; }); return c; };
+  // True when a 400 came from PostgREST not knowing the second-window columns yet.
+  const missingSecondWindow = async r => { if (r.status !== 400) return false; const text = await r.clone().text().catch(() => ''); return /(weekday|weekend)2_(start|end)/.test(text); };
+
+  /* Turns a failed dashboard write into an Error that says what the server said. A 401 keeps its
+   * wording (the dashboard sends the researcher back to sign in). When the message is about a column,
+   * function or table the database does not have, supabase-setup.sql has not been run again since that
+   * feature was added, and the message opens with exactly that, because it is what the researcher has
+   * to do. Postgres: 42703 undefined column, 42883 undefined function, 42P01 undefined table.
+   * PostgREST: PGRST202 function, PGRST204 column and PGRST205 table missing from the schema cache. */
+  async function writeError(r, what) {
+    if (r.status === 401) return new Error('Your session has expired, please sign in again');
+    const j = await r.json().catch(() => null);
+    const msg = String((j && (j.message || j.hint || j.error_description || j.error)) || '').trim();
+    const code = String((j && j.code) || '');
+    const missing = /^(42703|42883|42P01|PGRST20[245])$/.test(code) || (/column|function|table|relation/i.test(msg) && /does not exist|could not find/i.test(msg));
+    return new Error((missing ? 'The database has not been updated yet: run supabase-setup.sql again in Supabase. ' : '') + what + ' (' + r.status + ')' + (msg ? ': ' + msg : ''));
+  }
 
   const S = {
     live, cfg,
@@ -125,14 +144,15 @@
     // Both write functions ask PostgREST to return the rows it touched and resolve to true only when
     // there was at least one: a 2xx with an empty array means the code no longer exists (someone
     // else removed it, or the list is stale), which the dashboard reports rather than hides.
-    // They reject on a network failure.
+    // They reject on a network failure, and on a refused request with the server's own message
+    // (see writeError above), so the dashboard alert can say what to do.
     async setApproval(token, code, approved) {
       const r = await fetch(rest('participants') + '?code=eq.' + encodeURIComponent(code), {
         method: 'PATCH',
         headers: headers({ Authorization: 'Bearer ' + token, Prefer: 'return=representation' }),
         body: JSON.stringify({ approved: !!approved, updated_at: new Date().toISOString() })
       });
-      if (!r.ok) throw new Error(r.status === 401 ? 'Your session has expired, please sign in again' : 'Could not update the participant (' + r.status + ')');
+      if (!r.ok) throw await writeError(r, 'Could not update the participant');
       const rows = await r.json().catch(() => null);
       return Array.isArray(rows) && rows.length > 0;
     },
@@ -142,33 +162,38 @@
     async removeParticipant(token, code) {
       const h = headers({ Authorization: 'Bearer ' + token, Prefer: 'return=representation' });
       const phones = await fetch(rest(cfg.pushTable || 'push_subscriptions') + '?participant=eq.' + encodeURIComponent(code), { method: 'DELETE', headers: h });
-      if (!phones.ok) throw new Error(phones.status === 401 ? 'Your session has expired, please sign in again' : 'Could not remove the registered phones (' + phones.status + ')');
+      if (!phones.ok) throw await writeError(phones, 'Could not remove the registered phones');
       const r = await fetch(rest('participants') + '?code=eq.' + encodeURIComponent(code), { method: 'DELETE', headers: h });
-      if (!r.ok) throw new Error(r.status === 401 ? 'Your session has expired, please sign in again' : 'Could not remove the participant (' + r.status + ')');
+      if (!r.ok) throw await writeError(r, 'Could not remove the participant');
       const rows = await r.json().catch(() => null);
       return Array.isArray(rows) && rows.length > 0;
     },
 
     /* ---- reminders: one row per registered phone, keyed by the push endpoint ---- */
-    async saveSubscription(record) {
+    // The optional second reminder window lives in four columns added later. Until supabase-setup.sql
+    // has been re-run on a project, PostgREST refuses any write that names them (400, unknown column),
+    // so those writes are retried once without them rather than failing reminder sign-up outright.
+    async saveSubscription(record, retried) {
       if (!live) return false;
       // Insert first; if this phone is already registered (409 on the endpoint), update its row instead.
       const t = rest(cfg.pushTable || 'push_subscriptions');
       const r = await fetch(t, { method: 'POST', headers: headers({ Prefer: 'return=minimal' }), body: JSON.stringify(record) });
       if (r.ok) return true;
+      if (!retried && await missingSecondWindow(r)) return S.saveSubscription(stripSecondWindow(record), true);
       if (r.status !== 409) return false;
       const patch = Object.assign({}, record, { updated_at: new Date().toISOString() });
       delete patch.endpoint;
       const u = await fetch(t + '?endpoint=eq.' + encodeURIComponent(record.endpoint), { method: 'PATCH', headers: headers({ Prefer: 'return=minimal' }), body: JSON.stringify(patch) });
       return u.ok;
     },
-    async updateSchedule(participant, patch) {
+    async updateSchedule(participant, patch, retried) {
       if (!live || !participant) return false;
       const r = await fetch(rest(cfg.pushTable || 'push_subscriptions') + '?participant=eq.' + encodeURIComponent(participant), {
         method: 'PATCH',
         headers: headers({ Prefer: 'return=minimal' }),
         body: JSON.stringify(Object.assign({ updated_at: new Date().toISOString() }, patch))
       });
+      if (!r.ok && !retried && await missingSecondWindow(r)) return S.updateSchedule(participant, stripSecondWindow(patch), true);
       return r.ok;
     },
     async disableSubscription(endpoint) {

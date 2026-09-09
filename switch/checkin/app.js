@@ -59,28 +59,22 @@ function insight(){
 
 /* ---------- session state and navigation ---------- */
 let S = { screen:'start', flow:[], i:0, a:{}, t0:null, mode:'self', same:false, lock:false, hist:[], edit:false };
-const extMode = () => (DEBUG && $('#extMode')) ? $('#extMode').value : 'rotate';
-function buildFlow(){
-  const m = extMode(), n = store.votes.length;
-  return m==='none' ? [] : m==='all' ? [...EXT_A, ...EXT_B] : (n%2===0 ? EXT_A : EXT_B);
-}
 function startSession(mode){
   S = { screen:'start', flow:[], i:0, a:{}, t0:Date.now(), mode, same:false, lock:false, hist:[], edit:false };
   go('home');
 }
+/* The same twelve questions every time (FLOW_ALL, questions.js). "Still the same as last time?" keeps the
+ * five core answers from the last check-in and asks the remaining seven in the same order. */
 function beginQuestions(same){
   const last = lastVote();
   S.same = same;
   if(last) Object.assign(S.a, { tsv:last.tsv, tp:last.tp, clo:[...(last.garments||[])], act:last.act, room:last.room });
-  if(same && last){
-    S.flow = buildFlow();
-    if(!S.flow.length){ go('review'); return; }
-  } else {
-    S.flow = [...CORE, ...buildFlow()];
-  }
+  S.flow = same && last ? FLOW_ALL.filter(q => !CORE.includes(q)) : [...FLOW_ALL];
   S.i = 0; go('q');
 }
 function go(screen, opts={}){
+  closeSheet();
+  if(screen==='reminders') remDraft = null;                 // a fresh visit shows the saved hours
   if(screen==='start' || screen==='pending' || screen==='welcome'){ S.hist = []; }
   else if(!opts.replace && S.screen!==screen) S.hist.push(S.screen);
   S.screen = screen; render();
@@ -90,10 +84,11 @@ function next(){
   if(S.i < S.flow.length-1){ S.i++; render(); } else { go('review'); }
 }
 function back(){
+  if(SHEET){ closeSheet(); return; }                        // the Back pill first closes an open detail sheet
   if(S.screen==='q' && S.i>0 && !S.edit){ S.i--; render(); return; }
   S.edit = false;
   const prev = S.hist.pop();
-  if(!prev || prev==='q' && S.screen==='review' && !S.flow.length){ S.screen='start'; S.hist=[]; render(); return; }
+  if(!prev){ S.screen='start'; S.hist=[]; render(); return; }
   if(prev==='q'){ S.i = Math.max(0, S.flow.length-1); }
   S.screen = prev; render();
 }
@@ -102,13 +97,30 @@ function back(){
 const hm = s => { const m = /^(\d{1,2}):(\d{2})/.exec(s||''); return m ? [Number(m[1]), Number(m[2])] : null; };
 /* the same moment if it is on the hour, otherwise the next whole hour */
 function ceilHour(d){ const c = new Date(d); if(c.getMinutes() || c.getSeconds() || c.getMilliseconds()) c.setHours(c.getHours()+1, 0, 0, 0); return c; }
+/* The home-hour windows on the day of d, as {start,end} Dates sorted by start: the weekday or weekend
+ * pair (defaults when unset) plus the optional second pair, and only windows with start < end. */
+function dayWindows(d, h){
+  const p = (d.getDay()===0 || d.getDay()===6) ? 'weekend' : 'weekday';
+  const wins = [];
+  [['', true], ['2', false]].forEach(([sfx, dflt]) => {
+    const s = hm(h[p+sfx+'_start']) || (dflt ? hm(DEFAULT_HOURS[p+'_start']) : null);
+    const e = hm(h[p+sfx+'_end']) || (dflt ? hm(DEFAULT_HOURS[p+'_end']) : null);
+    if(!s || !e) return;
+    const start = new Date(d); start.setHours(s[0], s[1], 0, 0);
+    const end = new Date(d); end.setHours(e[0], e[1], 0, 0);
+    if(start < end) wins.push({ start, end });
+  });
+  return wins.sort((a, b) => a.start - b.start);
+}
 /* The next moment the sender (switch/push/send.js) can actually send. It runs at the top of every hour and
  * sends when reminders are not paused (the hour of settling in after "I just got in" counts as a pause),
- * at least GAP_MIN minutes have passed since the last check-in, and the phone's clock is inside the
- * participant's home hours. So: the earliest allowed moment, rounded up to the next whole hour, then
- * pushed into home hours day by day (weekday and weekend hours differ). With hours 06:00-23:00 a
- * check-in at 22:45 gives "tomorrow at 06:00", one at 14:10 gives "today at 15:00", and "just got in"
- * at 18:05 gives "today at 20:00". */
+ * at least GAP_MIN minutes have passed since the last check-in, and the phone's clock is inside one of
+ * the participant's home-hour windows. So: the earliest allowed moment, rounded up to the next whole
+ * hour; if that is inside a window of the day it is the answer, otherwise the next window start of the
+ * day (rounded up to the hour), otherwise the first window of the following day, and so on for a week.
+ * With one window 06:00-23:00 a check-in at 22:45 gives "tomorrow at 06:00", one at 14:10 "today at
+ * 15:00". With 06:00-09:00 and 17:00-23:00 a check-in at 08:45 gives "today at 17:00", at 07:20
+ * "today at 08:00", at 22:50 "tomorrow at 06:00" and at 12:00 "today at 17:00". */
 function nextReminder(){
   const now = new Date(), h = hours();
   let t = now.getTime();
@@ -117,13 +129,10 @@ function nextReminder(){
   if(store.paused && new Date(store.paused) > now) t = Math.max(t, new Date(store.paused).getTime());
   let c = ceilHour(new Date(t));
   for(let i=0; i<8; i++){
-    const we = c.getDay()===0 || c.getDay()===6;
-    const s = hm(we ? h.weekend_start : h.weekday_start) || hm(we ? DEFAULT_HOURS.weekend_start : DEFAULT_HOURS.weekday_start);
-    const e = hm(we ? h.weekend_end : h.weekday_end) || hm(we ? DEFAULT_HOURS.weekend_end : DEFAULT_HOURS.weekday_end);
-    const start = new Date(c); start.setHours(s[0], s[1], 0, 0);
-    const end = new Date(c); end.setHours(e[0], e[1], 0, 0);
-    if(c < start) return ceilHour(start);
-    if(c <= end) return c;
+    for(const w of dayWindows(c, h)){
+      const s = ceilHour(c > w.start ? c : w.start);        // c itself when already inside, else the window start
+      if(s <= w.end) return s;
+    }
     c = new Date(c); c.setDate(c.getDate()+1); c.setHours(0,0,0,0);
   }
   return c;
@@ -141,7 +150,7 @@ function statusCard(){
   const now = Date.now();
   if(store.pausedWhy==='manual') return `<div class="status">${ic('pause')}<div><b>Paused until you are back</b><span>Tap &ldquo;Check in now&rdquo; when you are home again.</span></div></div>`;
   if(store.paused && new Date(store.paused) > now){
-    if(store.pausedWhy==='settling') return `<div class="status">${ic('clock')}<div><b>Settling in, next check-in ${whenWord(nextReminder())}</b><span>At least an hour at home before the first question.</span></div></div>`;
+    if(store.pausedWhy==='settling') return `<div class="status">${ic('clock')}<div><b>Settling in</b><span>Next check-in ${whenWord(nextReminder())}.</span></div></div>`;
     return `<div class="status">${ic('pause')}<div><b>Paused until ${fmt(new Date(store.paused))}</b><span>No reminders while you are out. Next one ${whenWord(nextReminder())}.</span></div></div>`;
   }
   const remindersOn = typeof PUSH !== 'undefined' && PUSH.status && PUSH.status() === 'on';
@@ -198,6 +207,63 @@ function lastDetails(l){
     Array.isArray(l.notes) && li(ic(byId(NOTES, l.notes[0])?.ic || 'info'), l.notes.length ? namesOf(NOTES, l.notes) : 'Nothing to note')
   ].filter(Boolean).join('');
 }
+/* Three small charts at the top of "My check-ins", from every check-in on this phone: how often each
+ * sensation was felt, check-ins per day over the last 14 days, and the split of preferences. Plain divs
+ * coloured with the scale tokens, so they follow the theme. Under two check-ins: a friendly placeholder. */
+const BAR_H = 40;                                          // tallest bar, px
+function charts(list){
+  if(list.length < 2) return `<div class="viz"><div class="vc wide empty">${ic('bulb')}<div>Your charts appear here after a couple of check-ins.</div></div></div>`;
+  const cnt = {}; list.forEach(v => { if(typeof v.tsv==='number') cnt[v.tsv] = (cnt[v.tsv]||0)+1; });
+  const maxS = Math.max(1, ...Object.values(cnt));
+  const sens = TSV.map(t => { const c = cnt[t.v]||0;
+    return `<div class="col" title="${t.w}: ${c}"><span class="n">${c||''}</span><i class="b ${c?'':'zero'}" style="${c ? `height:${Math.max(4, Math.round(c/maxS*BAR_H))}px;background:${tsvColour(t.v)}` : ''}"></i></div>`; }).join('');
+  const byDay = {}; list.forEach(v => { const k = dayKey(new Date(v.ts)); byDay[k] = (byDay[k]||0)+1; });
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = []; for(let i=13; i>=0; i--){ const d = new Date(today); d.setDate(d.getDate()-i); days.push({ d, c: byDay[dayKey(d)]||0 }); }
+  const maxD = Math.max(1, ...days.map(x => x.c));
+  const dcols = days.map((x, i) => `<div class="col ${i===13?'today':''}" title="${DAYS[x.d.getDay()]} ${x.d.getDate()} ${MONTHS[x.d.getMonth()]}: ${x.c}"><span class="n">${x.c||''}</span><i class="b ${x.c?'':'zero'}" style="${x.c ? `height:${Math.max(4, Math.round(x.c/maxD*BAR_H))}px` : ''}"></i></div>`).join('');
+  const f = days[0].d;
+  const pc = { cooler:0, same:0, warmer:0 }; let pn = 0;
+  list.forEach(v => { if(v.tp in pc){ pc[v.tp]++; pn++; } });
+  const pct = k => pn ? Math.round(pc[k]/pn*100) : 0;
+  return `<div class="viz">
+    <div class="vc"><div class="cap">Sensation</div><div class="bars">${sens}</div><div class="axis">${TSV.map(t => `<span>${signed(t.v)}</span>`).join('')}</div></div>
+    <div class="vc"><div class="cap">Check-ins per day</div><div class="bars">${dcols}</div><div class="axis ends"><span>${f.getDate()} ${MONTHS[f.getMonth()]}</span><span class="td">Today</span></div></div>
+    <div class="vc wide"><div class="cap">Preference<small>${pn} check-in${pn===1?'':'s'}</small></div>
+      <div class="pbar"><i class="pc" style="flex-grow:${pc.cooler}"></i><i class="pn" style="flex-grow:${pc.same}"></i><i class="pw" style="flex-grow:${pc.warmer}"></i></div>
+      <div class="legend"><span><i class="pc"></i>Cooler <b>${pct('cooler')}%</b></span><span><i class="pn"></i>No change <b>${pct('same')}%</b></span><span><i class="pw"></i>Warmer <b>${pct('warmer')}%</b></span></div></div>
+  </div>`;
+}
+/* ---------- the detail sheet over "My check-ins" ---------- */
+let SHEET = null;                                          // id of the check-in shown in the bottom sheet, or null
+const voteId = v => v.id || v.ts;
+function dateWord(d){
+  const now = new Date(), yest = new Date(now); yest.setDate(yest.getDate()-1);
+  const k = dayKey(d);
+  const day = k===dayKey(now) ? 'Today' : k===dayKey(yest) ? 'Yesterday' : `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return `${day} at ${fmt(d)}`;
+}
+const secsWord = s => !s ? '' : s < 90 ? `${s} second${s===1?'':'s'}` : `${Math.floor(s/60)} min ${s%60} s`;
+function openSheet(id){
+  const v = store.votes.find(x => voteId(x)===id); if(!v) return;
+  SHEET = id;
+  const d = new Date(v.ts);
+  const meta = [
+    `<span>${ic(v.type==='scheduled' ? 'bell' : 'user')}${v.type==='scheduled' ? 'From a reminder' : 'Self-started'}</span>`,
+    v.secs ? `<span>${ic('clock')}Took ${secsWord(v.secs)}</span>` : '',
+    v.same ? `<span>${ic('refresh')}Same as the time before</span>` : '',
+    v.example ? `<span>${ic('info')}Example data</span>` : ''
+  ].filter(Boolean).join('');
+  $('#sheet').innerHTML = `<div class="sh-head"><div><div class="eyebrow">Check-in</div><b>${dateWord(d)}</b></div><button class="x" data-act="sheet-close" aria-label="Close">${ic('x')}</button></div>
+    <div class="sh-body"><div class="last"><div class="when">What you logged</div><div class="fig">${avatar(v.garments||[])}</div><ul>${lastDetails(v)}</ul></div><div class="sh-meta">${meta}</div></div>`;
+  $('#backdrop').hidden = false; $('#sheet').hidden = false;
+  $('#sheet .x').focus({ preventScroll:true });
+}
+function closeSheet(){
+  if(!SHEET) return;
+  SHEET = null;
+  $('#sheet').hidden = true; $('#backdrop').hidden = true; $('#sheet').innerHTML = '';
+}
 const SCREENS = {
   welcome: () => `<div class="hero"><div class="eyebrow">SWITCH &middot; Personal comfort study</div><h1 class="h1">Welcome</h1><p class="sub">Short check-ins while you are at home teach the system what comfortable means for you. Registering takes about a minute and happens once.</p></div>
     ${welcomeNote ? `<div class="msg" id="welcomeMsg">${ic('info')}<div>${esc(welcomeNote)}</div></div>` : ''}
@@ -242,9 +308,9 @@ const SCREENS = {
       const d = new Date(v.ts), k = dayKey(d);
       if(k !== day){ day = k; const today = k===dayKey(new Date()); html += `<li class="day">${today ? 'Today' : DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()]}</li>`; }
       const bits = [byId(TP,v.tp)?.n && 'prefer ' + byId(TP,v.tp).n.toLowerCase(), byId(ROOMS,v.room)?.n, typeof v.clo==='number' && v.clo.toFixed(2) + ' clo', v.ta && taWord(v.ta).toLowerCase()].filter(Boolean).join(' &middot; ');
-      html += `<li class="item">${typeof v.tsv==='number' ? face(v.tsv) : ''}<div><b>${typeof v.tsv==='number' ? tsvWord(v.tsv) + ' (' + signed(v.tsv) + ')' : 'Check-in'}</b><span>${bits}</span></div><time>${fmt(d)}</time></li>`;
+      html += `<li class="item" data-act="show" data-id="${esc(voteId(v))}" role="button" tabindex="0">${typeof v.tsv==='number' ? face(v.tsv) : '<span></span>'}<div><b>${typeof v.tsv==='number' ? tsvWord(v.tsv) + ' (' + signed(v.tsv) + ')' : 'Check-in'}</b><span>${bits}</span></div><time>${fmt(d)}</time>${ic('chev','go')}</li>`;
     });
-    return qhead('History', 'My check-ins', `${list.length} on this phone, newest first. For viewing only.`) + `<ul class="hist">${html}</ul>`;
+    return qhead('History', 'My check-ins', `${list.length} on this phone, newest first. Tap one for the details.`) + charts(list) + `<ul class="hist">${html}</ul>`;
   },
   home: () => qhead('Before we start', 'Are you at home right now?', 'We only ask about comfort once you have settled in.') +
     `<div class="rows fill">
@@ -294,11 +360,15 @@ const SCREENS = {
       `<div class="actions"><button class="btn primary" data-act="go" data-to="start">Done</button></div></div>`;
   },
   reminders: () => {
-    const st = PUSH.status(), h = hours();
-    const form = `<div><div class="duo"><div class="lab">When are you usually at home?</div></div><div class="hours">
-        <label>Weekdays from<input type="time" id="h_ws" value="${h.weekday_start}"></label><label>until<input type="time" id="h_we" value="${h.weekday_end}"></label>
-        <label>Weekends from<input type="time" id="h_es" value="${h.weekend_start}"></label><label>until<input type="time" id="h_ee" value="${h.weekend_end}"></label></div>
-        <p class="note" style="margin-top:6px">Reminders only arrive inside these hours, and never within an hour of you saying you have just got home.</p></div>`;
+    const st = PUSH.status(), h = remDraft || hours();
+    const tin = (id, v, lab) => `<input type="time" id="${id}" value="${esc(v||'')}" aria-label="${lab}">`;
+    /* one day type: its from/until row, then either the optional second period (with a remove control) or the link that adds one */
+    const grp = (p, name, ids) => `<div class="hrow"><label class="hl" for="${ids[0]}">${name}</label>${tin(ids[0], h[p+'_start'], name+' from')}<span class="to">to</span>${tin(ids[1], h[p+'_end'], name+' until')}<span class="hx"></span></div>` +
+      (h[p+'2_start'] || h[p+'2_end']
+        ? `<div class="hrow"><label class="hl" for="${ids[2]}">and</label>${tin(ids[2], h[p+'2_start'], name+', second period, from')}<span class="to">to</span>${tin(ids[3], h[p+'2_end'], name+', second period, until')}<button class="hx" data-act="rm-win" data-w="${p}" aria-label="Remove the second ${name.toLowerCase()} period">${ic('x')}</button></div>`
+        : `<div class="hrow"><button class="addw" data-act="add-win" data-w="${p}">+ Add another period</button></div>`);
+    const form = `<div class="hours"><div class="lab">When are you usually at home?</div>${grp('weekday', 'Weekdays', ['h_ws','h_we','h_ws2','h_we2'])}${grp('weekend', 'Weekends', ['h_es','h_ee','h_es2','h_ee2'])}
+        <p class="note">Reminders only arrive inside these hours, and never within an hour of you saying you have just got home.</p></div>`;
     const backBtn = `<button class="btn secondary" data-act="back">Back</button>`;
     let body = '', actions = '';
     if(st === 'install'){ body = `<ol class="steps"><li><div>Tap the <b>Share</b> button in Safari.</div></li><li><div>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</div></li><li><div>Open the app from your home screen and turn on reminders there.</div></li></ol>`; actions = backBtn; }
@@ -509,8 +579,23 @@ async function afterRefusal(){
 
 /* ---------- reminders ---------- */
 const HOURS_KEY = 'switch_hours';
-const DEFAULT_HOURS = { weekday_start:'17:00', weekday_end:'22:30', weekend_start:'09:00', weekend_end:'22:30' };
-function hours(){ try{ return Object.assign({}, DEFAULT_HOURS, JSON.parse(LS.get(HOURS_KEY)||'{}')); }catch(e){ return Object.assign({}, DEFAULT_HOURS); } }
+/* Home hours: a weekday and a weekend window, plus an optional second window for each (null when unused).
+ * The same eight fields go to push_subscriptions, where the sender reads them. */
+const DEFAULT_HOURS = { weekday_start:'17:00', weekday_end:'22:30', weekend_start:'09:00', weekend_end:'22:30', weekday2_start:null, weekday2_end:null, weekend2_start:null, weekend2_end:null };
+function hours(){
+  let h; try{ h = Object.assign({}, DEFAULT_HOURS, JSON.parse(LS.get(HOURS_KEY)||'{}')); }catch(e){ h = Object.assign({}, DEFAULT_HOURS); }
+  ['weekday','weekend'].forEach(p => {                     // a second window counts only with both ends set
+    const ok = hm(h[p+'2_start']) && hm(h[p+'2_end']);
+    h[p+'2_start'] = ok ? String(h[p+'2_start']) : null; h[p+'2_end'] = ok ? String(h[p+'2_end']) : null;
+  });
+  return h;
+}
+let remDraft = null;                                       // unsaved hours on the reminders screen while a second period is added or removed
+/* "07:00–09:00 & 17:00–22:30", windows in order of the day */
+function hoursWord(h, p){
+  const w = [[h[p+'_start'], h[p+'_end']], [h[p+'2_start'], h[p+'2_end']]].filter(x => x[0] && x[1]).sort((a, b) => a[0] < b[0] ? -1 : 1);
+  return w.map(x => `${x[0]}&ndash;${x[1]}`).join(' &amp; ');
+}
 const PUSH = {
   supported: 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window,
   standalone: matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
@@ -544,7 +629,7 @@ function reminderCard(){
   if(st === 'unconfigured') return '';
   const h = hours();
   const map = {
-    on:          ['bell',  'Reminders are on', `Weekdays ${h.weekday_start}&ndash;${h.weekday_end}, weekends ${h.weekend_start}&ndash;${h.weekend_end}`],
+    on:          ['bell',  'Reminders are on', `Weekdays ${hoursWord(h, 'weekday')}<br>Weekends ${hoursWord(h, 'weekend')}`],
     off:         ['bell',  'Turn on reminders', 'A nudge once an hour while you are at home'],
     install:     ['pin',   'Add to your home screen', 'Reminders need the app on your home screen'],
     blocked:     ['pause', 'Reminders are blocked', 'Allow notifications to turn them on'],
@@ -553,7 +638,16 @@ function reminderCard(){
   const [icon, t, s] = map[st];
   return `<button class="rem ${st==='on'?'on':''}" data-act="go" data-to="reminders">${ic(icon)}<div><b>${t}</b><span>${s}</span></div>${ic('chev','go')}</button>`;
 }
-function readHours(){ return { weekday_start: $('#h_ws').value || DEFAULT_HOURS.weekday_start, weekday_end: $('#h_we').value || DEFAULT_HOURS.weekday_end, weekend_start: $('#h_es').value || DEFAULT_HOURS.weekend_start, weekend_end: $('#h_ee').value || DEFAULT_HOURS.weekend_end }; }
+/* The eight hour fields as the form shows them: the main windows fall back to the defaults, a second
+ * window is null unless its row is present and both ends are filled in. */
+function readHours(){
+  const val = id => { const el = $('#'+id); return el && el.value ? el.value : null; };
+  const pair = (a, b) => { const s = val(a), e = val(b); return s && e ? [s, e] : [null, null]; };
+  const h = { weekday_start: val('h_ws') || DEFAULT_HOURS.weekday_start, weekday_end: val('h_we') || DEFAULT_HOURS.weekday_end, weekend_start: val('h_es') || DEFAULT_HOURS.weekend_start, weekend_end: val('h_ee') || DEFAULT_HOURS.weekend_end };
+  [h.weekday2_start, h.weekday2_end] = pair('h_ws2', 'h_we2');
+  [h.weekend2_start, h.weekend2_end] = pair('h_es2', 'h_ee2');
+  return h;
+}
 function remMsg(t, ok){ const m = $('#remMsg'); if(!m) return; m.hidden = false; m.className = 'msg' + (ok ? ' ok' : ''); m.innerHTML = t; }
 
 /* ---------- events ---------- */
@@ -577,17 +671,20 @@ $('#screen').addEventListener('click', async e => {
     case 'next': next(); break;
     case 'edit': { const i = S.flow.indexOf(d.q); if(i>=0){ S.i=i; S.edit=true; S.hist.push('review'); S.screen='q'; render(); } break; }
     case 'submit': submit(); break;
+    case 'show': openSheet(d.id); break;
+    case 'add-win': { remDraft = readHours(); remDraft[d.w+'2_start'] = '07:00'; remDraft[d.w+'2_end'] = '09:00'; rerender(); $('#'+(d.w==='weekday'?'h_ws2':'h_es2'))?.focus({ preventScroll:true }); break; }
+    case 'rm-win': { remDraft = readHours(); remDraft[d.w+'2_start'] = null; remDraft[d.w+'2_end'] = null; rerender(); break; }
     case 'register': register(); break;
     case 'signin': signin(); break;
     case 'recheck': recheck(false); break;
     case 'forget': forgetIdentity(''); break;
     case 'push-on': {
-      LS.set(HOURS_KEY, JSON.stringify(readHours())); b.disabled = true;
+      LS.set(HOURS_KEY, JSON.stringify(readHours())); remDraft = null; b.disabled = true;
       try{ await PUSH.enable(); rerender(); }
       catch(err){ b.disabled = false; remMsg(err.message || 'Something went wrong, please try again.'); }
       break; }
     case 'save-hours': {
-      const h = readHours(); LS.set(HOURS_KEY, JSON.stringify(h));
+      const h = readHours(); LS.set(HOURS_KEY, JSON.stringify(h)); remDraft = null;
       let ok = false; try{ ok = await SWITCH.updateSchedule(PARTICIPANT, h); }catch(err){}
       remMsg(ok ? 'Saved.' : 'Saved on this phone. The reminder service could not be reached right now.', ok);
       break; }
@@ -595,12 +692,18 @@ $('#screen').addEventListener('click', async e => {
   }
 });
 $('#screen').addEventListener('keydown', e => {
+  if(e.key===' ' && e.target.dataset && e.target.dataset.act==='show'){ e.preventDefault(); openSheet(e.target.dataset.id); return; }
   if(e.key!=='Enter') return;
+  if(e.target.dataset && e.target.dataset.act==='show'){ e.preventDefault(); openSheet(e.target.dataset.id); return; }
   if(e.target.id==='s_email'){ e.preventDefault(); signin(); }
   if(e.target.closest && e.target.closest('#regForm') && e.target.tagName==='INPUT'){ e.preventDefault(); }
 });
 $('#screen').addEventListener('submit', e => e.preventDefault());   // the forms never submit natively
 $('#back').addEventListener('click', back);
+/* the detail sheet lives outside #screen: its close button, the backdrop and Escape all close it */
+$('#sheet').addEventListener('click', e => { if(e.target.closest('[data-act="sheet-close"]')) closeSheet(); });
+$('#backdrop').addEventListener('click', closeSheet);
+document.addEventListener('keydown', e => { if(e.key==='Escape' && SHEET) closeSheet(); });
 setInterval(() => { if(S.screen==='pending' && !document.hidden) recheck(true); }, 60000);
 document.addEventListener('visibilitychange', () => { if(!document.hidden && S.screen==='pending') recheck(true); });
 

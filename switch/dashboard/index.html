@@ -154,13 +154,19 @@ function profileCard(p){
   if(!p) return `<div class="notice"><div>No profile is stored for this code. It registered before profiles existed, or it is test data.</div></div>`;
   const age = p.birth_year ? new Date().getFullYear() - p.birth_year : null;
   const f = (k, v) => `<div><span>${k}</span><b>${v ?? '&ndash;'}</b></div>`;
-  const status = p.approved ? '<i class="status-ok">Approved</i>' : '<i class="status-wait">Awaiting approval</i>';
-  const actions = localMode ? '' : `<div class="full" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${approveBtns(p)}<i class="hint">${p.approved ? 'Remove deletes the profile and any registered phones; check-ins already submitted are kept under the code.' : 'They cannot check in until approved. Remove anyone you do not recognise.'}</i></div>`;
+  const status = dbStale() ? '<i class="status-wait">Unknown until the database is updated</i>' : p.approved ? '<i class="status-ok">Approved</i>' : '<i class="status-wait">Awaiting approval</i>';
+  const actions = (localMode || dbStale()) ? '' : `<div class="full" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${approveBtns(p)}<i class="hint">${p.approved ? 'Remove deletes the profile and any registered phones; check-ins already submitted are kept under the code.' : 'They cannot check in until approved. Remove anyone you do not recognise.'}</i></div>`;
   return `<div class="profile">${f('Name', esc(p.name))}${f('Email', esc(p.email))}${f('Gender', GENDER[p.gender] || (p.gender ? esc(p.gender) : null))}${f('Age', age)}${f('Height', p.height_cm ? p.height_cm + ' cm' : null)}${f('Weight', p.weight_kg ? p.weight_kg + ' kg' : null)}${f('Thermal sensitivity', SENS[p.sensitivity] || null)}${f('Registered', (p.created_at||'').slice(0,10) || null)}${f('Status', status)}${actions}</div>`;
 }
+/* True when the participant rows have no "approved" column at all: supabase-setup.sql has not been run
+   since the approval step was added, so nothing can be approved yet. The data view says so instead of
+   listing everyone as waiting. */
+const dbStale = () => !localMode && people.length > 0 && !Object.prototype.hasOwnProperty.call(people[0], 'approved');
+// "Waiting" only means something once the database has the approved column.
+const waiting = p => !!p && !dbStale() && !p.approved;
 /* Shown at the top of "All participants" while anyone is waiting to be let in. */
 function pendingBlock(){
-  const pend = localMode ? [] : people.filter(p => !p.approved);
+  const pend = (localMode || dbStale()) ? [] : people.filter(p => !p.approved);
   if(!pend.length) return '';
   return `<div class="pending"><div class="phead"><b>${pend.length} waiting for approval</b><span>New registrations cannot check in until you approve them. Approve the people you expect and remove anyone you do not recognise.</span></div>
     ${pend.map(p => `<div class="prow"><code>${esc(p.code)}</code><div class="pwho"><b>${esc(p.name)}</b><span>${esc(p.email)} &middot; registered ${esc(fmtTs(p.created_at))}</span></div>${approveBtns(p)}</div>`).join('')}</div>`;
@@ -176,7 +182,8 @@ async function writeAction(btn, code, verb, call){
   if(ok === true) return true;
   btn.disabled = false;
   if(ok === false){ rowError(btn, 'Nothing changed, refresh and try again'); return false; }
-  alert('Could not ' + verb + ' ' + code + '. ' + why + 'Check the connection, and that supabase-setup.sql has been run again since the approval step was added, then try again.');
+  const tail = /supabase-setup\.sql/.test(why) ? 'Then try again.' : 'Check the connection, and that supabase-setup.sql has been run again since the approval step was added, then try again.';
+  alert('Could not ' + verb + ' ' + code + '. ' + why + tail);
   return false;
 }
 /* A short error after the Approve/Remove buttons of one row (replaced, not stacked, on a retry). */
@@ -256,10 +263,11 @@ function dataView(){
   $('#app').innerHTML = `<div class="layout">
     <aside><h2>Participants</h2>
       <button class="p ${sel==='ALL'?'on':''}" data-p="ALL"><b>All participants</b><span>${rows.length}</span></button>
-      ${codes.map(c => { const last = byP[c][0], pp = person(c); return `<button class="p ${sel===c?'on':''}" data-p="${esc(c)}"><b>${label(c)}</b><span>${byP[c].length}</span>${pp && !pp.approved ? '<i class="wait">Awaiting approval</i>' : ''}<small>${last ? 'last ' + esc(last.local_time||'') : 'no check-ins yet'}</small></button>`; }).join('')}
+      ${codes.map(c => { const last = byP[c][0], pp = person(c); return `<button class="p ${sel===c?'on':''}" data-p="${esc(c)}"><b>${label(c)}</b><span>${byP[c].length}</span>${waiting(pp) ? '<i class="wait">Awaiting approval</i>' : ''}<small>${last ? 'last ' + esc(last.local_time||'') : 'no check-ins yet'}</small></button>`; }).join('')}
     </aside>
     <section class="main">
-      <div class="toolbar"><div><h1>${sel==='ALL' ? 'All participants' : (p ? esc(p.name) + ' <span style="color:var(--ink-soft);font-weight:400">&middot; ' + esc(sel) + '</span>' : esc(sel))}</h1><div class="sub">${subset.length} check-ins${localMode ? ' &middot; stored in this browser only' : ''}${p && !p.approved ? ' &middot; <span class="status-wait">awaiting approval</span>' : ''}</div></div>
+      ${dbStale() ? '<div class="notice warn" role="alert"><div>The database has not been updated yet: run <code>supabase-setup.sql</code> again in Supabase, then Refresh.</div></div>' : ''}
+      <div class="toolbar"><div><h1>${sel==='ALL' ? 'All participants' : (p ? esc(p.name) + ' <span style="color:var(--ink-soft);font-weight:400">&middot; ' + esc(sel) + '</span>' : esc(sel))}</h1><div class="sub">${subset.length} check-ins${localMode ? ' &middot; stored in this browser only' : ''}${waiting(p) ? ' &middot; <span class="status-wait">awaiting approval</span>' : ''}</div></div>
         <div class="tools">${localMode ? '' : '<button class="btn ghost" id="refresh">Refresh</button>'}${infoBtn}<button class="btn ghost" id="csv">Download CSV</button><button class="btn" id="xlsx">Download Excel${sel==='ALL' ? ' (one sheet per participant)' : ''}</button></div></div>
       ${sel === 'ALL' ? pendingBlock() : ''}
       ${infoPanel}

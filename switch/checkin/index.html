@@ -18,7 +18,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Nunito+Sans:wght@400;600;700;800&display=swap">
-<link rel="stylesheet" href="app.css?v=5">
+<link rel="stylesheet" href="app.css?v=6">
 <script src="../config.js"></script>
 <script src="../switch-api.js"></script>
 </head>
@@ -34,19 +34,15 @@
     </div>
     <div class="screen" id="screen"></div>
     <canvas class="confetti" id="confetti" hidden></canvas>
+    <!-- the detail sheet for one check-in (My check-ins): filled in by app.js, closed by the X, the backdrop, Back or Escape -->
+    <div class="backdrop" id="backdrop" hidden></div>
+    <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Check-in details" hidden></section>
   </div>
 
   <section class="panel" hidden>
     <h2>What gets stored</h2>
     <p class="sub">Testing panel, shown only with <code>?debug=1</code>. Every submitted check-in becomes one row. Rows marked <em>example</em> are seeded test data and are never synced.</p>
     <div class="controls">
-      <label>Extended questions
-        <select id="extMode">
-          <option value="rotate">Rotate (recommended)</option>
-          <option value="all">Ask all every time</option>
-          <option value="none">Core only</option>
-        </select>
-      </label>
       <button class="chip" id="copyCsv">Copy as CSV</button>
       <button class="chip" id="reseed">Reset to example data</button>
       <button class="chip ghost" id="clearAll">Clear check-ins</button>
@@ -55,8 +51,8 @@
     <div class="tablewrap" id="table"></div>
   </section>
 </div>
-<script src="icons.js?v=5"></script>
-<script src="questions.js?v=5"></script>
-<script src="app.js?v=5"></script>
+<script src="icons.js?v=6"></script>
+<script src="questions.js?v=6"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

@@ -8,7 +8,10 @@
  *   - at least half an interval (30 minutes for the hourly interval) has passed since the last
  *     reminder (last_prompt_at): the cron is not punctual and consecutive runs can be anywhere
  *     from about 48 to 70 minutes apart, so a guard close to the full interval skipped whole hours,
- *   - the phone's local time is inside the participant's home hours.
+ *   - the phone's local time is inside the participant's home hours: the weekday or weekend window
+ *     (weekday_start/end, weekend_start/end), or the optional second window for that kind of day
+ *     (weekday2_start/end, weekend2_start/end), which only counts when both of its bounds are set
+ *     and the start is before the end.
  *
  * Secrets (GitHub repository secrets, see switch/README.md):
  *   SUPABASE_SERVICE_ROLE_KEY  a Supabase secret key (sb_secret_...)
@@ -18,10 +21,102 @@
  * Optional:
  *   FORCE_PARTICIPANT  send to this code right now, ignoring every rule (manual test run)
  *   DRY_RUN=1          decide and log, but send nothing
+ *   SELFTEST=1         check the rules in decide() against known cases and exit. Needs no secrets,
+ *                      reads and sends nothing:  SELFTEST=1 node send.js
  */
 const fs = require('fs');
 const path = require('path');
-const webpush = require('web-push');
+
+/* ---- the rules. Kept free of secrets and network so the self-test below can run them anywhere ---- */
+const MIN = 60000;
+const toMin = hhmm => { const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; };
+
+/* True when the phone's local time (now shifted by tz_offset_min, read with the UTC getters) is inside
+ * the participant's home hours for that kind of day. The main window works as it always has: the time
+ * must lie between start and end, and a bound that does not parse means no restriction. The second
+ * window is optional and only counts when both of its bounds are present and the start is before the end. */
+function insideHomeHours(sub, local) {
+  const weekend = local.getUTCDay() === 0 || local.getUTCDay() === 6;
+  const k = weekend ? 'weekend' : 'weekday';
+  const hm = local.getUTCHours() * 60 + local.getUTCMinutes();
+  const start = toMin(sub[k + '_start']), end = toMin(sub[k + '_end']);
+  if (start === null || end === null || (hm >= start && hm <= end)) return true;
+  const start2 = toMin(sub[k + '2_start']), end2 = toMin(sub[k + '2_end']);
+  return start2 !== null && end2 !== null && start2 < end2 && hm >= start2 && hm <= end2;
+}
+
+/* Returns 'send' or the reason for skipping. opts.force is FORCE_PARTICIPANT (a code, or empty) and
+ * opts.interval the reminder interval in minutes from config.js (null: the phone's own interval_min). */
+function decide(sub, now, opts) {
+  const force = (opts && opts.force) || '';
+  if (force) return sub.participant === force ? 'send' : 'not the test participant';
+  if (!sub.enabled) return 'reminders off';
+  if (sub.paused_until && new Date(sub.paused_until) > now) return 'paused (away)';
+  if (sub.settled_at && now - new Date(sub.settled_at) < 60 * MIN) return 'settling in after arriving home';
+  if (sub.last_vote_at && now - new Date(sub.last_vote_at) < 30 * MIN) return 'checked in recently';
+  const interval = (opts && opts.interval) || sub.interval_min || 60;
+  // Half the interval, not "interval minus a few minutes": GitHub's cron jitter would otherwise skip hours.
+  if (sub.last_prompt_at && now - new Date(sub.last_prompt_at) < Math.round(interval / 2) * MIN) return 'reminded recently';
+  const local = new Date(now.getTime() + (sub.tz_offset_min || 0) * MIN);
+  if (!insideHomeHours(sub, local)) return 'outside home hours';
+  return 'send';
+}
+
+/* ---- self-check of the rules:  SELFTEST=1 node send.js  ---- */
+function selfTest() {
+  // Wednesday 9 and Saturday 12 September 2026. The phone is on UTC unless a case says otherwise, so
+  // its local clock reads the same as the time written in the case.
+  const weekday = hhmm => new Date(`2026-09-09T${hhmm}:00Z`);
+  const weekend = hhmm => new Date(`2026-09-12T${hhmm}:00Z`);
+  if (weekday('12:00').getUTCDay() !== 3 || weekend('12:00').getUTCDay() !== 6) { console.error('FAIL: the test dates are not a Wednesday and a Saturday'); process.exit(1); }
+  const one = { participant: 'P01', enabled: true, tz_offset_min: 0, weekday_start: '17:00', weekday_end: '22:30', weekend_start: '09:00', weekend_end: '22:30' };
+  const two = { ...one, weekday_start: '06:00', weekday_end: '09:00', weekday2_start: '17:00', weekday2_end: '23:00', weekend2_start: '06:00', weekend2_end: '08:30' };
+  const iso = d => d.toISOString();
+  const cases = [
+    // one window only: unchanged
+    ['one window, weekday 16:59', one, weekday('16:59'), 'outside home hours'],
+    ['one window, weekday 17:00', one, weekday('17:00'), 'send'],
+    ['one window, weekday 22:30', one, weekday('22:30'), 'send'],
+    ['one window, weekday 22:31', one, weekday('22:31'), 'outside home hours'],
+    ['one window, weekend 08:59', one, weekend('08:59'), 'outside home hours'],
+    ['one window, weekend 09:00', one, weekend('09:00'), 'send'],
+    ['one window, phone at UTC+1, 16:30Z is 17:30 local', { ...one, tz_offset_min: 60 }, weekday('16:30'), 'send'],
+    ['one window, phone at UTC+1, 21:45Z is 22:45 local', { ...one, tz_offset_min: 60 }, weekday('21:45'), 'outside home hours'],
+    ['one window, empty second-window columns', { ...one, weekday2_start: null, weekday2_end: null }, weekday('18:00'), 'send'],
+    // two windows, 06:00-09:00 and 17:00-23:00 on weekdays
+    ['two windows, weekday 08:30', two, weekday('08:30'), 'send'],
+    ['two windows, weekday 12:00', two, weekday('12:00'), 'outside home hours'],
+    ['two windows, weekday 17:00', two, weekday('17:00'), 'send'],
+    ['two windows, weekday 23:30', two, weekday('23:30'), 'outside home hours'],
+    ['two windows, weekend 07:00 (second window 06:00-08:30)', two, weekend('07:00'), 'send'],
+    ['two windows, weekend 08:45 (between the windows)', two, weekend('08:45'), 'outside home hours'],
+    // a half-filled or inverted second window is ignored
+    ['second window with only a start', { ...one, weekday2_start: '06:00' }, weekday('07:00'), 'outside home hours'],
+    ['second window with start after end', { ...one, weekday2_start: '09:00', weekday2_end: '06:00' }, weekday('07:00'), 'outside home hours'],
+    ['second window with start equal to end', { ...one, weekday2_start: '07:00', weekday2_end: '07:00' }, weekday('07:00'), 'outside home hours'],
+    // the other rules
+    ['reminders off', { ...one, enabled: false }, weekday('18:00'), 'reminders off'],
+    ['paused', { ...one, paused_until: iso(weekday('20:00')) }, weekday('18:00'), 'paused (away)'],
+    ['settling in', { ...one, settled_at: iso(weekday('17:30')) }, weekday('18:00'), 'settling in after arriving home'],
+    ['checked in recently', { ...one, last_vote_at: iso(weekday('17:45')) }, weekday('18:00'), 'checked in recently'],
+    ['reminded recently', { ...one, last_prompt_at: iso(weekday('17:45')) }, weekday('18:00'), 'reminded recently'],
+    ['reminded 30 minutes ago', { ...one, last_prompt_at: iso(weekday('17:30')) }, weekday('18:00'), 'send'],
+    ['forced test participant, every rule ignored', { ...one, enabled: false }, weekday('03:00'), 'send', { force: 'P01' }],
+    ['forced, another participant', one, weekday('18:00'), 'not the test participant', { force: 'P02' }]
+  ];
+  let bad = 0;
+  for (const [name, sub, now, want, extra] of cases) {
+    const got = decide(sub, now, { interval: 60, ...(extra || {}) });
+    if (got !== want) bad++;
+    console.log(`${got === want ? 'ok  ' : 'FAIL'} ${name}: ${got}${got === want ? '' : ` (expected: ${want})`}`);
+  }
+  console.log(bad ? `${bad} of ${cases.length} checks failed` : `all ${cases.length} checks passed`);
+  process.exit(bad ? 1 : 0);
+}
+if (process.env.SELFTEST) selfTest();
+
+/* ---- the real run: configuration, secrets, and the phones in the database ---- */
+const webpush = require('web-push');   // after the self-test, which needs neither the package nor any secret
 
 const config = fs.readFileSync(path.join(__dirname, '..', 'config.js'), 'utf8');
 const cfgVal = k => (config.match(new RegExp(k + ':\\s*"([^"]*)"')) || [])[1] || '';
@@ -72,28 +167,6 @@ const headers = KEY.startsWith('sb_secret_')
   ? { apikey: KEY, 'Content-Type': 'application/json' }
   : { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' };
 const rest = q => `${URL_}/rest/v1/${TABLE}${q}`;
-const MIN = 60000;
-
-const toMin = hhmm => { const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; };
-
-/* Returns 'send' or the reason for skipping. */
-function decide(sub, now) {
-  if (FORCE) return sub.participant === FORCE ? 'send' : 'not the test participant';
-  if (!sub.enabled) return 'reminders off';
-  if (sub.paused_until && new Date(sub.paused_until) > now) return 'paused (away)';
-  if (sub.settled_at && now - new Date(sub.settled_at) < 60 * MIN) return 'settling in after arriving home';
-  if (sub.last_vote_at && now - new Date(sub.last_vote_at) < 30 * MIN) return 'checked in recently';
-  const interval = INTERVAL || sub.interval_min || 60;
-  // Half the interval, not "interval minus a few minutes": GitHub's cron jitter would otherwise skip hours.
-  if (sub.last_prompt_at && now - new Date(sub.last_prompt_at) < Math.round(interval / 2) * MIN) return 'reminded recently';
-  const local = new Date(now.getTime() + (sub.tz_offset_min || 0) * MIN);
-  const weekend = local.getUTCDay() === 0 || local.getUTCDay() === 6;
-  const start = toMin(weekend ? sub.weekend_start : sub.weekday_start);
-  const end = toMin(weekend ? sub.weekend_end : sub.weekday_end);
-  const hm = local.getUTCHours() * 60 + local.getUTCMinutes();
-  if (start !== null && end !== null && (hm < start || hm > end)) return 'outside home hours';
-  return 'send';
-}
 
 async function main() {
   const now = new Date();
@@ -105,7 +178,7 @@ async function main() {
   const summary = {};
   let sent = 0, removed = 0;
   for (const sub of subs) {
-    const verdict = decide(sub, now);
+    const verdict = decide(sub, now, { force: FORCE, interval: INTERVAL });
     summary[verdict] = (summary[verdict] || 0) + 1;
     if (verdict !== 'send') continue;
     const payload = JSON.stringify({

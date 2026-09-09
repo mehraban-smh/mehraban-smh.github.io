@@ -40,9 +40,10 @@ const NOTES = [
   {id:'hot_drink',n:'Hot drink',ic:'mug'},{id:'cold_drink',n:'Cold drink',ic:'glass'},{id:'ate',n:'Just ate',ic:'fork'},
   {id:'tired',n:'Tired',ic:'zzz'},{id:'unwell',n:'Feeling unwell',ic:'thermo'}
 ];
+/* Every check-in asks the same twelve questions in the same order. The five CORE answers are the ones
+ * "Still the same as last time?" carries over, so that path asks only the other seven (same order). */
+const FLOW_ALL = ['tsv','tp','ta','tc','clo','act','room','air','hum','sun','actions','notes'];
 const CORE = ['tsv','tp','clo','act','room'];
-const EXT_A = ['ta','tc','actions'];
-const EXT_B = ['air','hum','sun','notes'];
 const byId = (list,id) => list.find(x=>x.id===id);
 const tsvWord = v => (TSV.find(t=>t.v===v)||{}).w || '';
 const tsvColour = v => `var(--c${v<0?'-'+(-v):v})`;
