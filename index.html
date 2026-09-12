@@ -170,7 +170,8 @@
   @media (max-width:860px){.about-grid{grid-template-columns:1fr;gap:34px}}
 
   /* research */
-  .proj{display:grid;grid-template-columns:1fr;gap:22px}
+  .proj{display:grid;grid-template-columns:1fr;gap:22px;margin-top:22px}
+  .proj-h{margin:0 0 16px}
   .card{
     border:1px solid var(--line);border-top:3px solid var(--accent);
     border-radius:10px;background:#fff;padding:28px;
@@ -430,8 +431,9 @@
   <section id="research">
     <div class="wrap">
       <p class="sec-label">Research</p>
-      <h2>Explore the house</h2>
-      <p class="twin-intro">Three rooms, three research problems. Click a glowing window to step inside, then follow the markers to see what my research looks for in each space.</p>
+      <h2>Helping buildings predict problems before people feel them</h2>
+      <p class="twin-intro">AI-integrated Digital Twins for damp and mould, personal thermal comfort and thermal resilience. Step inside the house to explore.</p>
+      <h3 class="proj-h">Current projects</h3>
       <div class="twin-stage reveal" id="twStage">
         <img class="twin-ext" id="twExt" src="house-exterior.jpg" alt="Exterior of a contemporary two-storey UK net-zero home" loading="lazy">
         <div class="tw-extlayer" id="twExtLayer"></div>
@@ -452,7 +454,7 @@
           <div class="tc-stats" id="twStats"></div>
         </div>
       </div>
-      <h2 class="h2-gap">Current projects</h2>
+
       <div class="proj">
         <article class="card reveal" id="proj-mould">
           <span class="tag">London South Bank University - Wates Group</span>
