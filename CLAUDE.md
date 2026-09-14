@@ -3,6 +3,7 @@
 ## What this repository is
 - A GitHub Pages user site served at https://mehraban.uk (custom domain via the `CNAME` file). Never delete or rename `CNAME`.
 - The entire site is ONE file: `index.html` (HTML, CSS and JS inline). Deploys automatically on commit to `main` in about two minutes.
+- Two extra pages live in subfolders and must be kept: `mould-digital-twin/` (video summary of the Building and Environment paper; its URL https://mehraban.uk/mould-digital-twin is cited in print, never rename or move it) and `switch/` (the SWITCH check-in app).
 - Other files in the root: `profile.jpg` (social-share image), `graphical-abstract.png` and `retrofit-optimization.png` (full-size figures opened from the project cards), `favicon.png`, `apple-touch-icon.png`. Never rename or delete them.
 - The portrait, the two project figures, the world map (inline SVG) and five flag images are EMBEDDED inside `index.html` as base64 data URIs / inline SVG. Do not edit, reflow or "clean up" those long data strings. Edit the markup and CSS around them.
 
@@ -35,3 +36,12 @@
 - All content and geometry is in the `TW_SCENES` object in the last `<script>`: per room a `win` rectangle (percent of the exterior image), the zoom origin `x,y` and scale `s`, and `spots` (marker `x,y` in percent of the room image, icon key, tag, title, description, stat tiles). Edit text and numbers there; do not restyle the block.
 - Interaction is image-only by the owner's request: no buttons. Exterior windows glow and are clickable; rooms have sonar markers opening cards; the bottom-left chip links to the matching project card (`#proj-mould`, `#proj-comfort`, `#proj-resilience`, ids on the three project articles).
 - No "Next" button in cards and no project link inside cards (removed on request).
+
+## Before replacing index.html wholesale (read this first)
+On 12 Sep 2026 an `index.html` uploaded from an old local copy silently removed several finished additions. Always start from the CURRENT file on `main` (open it on GitHub and download it, or `git pull`), never from an older download. Before committing any large replacement of `index.html`, confirm every item below is still present:
+- `<link>` / `html{scroll-behavior:smooth;scroll-padding-top:78px}` and `html{scroll-padding-top:94px}` inside the `max-width:640px` media query. This is the sticky-nav offset for ALL anchors; do not re-add per-element `scroll-margin-top` rules (`.card`, `.country-h`), they double up with it.
+- The two `.fig` images carry `width="1300" height="…"` attributes. Without them the page grows while a smooth scroll is in flight and "Get in touch" lands in Publications instead of Contact.
+- Under the framework figure caption: `.<br><a href="mould-digital-twin/" target="_blank" rel="noopener">watch the video summary ↗</a>`.
+- The Building and Environment paper (doi:10.1016/j.buildenv.2026.115221) is the first `.pub` block, with a "video summary" link after the DOI.
+- The GoatCounter snippet just before `</body>` (`data-goatcounter="https://mehraban.goatcounter.com/count"`). Cookieless; no consent banner needed.
+- `#contact` has NO min-height or flex centring (a full-height contact section was tried and rejected for the empty space it created).
