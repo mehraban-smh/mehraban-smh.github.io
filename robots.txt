@@ -1,2 +1,2 @@
 User-agent: *
-Disallow: /p/
+Disallow: /ai-mould-review.pdf
