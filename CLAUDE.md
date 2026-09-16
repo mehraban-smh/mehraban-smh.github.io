@@ -4,6 +4,7 @@
 - A GitHub Pages user site served at https://mehraban.uk (custom domain via the `CNAME` file). Never delete or rename `CNAME`.
 - The entire site is ONE file: `index.html` (HTML, CSS and JS inline). Deploys automatically on commit to `main` in about two minutes.
 - Two extra pages live in subfolders and must be kept: `mould-digital-twin/` (video summary of the Building and Environment paper; its URL https://mehraban.uk/mould-digital-twin is cited in print, never rename or move it) and `switch/` (the SWITCH check-in app).
+- `p/` holds UNLISTED files shared by direct link only (currently the review-paper manuscript PDF). Never link to anything in it from the site, never rename or delete it, and keep `robots.txt` (which disallows `/p/`).
 - Other files in the root: `profile.jpg` (social-share image), `graphical-abstract.png` and `retrofit-optimization.png` (full-size figures opened from the project cards), `favicon.png`, `apple-touch-icon.png`. Never rename or delete them.
 - The portrait, the two project figures, the world map (inline SVG) and five flag images are EMBEDDED inside `index.html` as base64 data URIs / inline SVG. Do not edit, reflow or "clean up" those long data strings. Edit the markup and CSS around them.
 
