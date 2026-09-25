@@ -1,3 +1,4 @@
 User-agent: *
 Disallow: /ai-mould-review.pdf
 Disallow: /retrofit-mould-twin.pdf
+Sitemap: https://mehraban.uk/sitemap.xml

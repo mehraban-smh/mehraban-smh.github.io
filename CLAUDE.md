@@ -44,5 +44,6 @@ On 12 Sep 2026 an `index.html` uploaded from an old local copy silently removed 
 - The two `.fig` images carry `width="1300" height="…"` attributes. Without them the page grows while a smooth scroll is in flight and "Get in touch" lands in Publications instead of Contact.
 - Under the framework figure caption: `.<br><a href="mould-digital-twin/" target="_blank" rel="noopener">watch the video summary ↗</a>`.
 - The Building and Environment paper (doi:10.1016/j.buildenv.2026.115221) is the first `.pub` block, with a "video summary" link after the DOI.
+- In `<head>`: the `google-site-verification` meta tag (Search Console ownership) and `<link rel="canonical" href="https://mehraban.uk/">`. In the JSON-LD: the `alternateName` list of name variants incl. Persian script. In About: the "My full name is …" sentence (`p.aka`). `sitemap.xml` and the `Sitemap:` line in `robots.txt`.
 - The GoatCounter snippet just before `</body>` (`data-goatcounter="https://mehraban.goatcounter.com/count"`). Cookieless; no consent banner needed.
 - `#contact` has NO min-height or flex centring (a full-height contact section was tried and rejected for the empty space it created).
