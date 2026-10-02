@@ -52,6 +52,7 @@ const P = {
   zzz:'<path d="M4 8h5l-5 6h5"/><path d="M13 4h4l-4 5h4"/><path d="M14 14h6l-6 6h6"/>',
   thermo:'<path d="M10 4a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 9v6"/>',
   fork:'<path d="M7 3v18"/><path d="M5 3v5a2 2 0 0 0 4 0V3"/><path d="M17 3c-2 0-3 3-3 6a3 3 0 0 0 3 3v9"/>',
+  apple:'<path d="M12 8c-1.6-1.2-3.8-1.4-5.3-.3C4.4 9.3 4.6 13 5.6 15.8c.9 2.6 2.7 4.7 4.4 4.7.8 0 1.3-.4 2-.4s1.2.4 2 .4c1.7 0 3.5-2.1 4.4-4.7 1-2.8 1.2-6.5-1.1-8.1-1.5-1.1-3.7-.9-5.3.3z"/><path d="M12 8c0-2 .8-3.6 2.5-4.5"/>',
   checkc:'<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
   refresh:'<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/>',
   copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
@@ -69,7 +70,7 @@ const P = {
 };
 const ic = (n, cls='') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
 
-/* ---------- faces: thermal sensation (-3..+3) and comfort (1..6) ---------- */
+/* ---------- faces: thermal sensation (-3..+3) ---------- */
 const TSV = [
   {v:-3, w:'Cold'}, {v:-2, w:'Cool'}, {v:-1, w:'Slightly cool'}, {v:0, w:'Neutral'},
   {v:1, w:'Slightly warm'}, {v:2, w:'Warm'}, {v:3, w:'Hot'}
@@ -91,23 +92,6 @@ function face(v, o={}){
     <g fill="${ink}" stroke="${ink}" stroke-width="2.2" stroke-linecap="round">
       <circle cx="18" cy="22.5" r="2.2" stroke="none"/><circle cx="30" cy="22.5" r="2.2" stroke="none"/>
       <g fill="none">${mouth}${brows}</g></g>${extra}</svg>`;
-}
-/* comfort 1..6: mouths from a deep frown to a big smile, colours from red to green */
-function comfortFace(k){
-  const fill = `var(--k${k})`;
-  const ink = (k<=2 || k===6) ? 'var(--face-ink-light)' : 'var(--face-ink)';
-  const mouths = {
-    1:'<path d="M16.5 34.5Q24 26.5 31.5 34.5"/><path d="M15 17l6 2M33 17l-6 2"/>',
-    2:'<path d="M17 33Q24 28 31 33"/>',
-    3:'<path d="M17.5 31.5Q24 29.5 30.5 31.5"/>',
-    4:'<path d="M17.5 30.5Q24 33 30.5 30.5"/>',
-    5:'<path d="M17 30Q24 36 31 30"/>',
-    6:'<path d="M16 29Q24 39 32 29" fill="'+ink+'" fill-opacity=".25"/><path d="M15 19l6-2M33 19l-6-2"/>'
-  };
-  return `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="${fill}"/>
-    <g fill="${ink}" stroke="${ink}" stroke-width="2.2" stroke-linecap="round">
-      <circle cx="18" cy="22.5" r="2.2" stroke="none"/><circle cx="30" cy="22.5" r="2.2" stroke="none"/>
-      <g fill="none">${mouths[k]}</g></g></svg>`;
 }
 
 /* ---------- clothing: garments and the avatar ---------- */

@@ -20,5 +20,5 @@ self.SWITCH_CONFIG = {
   reminderIntervalMin: 60,
   timeZone: "Europe/London",   // the sender reads home hours in this zone for phones that have not reported their own
   studyName: "SWITCH personal comfort study",
-  appVersion: "0.3.1"
+  appVersion: "0.4.0"
 };

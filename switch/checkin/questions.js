@@ -21,14 +21,7 @@ const TA  = [
 ];
 /* Older check-ins on the phone may still carry the four-point answers */
 const TA_OLD = {clearly_acc:'Clearly acceptable', just_acc:'Just acceptable', just_unacc:'Just unacceptable', clearly_unacc:'Clearly unacceptable'};
-/* Six-point thermal comfort scale, as in the ASHRAE Global Thermal Comfort Database */
-const TC  = [
-  {k:1,id:'very_uncomfortable',n:'Very uncomfortable'},{k:2,id:'uncomfortable',n:'Uncomfortable'},{k:3,id:'slightly_uncomfortable',n:'Slightly uncomfortable'},
-  {k:4,id:'slightly_comfortable',n:'Slightly comfortable'},{k:5,id:'comfortable',n:'Comfortable'},{k:6,id:'very_comfortable',n:'Very comfortable'}
-];
 const AIR  = [{id:'still',n:'Still',ic:'still'},{id:'slight',n:'Slight breeze',ic:'slight'},{id:'draughty',n:'Draughty',ic:'draught'}];
-const AIRP = [{id:'more',n:'More air',ic:'draught'},{id:'same',n:'Fine as is',ic:'check'},{id:'less',n:'Less air',ic:'still'}];
-const HUM  = [{id:'dry',n:'Dry',s:'Dry skin, eyes or throat',ic:'dry'},{id:'ok',n:'Fine',s:'Nothing I notice',ic:'drop'},{id:'muggy',n:'Muggy',s:'Sticky, heavy air',ic:'muggy'}];
 const SUN  = [{id:'yes',n:'Sun on me',s:'Direct sunlight where I am',ic:'sun'},{id:'no',n:'No direct sun',s:'Daylight, but not on me',ic:'cloud'},{id:'dark',n:"It's dark",s:'Evening, or curtains drawn',ic:'moon'}];
 const ACTIONS = [
   {id:'win_open',n:'Opened a window',ic:'window'},{id:'win_close',n:'Closed a window',ic:'window'},
@@ -38,18 +31,17 @@ const ACTIONS = [
 ];
 const NOTES = [
   {id:'hot_drink',n:'Hot drink',ic:'mug'},{id:'cold_drink',n:'Cold drink',ic:'glass'},{id:'ate',n:'Just ate',ic:'fork'},
-  {id:'tired',n:'Tired',ic:'zzz'},{id:'unwell',n:'Feeling unwell',ic:'thermo'}
+  {id:'hungry',n:'Hungry',ic:'apple'},{id:'tired',n:'Tired',ic:'zzz'},{id:'unwell',n:'Feeling unwell',ic:'thermo'}
 ];
-/* Every check-in asks the same twelve questions in the same order. The five CORE answers are the ones
- * "Still the same as last time?" carries over, so that path asks only the other seven (same order). */
-const FLOW_ALL = ['tsv','tp','ta','tc','clo','act','room','air','hum','sun','actions','notes'];
-const CORE = ['tsv','tp','clo','act','room'];
+/* Every check-in asks the same ten questions in the same order. "Still the same as last time?" shows the
+ * answers of the last check-in instead, each with an Edit button, and "Yes, still the same" saves them
+ * without asking anything (what changed and anything to note start empty). */
+const FLOW_ALL = ['tsv','tp','ta','clo','act','room','air','sun','actions','notes'];
 const byId = (list,id) => list.find(x=>x.id===id);
 const tsvWord = v => (TSV.find(t=>t.v===v)||{}).w || '';
 const tsvColour = v => `var(--c${v<0?'-'+(-v):v})`;
 const signed = v => v>0?'+'+v:String(v);
 const garmentNames = ids => (ids||[]).map(id=>byId(GARMENTS,id)?.n).filter(Boolean).join(', ');
-const tcWord = k => (TC.find(t=>t.k===k)||{}).n || '';
 const taWord = id => byId(TA,id)?.n || TA_OLD[id] || '';
 const namesOf = (list, ids) => ids && (ids.length ? ids.map(id=>byId(list,id)?.n).filter(Boolean).join(', ') : 'Nothing');
 const sameSet = (a, b) => (a||[]).length===(b||[]).length && (a||[]).every(x=>(b||[]).includes(x));
@@ -91,16 +83,8 @@ const Q = {
   /* two tall rows (like the preference screen), tinted green and red, rather than two very tall tiles */
   ta: () => qhead('Acceptability', 'Are these conditions acceptable to you?', 'The thermal environment as a whole.') +
     `<div class="rows fill">${TA.map(o=>tallRow('ta',o,S.a.ta===o.id)).join('')}</div>`,
-  tc: () => {
-    const k = S.a.tc;
-    return qhead('Comfort', 'How comfortable are you overall?', 'Six-point thermal comfort scale.') +
-      `<div class="scale fill">${TC.map(t=>scaleRow('tc', t.k, comfortFace(t.k), t.n, t.k, `var(--k${t.k})`, k===t.k)).join('')}</div>`;
-  },
-  air: () => qhead('Air', 'How is the air movement?') +
-    `<div class="duo fill"><div class="grp"><div class="lab">It feels&hellip;</div><div class="tiles c3 fill">${AIR.map(o=>tile('air',o,S.a.air===o.id)).join('')}</div></div>` +
-    `<div class="grp"><div class="lab">And I would like&hellip;</div><div class="tiles c3 fill">${AIRP.map(o=>tile('air_pref',o,S.a.air_pref===o.id)).join('')}</div></div></div>`,
-  hum: () => qhead('Humidity', 'Does the air feel dry or muggy?') +
-    `<div class="rows fill">${HUM.map(o=>tallRow('hum',o,S.a.hum===o.id)).join('')}</div>`,
+  air: () => qhead('Air', 'How is the air movement?', 'It feels&hellip;') +
+    `<div class="rows fill">${AIR.map(o=>tallRow('air',o,S.a.air===o.id)).join('')}</div>`,
   sun: () => qhead('Sunlight', 'Is the sun shining on you?') +
     `<div class="rows fill">${SUN.map(o=>tallRow('sun',o,S.a.sun===o.id)).join('')}</div>`,
   actions: () => {

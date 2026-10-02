@@ -216,6 +216,13 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .last li .f svg{width:100%;height:100%;display:block}
 .last li .ic{width:22px;height:22px;color:var(--accent)}
 .last li div{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* quick check: an Edit button at the end of every line, a smaller figure to leave the text room */
+.last.editable .fig svg{height:96px}
+.last.editable ul{gap:4px;overflow-y:auto;overscroll-behavior:contain}   /* short phones: the list scrolls inside the card */
+@media (max-width:370px){.last.editable{grid-template-columns:1fr}.last.editable .fig{display:none}}   /* narrow phones: the text gets the room */
+.last.editable li div{flex:1}
+.last li .edit{flex:none;margin-left:auto;color:var(--accent);font-weight:800;font-size:.8rem;padding:5px 0 5px 8px}
+.last li .open{color:var(--muted);font-style:italic}
 /* review */
 .review{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border:1.5px solid var(--line);border-radius:16px;overflow:hidden}
 .review li{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:.88rem}

@@ -62,11 +62,7 @@
         activity: row.act,
         room: row.room,
         acceptability: row.ta,
-        comfort: row.tc,
-        comfort_score: row.tcs,
         air: row.air,
-        air_pref: row.air_pref,
-        humidity: row.hum,
         sun: row.sun,
         actions: row.actions,
         notes: row.notes,
@@ -82,10 +78,14 @@
       // A plain insert. The public key cannot read rows, so an "upsert" (which compares against the
       // existing row) is refused by row-level security. A retry of a row that already exists comes
       // back as 409 from the unique client_id, which counts as success.
+      // A check-in queued offline by a version before 0.4.0 still carries answers that are no longer
+      // kept (comfort, humidity, the air preference); they are left out.
+      const rec = Object.assign({}, record);
+      ['comfort', 'comfort_score', 'humidity', 'air_pref'].forEach(k => { delete rec[k]; });
       const r = await fetch(rest(table), {
         method: 'POST',
         headers: headers({ Prefer: 'return=minimal' }),
-        body: JSON.stringify(record)
+        body: JSON.stringify(rec)
       });
       const ok = r.ok || r.status === 409;
       return { ok, status: r.status, text: ok ? '' : await r.text() };

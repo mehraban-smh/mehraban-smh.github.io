@@ -30,16 +30,28 @@ function greeting(){
 
 /* ---------- check-ins kept on this phone ---------- */
 let store = {votes:[], paused:null, pausedWhy:''};
-function load(){ try{ const s=JSON.parse(LS.get(KEY)||'null'); if(s&&Array.isArray(s.votes)) store=s; }catch(e){} }
+/* Answers no longer kept (overall comfort, humidity, the air preference, asked before 0.4.0) are dropped
+ * from the check-ins on the phone as they load. */
+function load(){
+  try{
+    const s=JSON.parse(LS.get(KEY)||'null');
+    if(s&&Array.isArray(s.votes)){
+      let dropped = false;
+      s.votes.forEach(v => ['tc','tcs','hum','air_pref'].forEach(k => { if(v && k in v){ delete v[k]; dropped = true; } }));
+      store=s;
+      if(dropped) save();
+    }
+  }catch(e){}
+}
 function save(){ LS.set(KEY, JSON.stringify(store)); }
 function seed(){
   const now = Date.now(), m = 60000;
   const mk = (ago, o) => Object.assign({ id:'ex'+ago, ts:new Date(now-ago*m).toISOString(), type:'scheduled', home:'long', example:true, same:false }, o);
   store = { votes:[
-    mk(26*60, {tsv:-1,tp:'warmer',garments:['long','trousers','socks','slippers'],clo:0.55,act:'desk',met:1.1,room:'office',ta:'unacceptable',tc:'slightly_uncomfortable',tcs:3,actions:['heat_up'],secs:31}),
-    mk(25*60+20, {tsv:0,tp:'same',garments:['long','trousers','socks','slippers'],clo:0.55,act:'desk',met:1.1,room:'office',air:'still',air_pref:'same',hum:'ok',sun:'no',notes:[],secs:19,same:true}),
-    mk(100, {tsv:1,tp:'cooler',garments:['tshirt','joggers','socks'],clo:0.39,act:'house',met:1.8,room:'kitchen',ta:'acceptable',tc:'slightly_comfortable',tcs:4,actions:['win_open'],secs:27}),
-    mk(40, {tsv:1,tp:'cooler',garments:['tshirt','joggers','socks'],clo:0.39,act:'sit',met:1.0,room:'living',air:'slight',air_pref:'same',hum:'ok',sun:'no',notes:['hot_drink'],secs:22})
+    mk(26*60, {tsv:-1,tp:'warmer',garments:['long','trousers','socks','slippers'],clo:0.55,act:'desk',met:1.1,room:'office',ta:'unacceptable',air:'still',sun:'dark',actions:['heat_up'],notes:[],secs:31}),
+    mk(25*60+20, {tsv:0,tp:'same',garments:['long','trousers','socks','slippers'],clo:0.55,act:'desk',met:1.1,room:'office',ta:'acceptable',air:'still',sun:'dark',actions:[],notes:[],secs:4,same:true}),
+    mk(100, {tsv:1,tp:'cooler',garments:['tshirt','joggers','socks'],clo:0.39,act:'house',met:1.8,room:'kitchen',ta:'acceptable',air:'slight',sun:'no',actions:['win_open'],notes:['ate'],secs:27}),
+    mk(40, {tsv:1,tp:'cooler',garments:['tshirt','joggers','socks'],clo:0.39,act:'sit',met:1.0,room:'living',ta:'acceptable',air:'slight',sun:'no',actions:[],notes:['hot_drink','hungry'],secs:22})
   ], paused:null, pausedWhy:'' };
   save();
 }
@@ -60,19 +72,44 @@ function insight(){
 }
 
 /* ---------- session state and navigation ---------- */
-let S = { screen:'start', flow:[], i:0, a:{}, t0:null, mode:'self', same:false, lock:false, hist:[], edit:false };
+/* S.orig: the quick check's starting answers (from the last check-in); S.quick: its answers, kept while
+ * "Something has changed" runs the questions, so Back returns to them; S.editFrom: the screen an Edit
+ * button was tapped on ('review' or 'same'), where answering that one question returns to. */
+let S = { screen:'start', flow:[], i:0, a:{}, t0:null, mode:'self', same:false, lock:false, hist:[], edit:false, editFrom:'review', editPrev:null, orig:null, quick:null };
 function startSession(mode){
-  S = { screen:'start', flow:[], i:0, a:{}, t0:Date.now(), mode, same:false, lock:false, hist:[], edit:false };
+  S = { screen:'start', flow:[], i:0, a:{}, t0:Date.now(), mode, same:false, lock:false, hist:[], edit:false, editFrom:'review', editPrev:null, orig:null, quick:null };
   go('home');
 }
-/* The same twelve questions every time (FLOW_ALL, questions.js). "Still the same as last time?" keeps the
- * five core answers from the last check-in and asks the remaining seven in the same order. */
-function beginQuestions(same){
-  const last = lastVote();
-  S.same = same;
-  if(last) Object.assign(S.a, { tsv:last.tsv, tp:last.tp, clo:[...(last.garments||[])], act:last.act, room:last.room });
-  S.flow = same && last ? FLOW_ALL.filter(q => !CORE.includes(q)) : [...FLOW_ALL];
+/* The same ten questions every time (FLOW_ALL, questions.js), with feeling, preference, clothing, activity
+ * and room already selected: as the quick check shows them (edits included) when coming from it, else from
+ * the last check-in. */
+function beginQuestions(){
+  const last = lastVote(), fromQuick = S.screen==='same';
+  if(fromQuick) S.quick = S.a;                             // Back from the first question returns to the quick check as it was
+  const src = fromQuick ? S.quick : last && { tsv:last.tsv, tp:last.tp, clo:last.garments, act:last.act, room:last.room };
+  S.same = false;
+  S.a = { home:S.a.home };
+  if(src) Object.assign(S.a, { tsv:src.tsv, tp:src.tp, clo:[...(src.clo||[])], act:src.act, room:src.room });
+  S.flow = [...FLOW_ALL];
   S.i = 0; go('q');
+}
+/* An earlier check-in as answers (S.a): the starting point of the quick check. What changed and anything
+ * worth noting start empty; an answer the earlier check-in lacks, or that is no longer offered, stays unset. */
+function answersFrom(v){
+  const keep = (list, id) => byId(list, id) ? id : undefined;
+  return { tsv: typeof v.tsv==='number' ? v.tsv : undefined, tp: keep(TP, v.tp), ta: keep(TA, v.ta),
+    clo: (v.garments||[]).filter(id => byId(GARMENTS, id)), act: keep(ACTS, v.act), room: keep(ROOMS, v.room),
+    air: keep(AIR, v.air), sun: keep(SUN, v.sun), actions: [], notes: [] };
+}
+const answered = (a, q) => q==='clo' ? !!(a.clo && a.clo.length) : (q==='actions' || q==='notes') ? Array.isArray(a[q]) : a[q] !== undefined && a[q] !== null && a[q] !== '';
+const sameAnswer = (x, y) => Array.isArray(x) || Array.isArray(y) ? sameSet(x, y) : x === y;
+const quickEdited = () => !!S.orig && FLOW_ALL.some(q => !sameAnswer(S.a[q], S.orig[q]));
+/* "Still the same as last time?": the last check-in's answers, each with an Edit button. */
+function quickCheck(){
+  S.orig = answersFrom(lastVote());
+  Object.assign(S.a, S.orig, { clo:[...S.orig.clo], actions:[], notes:[] });
+  S.flow = [...FLOW_ALL];
+  go('same');
 }
 function go(screen, opts={}){
   closeSheet();
@@ -82,16 +119,20 @@ function go(screen, opts={}){
   S.screen = screen; render();
 }
 function next(){
-  if(S.edit){ S.edit = false; S.hist.pop(); S.screen = 'review'; render(); return; }   // one question edited from the review: straight back to it
+  if(S.edit){ S.edit = false; S.editPrev = null; S.hist.pop(); S.screen = S.editFrom || 'review'; render(); return; }   // one question edited from the review or the quick check: straight back to it
   if(S.i < S.flow.length-1){ S.i++; render(); } else { go('review'); }
 }
 function back(){
+  if(S.lock) return;                                         // an answer is about to move on by itself
   if(SHEET){ closeSheet(); return; }                        // the Back pill first closes an open detail sheet
   if(S.screen==='q' && S.i>0 && !S.edit){ S.i--; render(); return; }
-  S.edit = false;
+  const editing = S.edit;
+  if(editing && S.editPrev) S.a[S.editPrev.q] = S.editPrev.v;   // Back from an Edit cancels it
+  S.edit = false; S.editPrev = null;
   const prev = S.hist.pop();
   if(!prev){ S.screen='start'; S.hist=[]; render(); return; }
   if(prev==='q'){ S.i = Math.max(0, S.flow.length-1); }
+  if(prev==='same' && !editing){ if(S.quick){ S.a = S.quick; S.quick = null; } S.flow = [...FLOW_ALL]; }   // every Edit works again
   S.screen = prev; render();
 }
 
@@ -115,7 +156,7 @@ function dayWindows(d, h){
   return wins.sort((a, b) => a.start - b.start);
 }
 /* The next moment the sender (switch/push/send.js) can actually send. It runs at the top of every hour and
- * sends when reminders are not paused (the hour of settling in after "I just got in" counts as a pause),
+ * sends when reminders are not paused (a "settling in" pause left by a version before 0.4.0 counts too),
  * at least GAP_MIN minutes have passed since the last check-in, and the phone's clock is inside one of
  * the participant's home-hour windows. So: the earliest allowed moment, rounded up to the next whole
  * hour; if that is inside a window of the day it is the answer, otherwise the next window start of the
@@ -139,6 +180,8 @@ function nextReminder(){
   }
   return c;
 }
+/* "23:42", or "01:42 tomorrow" (the end of a pause, at most a few hours ahead) */
+const untilWord = d => fmt(d) + (dayKey(d)===dayKey(new Date()) ? '' : ' tomorrow');
 function whenWord(d){
   const now = new Date(), tom = new Date(now); tom.setDate(tom.getDate()+1);
   const k = dayKey(d);
@@ -194,8 +237,7 @@ function footLine(){
 /* everything the last check-in holds, one line each, for the "still the same?" card */
 function lastDetails(l){
   const li = (icon, html) => html ? `<li>${icon}<div>${html}</div></li>` : '';
-  const tp = byId(TP,l.tp), act = byId(ACTS,l.act), room = byId(ROOMS,l.room), air = byId(AIR,l.air), airp = byId(AIRP,l.air_pref), hum = byId(HUM,l.hum), sun = byId(SUN,l.sun);
-  const tcs = typeof l.tcs==='number' ? l.tcs : typeof l.tc==='number' ? l.tc : (TC.find(t=>t.id===l.tc)||{}).k;
+  const tp = byId(TP,l.tp), act = byId(ACTS,l.act), room = byId(ROOMS,l.room), air = byId(AIR,l.air), sun = byId(SUN,l.sun);
   const taOk = l.ta ? (byId(TA,l.ta) ? l.ta==='acceptable' : !/unacc/.test(l.ta)) : null;
   return [
     typeof l.tsv==='number' && li(`<span class="f">${face(l.tsv)}</span>`, `<b>${tsvWord(l.tsv)}</b> (${signed(l.tsv)})`),
@@ -204,13 +246,32 @@ function lastDetails(l){
     act && li(ic(act.ic), act.n),
     room && li(ic(room.ic), room.n),
     l.ta && li(ic(taOk?'up':'down', taOk?'good':'bad'), taWord(l.ta)),
-    tcs && li(`<span class="f">${comfortFace(tcs)}</span>`, `${tcWord(tcs)} (${tcs}/6)`),
-    air && li(ic(air.ic), `${air.id==='still' ? 'Still air' : air.n}${airp ? ' &middot; ' + airp.n.toLowerCase() : ''}`),
-    hum && li(ic(hum.ic), hum.id==='ok' ? 'Humidity fine' : hum.id==='dry' ? 'Dry air' : 'Muggy air'),
+    air && li(ic(air.ic), air.id==='still' ? 'Still air' : air.n),
     sun && li(ic(sun.ic), sun.n),
     Array.isArray(l.actions) && li(ic(byId(ACTIONS, l.actions[0])?.ic || 'bolt'), l.actions.length ? 'Changed: ' + namesOf(ACTIONS, l.actions).toLowerCase() : 'Nothing changed'),
     Array.isArray(l.notes) && li(ic(byId(NOTES, l.notes[0])?.ic || 'info'), l.notes.length ? namesOf(NOTES, l.notes) : 'Nothing to note')
   ].filter(Boolean).join('');
+}
+/* The answers of the check-in being made (S.a), one line per question in FLOW_ALL order, each with an Edit
+ * button, for the quick check. A question without an answer says so. */
+const QNAME = { tsv:'how you feel', tp:'your preference', ta:'acceptability', clo:'clothing', act:'activity', room:'room', air:'air movement', sun:'sunlight', actions:'what changed', notes:'notes' };
+function answerRows(a){
+  const row = (q, icon, html) => `<li>${icon}<div>${html}</div><button class="edit" data-act="edit" data-q="${q}" aria-label="Edit ${QNAME[q]}">Edit</button></li>`;
+  const open = '<span class="open">Not answered yet</span>';
+  const tp = byId(TP,a.tp), ta = byId(TA,a.ta), act = byId(ACTS,a.act), room = byId(ROOMS,a.room), air = byId(AIR,a.air), sun = byId(SUN,a.sun);
+  const acts = a.actions || [], notes = a.notes || [];
+  return [
+    row('tsv', typeof a.tsv==='number' ? `<span class="f">${face(a.tsv)}</span>` : ic('thermo'), typeof a.tsv==='number' ? `<b>${tsvWord(a.tsv)}</b> (${signed(a.tsv)})` : open),
+    row('tp', tp ? ic(tp.ic, tp.cls||'') : ic('thermo'), tp ? (tp.id==='same' ? 'Happy with the temperature' : `Would like to be <b>${tp.n.toLowerCase()}</b>`) : open),
+    row('ta', ta ? ic(ta.ic, ta.cls) : ic('up'), ta ? (ta.id==='acceptable' ? 'Conditions acceptable' : 'Conditions not acceptable') : open),
+    row('clo', ic('tshirt'), a.clo && a.clo.length ? `${garmentNames(a.clo)} &middot; ${cloOf(a.clo).toFixed(2)} clo` : open),
+    row('act', ic(act ? act.ic : 'walk'), act ? act.n : open),
+    row('room', ic(room ? room.ic : 'door'), room ? room.n : open),
+    row('air', ic(air ? air.ic : 'still'), air ? (air.id==='still' ? 'Still air' : air.n) : open),
+    row('sun', ic(sun ? sun.ic : 'sun'), sun ? sun.n : open),
+    row('actions', ic(byId(ACTIONS, acts[0])?.ic || 'bolt'), acts.length ? 'Changed: ' + namesOf(ACTIONS, acts).toLowerCase() : 'Nothing changed'),
+    row('notes', ic(byId(NOTES, notes[0])?.ic || 'info'), notes.length ? namesOf(NOTES, notes) : 'Nothing to note')
+  ].join('');
 }
 /* Three small charts at the top of "My check-ins", from every check-in on this phone: how often each
  * sensation was felt, check-ins per day over the last 14 days, and the split of preferences. Plain divs
@@ -317,26 +378,36 @@ const SCREENS = {
     });
     return qhead('History', 'My check-ins', `${list.length} on this phone, newest first. Tap one for the details.`) + charts(list) + `<ul class="hist">${html}</ul>`;
   },
-  home: () => qhead('Before we start', 'Are you at home right now?', 'We only ask about comfort once you have settled in.') +
+  home: () => qhead('Before we start', 'Are you at home right now?', 'Then a few quick questions about how you feel.') +
     `<div class="rows fill">
       <button class="row" data-act="home" data-v="long">${ic('home')}<div><b>Yes, for over an hour</b><span>Let's do the check-in</span></div>${ic('chev','go')}</button>
-      <button class="row" data-act="home" data-v="recent">${ic('clock')}<div><b>Yes, I just got in</b><span>We will ask again in an hour or two</span></div>${ic('chev','go')}</button>
+      <button class="row" data-act="home" data-v="recent">${ic('clock')}<div><b>Yes, I just got in</b><span>Let's do the check-in</span></div>${ic('chev','go')}</button>
       <button class="row" data-act="home" data-v="out">${ic('out')}<div><b>No, I'm out</b><span>Pause reminders for a while</span></div>${ic('chev','go')}</button>
     </div>`,
-  recent: () => `<div class="done"><div class="big">${ic('clock')}</div><h1>No rush</h1><p class="sub">Your body takes a while to adjust after coming indoors. We will check back <b>${whenWord(nextReminder())}</b>.</p><div class="actions"><button class="btn primary" data-act="go" data-to="start">OK</button></div></div>`,
-  away: () => qhead('Out and about', 'When should we check again?', 'This phone stays quiet until then.') +
-    `<div class="rows fill">
-      <button class="row" data-act="pause" data-v="60">${ic('clock')}<div><b>In an hour</b></div>${ic('chev','go')}</button>
-      <button class="row" data-act="pause" data-v="180">${ic('clock')}<div><b>In three hours</b></div>${ic('chev','go')}</button>
-      ${new Date().getHours() < 19 ? `<button class="row" data-act="pause" data-v="evening">${ic('moon')}<div><b>This evening</b><span>From 19:00</span></div>${ic('chev','go')}</button>` : ''}
-      <button class="row" data-act="pause" data-v="manual">${ic('pin')}<div><b>I'll tell you when I'm back</b><span>Or in ${MANUAL_PAUSE_H} hours at the latest</span></div>${ic('chev','go')}</button>
-    </div>`,
+  /* each pause with the time it ends on the phone's clock */
+  away: () => {
+    const opt = (v, icon, label, sub) => `<button class="row" data-act="pause" data-v="${v}">${ic(icon)}<div><b>${label}</b><span>${sub}</span></div>${ic('chev','go')}</button>`;
+    const until = min => untilWord(new Date(Date.now() + min*60000));
+    return qhead('Out and about', 'When should we check again?', 'This phone stays quiet until then.') +
+      `<div class="rows fill">
+        ${opt(60, 'clock', 'In an hour', until(60))}
+        ${opt(180, 'clock', 'In three hours', until(180))}
+        ${opt(300, 'clock', 'In five hours', until(300))}
+        ${new Date().getHours() < 19 ? opt('evening', 'moon', 'This evening', 'From 19:00') : ''}
+        ${opt('manual', 'pin', "I'll tell you when I'm back", `Or in ${MANUAL_PAUSE_H} hours at the latest`)}
+      </div>`;
+  },
+  /* the quick check: the last check-in's answers, each with an Edit button; "Yes, still the same" saves
+   * them straight away. Answers the last check-in lacks are asked first. */
   same: () => {
     const l = lastVote(), d = new Date(l.ts), mins = Math.round((Date.now()-d)/60000);
     const ago = mins < 60 ? mins + ' minute' + (mins===1?'':'s') : mins < 48*60 ? Math.round(mins/60) + ' hour' + (Math.round(mins/60)===1?'':'s') : Math.round(mins/1440) + ' days';
-    return qhead('Quick check', 'Still the same as last time?', `Logged ${dayKey(d)===dayKey(new Date()) ? 'at ' + fmt(d) : 'on ' + DAYS[d.getDay()] + ' at ' + fmt(d)}, ${ago} ago.`) +
-      `<div class="last"><div class="when">Last check-in</div><div class="fig">${avatar(l.garments||[])}</div><ul>${lastDetails(l)}</ul></div>
-      <div class="actions"><button class="btn primary" data-act="same">${ic('check')} Yes, still the same</button><button class="btn secondary" data-act="changed">Something has changed</button></div>`;
+    const missing = FLOW_ALL.filter(q => !answered(S.a, q)).length, edited = quickEdited();
+    const main = missing ? `<button class="btn primary" data-act="fill">${ic('chev')} Answer ${missing === 1 ? 'the one question' : 'the ' + missing + ' questions'} still open</button>`
+      : `<button class="btn primary" data-act="same">${ic('check')} ${edited ? 'Save with my changes' : 'Yes, still the same'}</button>`;
+    return qhead('Quick check', 'Still the same as last time?', `Logged ${dayKey(d)===dayKey(new Date()) ? 'at ' + fmt(d) : 'on ' + DAYS[d.getDay()] + ' at ' + fmt(d)}, ${ago} ago. Tap Edit to change any one.`) +
+      `<div class="last editable"><div class="when">${edited ? 'With your changes' : 'Last check-in'}</div><div class="fig">${avatar(S.a.clo||[])}</div><ul>${answerRows(S.a)}</ul></div>
+      <div class="actions">${main}<button class="btn secondary" data-act="changed">Something has changed</button></div>`;
   },
   q: () => Q[S.flow[S.i]](),
   review: () => {
@@ -349,9 +420,7 @@ const SCREENS = {
         ${li('Activity', byId(ACTS,a.act)?.n, 'act')}
         ${li('Room', byId(ROOMS,a.room)?.n, 'room')}
         ${li('Conditions', a.ta && taWord(a.ta), 'ta')}
-        ${li('Comfort', typeof a.tc==='number' && `${tcWord(a.tc)} (${a.tc}/6)`, 'tc')}
-        ${li('Air', a.air && `${byId(AIR,a.air)?.n}, ${byId(AIRP,a.air_pref)?.n.toLowerCase()||'no preference yet'}`, 'air')}
-        ${li('Humidity', byId(HUM,a.hum)?.n, 'hum')}
+        ${li('Air', byId(AIR,a.air)?.n, 'air')}
         ${li('Sun', byId(SUN,a.sun)?.n, 'sun')}
         ${li('Changed', namesOf(ACTIONS, a.actions), 'actions')}
         ${li('Notes', namesOf(NOTES, a.notes), 'notes')}
@@ -373,7 +442,7 @@ const SCREENS = {
         ? `<div class="hrow"><label class="hl" for="${ids[2]}">and</label>${tin(ids[2], h[p+'2_start'], name+', second period, from')}<span class="to">to</span>${tin(ids[3], h[p+'2_end'], name+', second period, until')}<button class="hx" data-act="rm-win" data-w="${p}" aria-label="Remove the second ${name.toLowerCase()} period">${ic('x')}</button></div>`
         : `<div class="hrow"><button class="addw" data-act="add-win" data-w="${p}">+ Add another period</button></div>`);
     const form = `<div class="hours"><div class="lab">When are you usually at home?</div>${grp('weekday', 'Weekdays', ['h_ws','h_we','h_ws2','h_we2'])}${grp('weekend', 'Weekends', ['h_es','h_ee','h_es2','h_ee2'])}
-        <p class="note">Reminders only arrive inside these hours, and never within an hour of you saying you have just got home.</p></div>`;
+        <p class="note">Reminders only arrive inside these hours, never within half an hour of a check-in, and not while you have said you are out.</p></div>`;
     const backBtn = `<button class="btn secondary" data-act="back">Back</button>`;
     let body = '', actions = '';
     if(st === 'install'){ body = `<ol class="steps"><li><div>Tap the <b>Share</b> button in Safari.</div></li><li><div>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</div></li><li><div>Open the app from your home screen and turn on reminders there.</div></li></ol>`; actions = backBtn; }
@@ -388,7 +457,7 @@ const SCREENS = {
 /* ---------- render ---------- */
 function updateTop(){
   const inFlow = S.screen==='q' || S.screen==='review';
-  $('#back').hidden = ['start','welcome','done','recent','pending'].includes(S.screen);
+  $('#back').hidden = ['start','welcome','done','pending'].includes(S.screen);
   const n = S.flow.length, step = S.screen==='review' ? n + 1 : S.i + 1;
   $('#prog').hidden = !inFlow;
   $('#count').textContent = !inFlow ? '' : S.screen==='review' ? 'Review' : `Question ${step} of ${n}`;
@@ -408,10 +477,9 @@ function rerender(){ $('#screen').innerHTML = SCREENS[S.screen](); updateTop(); 
 
 /* ---------- answering ---------- */
 function pick(q, raw){
-  const v = (q==='tsv' || q==='tc') ? Number(raw) : raw;
+  const v = q==='tsv' ? Number(raw) : raw;
   S.a[q] = v;
   rerender();
-  if(S.flow[S.i]==='air' && !(S.a.air && S.a.air_pref)) return;
   S.lock = true;
   setTimeout(()=>{ S.lock=false; next(); }, 460);
 }
@@ -421,16 +489,14 @@ function toggle(q, v){
   if(i>=0) arr.splice(i,1); else arr.push(v);
   S.a[q] = arr; rerender();
 }
+/* "Yes, for over an hour" and "Yes, I just got in" both lead to the check-in; the answer is stored with it
+ * (at_home long or recent). */
 function onHome(v){
   S.a.home = v;
-  if(v==='long'){
+  if(v==='long' || v==='recent'){
     store.paused=null; store.pausedWhy=''; save();
     schedChange({ paused_until:null, settled_at:null });
-    lastVote() ? go('same') : beginQuestions(false);
-  } else if(v==='recent'){
-    store.paused = new Date(Date.now()+60*60000).toISOString(); store.pausedWhy='settling'; save();
-    schedChange({ settled_at:new Date().toISOString(), paused_until:null });
-    go('recent');
+    lastVote() ? quickCheck() : beginQuestions();
   } else { go('away'); }
 }
 /* "No, I'm out": no reminders until the chosen time. "I'll tell you when I'm back" is open-ended in the
@@ -438,7 +504,7 @@ function onHome(v){
  * are home is not lost to the study; the status card says when. */
 function setPause(v){
   if(v==='manual'){ store.paused = new Date(Date.now()+MANUAL_PAUSE_H*3600000).toISOString(); store.pausedWhy='manual'; }
-  else if(v==='evening'){ const d=new Date(); if(d.getHours()>=19) d.setDate(d.getDate()+1); d.setHours(19,0,0,0); store.paused=d.toISOString(); store.pausedWhy='away'; }
+  else if(v==='evening'){ const d=new Date(); if(d.getHours()>=19){ rerender(); return; } d.setHours(19,0,0,0); store.paused=d.toISOString(); store.pausedWhy='away'; }   // from a screen left open past 19:00: show the current options instead
   else { store.paused = new Date(Date.now()+Number(v)*60000).toISOString(); store.pausedWhy='away'; }
   save();
   schedChange({ paused_until: store.paused });
@@ -448,8 +514,7 @@ function submit(){
   const a = S.a;
   const row = { id:'v'+Date.now()+Math.random().toString(36).slice(2,6), ts:new Date().toISOString(), type:S.mode, home:a.home||'long',
     tsv:a.tsv, tp:a.tp, garments:a.clo||[], clo:cloOf(a.clo||[]), act:a.act, met:byId(ACTS,a.act)?.met, room:a.room,
-    ta:a.ta, tc: typeof a.tc==='number' ? (TC.find(t=>t.k===a.tc)||{}).id : undefined, tcs: typeof a.tc==='number' ? a.tc : undefined,
-    air:a.air, air_pref:a.air_pref, hum:a.hum, sun:a.sun, actions:a.actions, notes:a.notes,
+    ta:a.ta, air:a.air, sun:a.sun, actions:a.actions, notes:a.notes,
     same:S.same, secs:Math.max(1, Math.round((Date.now()-S.t0)/1000)) };
   store.votes.push(row); store.paused=null; store.pausedWhy=''; save();
   syncVote(row);
@@ -779,14 +844,19 @@ $('#screen').addEventListener('click', async e => {
     case 'start': startSession('self'); break;
     case 'home': onHome(d.v); break;
     case 'pause': setPause(d.v); break;
-    case 'same': beginQuestions(true); break;
-    case 'changed': beginQuestions(false); break;
+    case 'same': S.same = !quickEdited(); submit(); break;                       // the quick check: saved as shown, nothing more to ask
+    case 'fill': S.flow = FLOW_ALL.filter(q => !answered(S.a, q)); S.same = false; S.i = 0; go('q'); break;
+    case 'changed': beginQuestions(); break;
     case 'pick': pick(d.q, d.v); break;
     case 'toggle': toggle(d.q, d.v); break;
     case 'none': S.a[d.q] = []; rerender(); break;
     case 'lastclo': S.a.clo = [...((lastVote() || {}).garments || [])]; rerender(); break;
     case 'next': next(); break;
-    case 'edit': { const i = S.flow.indexOf(d.q); if(i>=0){ S.i=i; S.edit=true; S.hist.push('review'); S.screen='q'; render(); } break; }
+    case 'edit': {
+      if(S.screen==='same') S.flow = [...FLOW_ALL];
+      const i = S.flow.indexOf(d.q);
+      if(i>=0){ const v = S.a[d.q]; S.editPrev = { q:d.q, v: Array.isArray(v) ? [...v] : v }; S.i=i; S.edit=true; S.editFrom=S.screen; S.hist.push(S.screen); S.screen='q'; render(); }
+      break; }
     case 'submit': submit(); break;
     case 'show': openSheet(d.id); break;
     case 'add-win': { remDraft = readHours(); remDraft[d.w+'2_start'] = '07:00'; remDraft[d.w+'2_end'] = '09:00'; rerender(); $('#'+(d.w==='weekday'?'h_ws2':'h_es2'))?.focus({ preventScroll:true }); break; }
@@ -827,11 +897,15 @@ $('#back').addEventListener('click', back);
 $('#sheet').addEventListener('click', e => { if(e.target.closest('[data-act="sheet-close"]')) closeSheet(); });
 $('#backdrop').addEventListener('click', closeSheet);
 document.addEventListener('keydown', e => { if(e.key==='Escape' && SHEET) closeSheet(); });
-setInterval(() => { if(S.screen==='pending' && !document.hidden) recheck(true); }, 60000);
+setInterval(() => {
+  if(document.hidden) return;
+  if(S.screen==='pending') recheck(true);
+  if(S.screen==='away' && !S.lock) rerender();             // keeps the end times of the pauses current
+}, 60000);
 document.addEventListener('visibilitychange', () => {
   if(document.hidden) return;
   if(S.screen==='pending') recheck(true);
-  else quiet(syncReminders());
+  else { if(S.screen==='away' && !S.lock) rerender(); quiet(syncReminders()); }   // the pause end times are current again
 });
 
 /* ---------- celebration ---------- */
@@ -856,7 +930,7 @@ const COLS = [
   ['participant', () => PARTICIPANT], ['timestamp_utc', v=>v.ts], ['local_time', v=>{const d=new Date(v.ts); return dayKey(d)+' '+fmt(d);}],
   ['prompt', v=>v.type], ['at_home', v=>v.home], ['tsv', v=>v.tsv], ['preference', v=>v.tp], ['clo', v=>v.clo?.toFixed(2)],
   ['garments', v=>(v.garments||[]).join('|')], ['met', v=>v.met], ['activity', v=>v.act], ['room', v=>v.room],
-  ['acceptability', v=>v.ta], ['comfort', v=>v.tc], ['comfort_score', v=>v.tcs], ['air', v=>v.air], ['air_pref', v=>v.air_pref], ['humidity', v=>v.hum], ['sun', v=>v.sun],
+  ['acceptability', v=>v.ta], ['air', v=>v.air], ['sun', v=>v.sun],
   ['actions', v=>(v.actions||[]).join('|')], ['notes', v=>(v.notes||[]).join('|')], ['same_as_last', v=>v.same?'yes':'no'], ['seconds', v=>v.secs], ['', v=>v.example?'example':'']
 ];
 const cell = x => x===undefined||x===null ? '' : String(x);

@@ -67,10 +67,25 @@ ask them to register again.
 
 ## The check-in
 
-Every check-in asks the **same twelve questions in the same order** (on a repeat check-in, answering "Yes, still the same" copies the five core answers from the last check-in and asks the remaining seven; the stored row is still the full twelve, marked `same_as_last`): thermal sensation, preference, clothing,
-activity, room, acceptability, overall comfort, what has changed since last time, air movement (and what they would
-like), humidity, sunlight, and anything else worth noting. There are no alternating sets: two check-ins from the same
-participant, or from two participants, always hold the same fields, so the rows in `comfort_votes` compare directly.
+A check-in starts with "Are you at home right now?". "Yes, for over an hour" and "Yes, I just got in" both go on to
+the questions (the answer is stored in `at_home` as `long` or `recent`); "No, I'm out" offers a pause of one, three
+or five hours (each showing the time it ends), until 19:00 (before 19:00 only), or until the participant is back
+(12 hours at most).
+
+Every check-in asks the **same ten questions in the same order**: thermal sensation, preference, acceptability,
+clothing, activity, room, air movement, sunlight, what has changed since last time, and anything else worth noting
+(hot or cold drink, just ate, hungry, tired, unwell). From the second check-in on, a **quick check** comes first: it
+shows the answers of the last check-in, each with an **Edit** button. "Yes, still the same" saves them at once with
+nothing more to ask (what has changed and anything to note are saved as empty), marked `same_as_last`; after an edit
+the button reads "Save with my changes" and the row is not marked `same_as_last`. "Something has changed" asks all
+ten questions. Two check-ins, from the same participant or from two participants, always hold the same fields, so
+the rows in `comfort_votes` compare directly.
+
+Since version 0.4.0 (`app_version`) the app no longer asks overall comfort (the six-point scale), humidity or which
+air movement the participant would like, and those answers are not kept: the app no longer sends them, drops them from
+the check-ins stored on the phone (and from any still waiting to sync), and the dashboard no longer shows or exports
+them. Answers already in the database stay in its `comfort`, `comfort_score`, `humidity` and `air_pref` columns until
+those columns are dropped there.
 
 **My check-ins** on the start screen lists everything submitted from that phone, with three small charts at the top.
 Tapping a row opens a pop-up summary of that check-in; the list itself is the only part of the app that scrolls.
@@ -91,7 +106,8 @@ see "The reminder clock" below), which runs two scripts in `switch/push/`:
 
 - `send.js` reads the registered phones from the `push_subscriptions` table and sends a web push to each one that
   is due. A phone is sent to when reminders are on and not paused (the participant has not said they are out),
-  at least an hour has passed since they said they had just got in, at least 30 minutes have passed since their
+  at least an hour has passed since `settled_at` (no longer set by the app since 0.4.0, when "Yes, I just got in"
+  started going straight to the check-in), at least 30 minutes have passed since their
   last check-in, it has not had a reminder yet in this clock hour (nor in the last 45 minutes), and the phone's
   local time is inside the participant's home hours (weekdays 17:00–22:30 and weekends 09:00–22:30 unless they
   change it in the app). Anyone who wants a more customised schedule can add a **second window** for weekdays and
