@@ -32,10 +32,13 @@
 - Keep commit messages short and descriptive.
 
 ## Interactive "Explore the house" block (top of #research)
-- Files in repo root: `house-exterior.jpg`, `room-mould.jpg`, `room-comfort.jpg`, `room-resilience.jpg` (1600×900 JPEGs, loaded lazily). Never rename them.
+- The house and the three rooms are animated inline SVG illustrations (`svg.tw-art`, viewBox 0 0 1600 900) inside `#twStage`: an isometric single-storey "digital twin" (dark navy, cyan data streams) that assembles the first time the block scrolls into view. A family of three (man, woman in a sleeveless top and skirt, child) follows one shared 60 s routine, and the resilience room plays a 20 s power-outage cycle. Animation classes are `tw-` prefixed, keyframes `tw…`.
+- Outside and inside stay in step: the people (`.tw-pa`) and the outage cycle (`.tw-sync`) keep running in hidden views, so a zone always opens on the same moment as the outside view and nobody is in two places at once. Everything pauses while the block is off screen (`.tw-paused`); reduced-motion visitors get a static frame with no intro.
+- Each room close-up is drawn exactly where the exterior zoom ends: the zoom origin `x,y` and scale `s` in `TW_SCENES` are computed from the drawing, so do not change them by hand. The SVG path data is machine-generated; do not hand-edit it.
+- The old photos `house-exterior.jpg`, `room-mould.jpg`, `room-comfort.jpg`, `room-resilience.jpg` are no longer used but stay in the repo as a fallback. Never rename them.
 - Markup lives in `#research` before the "Current projects" heading; all its classes are prefixed `tw-`, `twin-`, `tcard`, `tchip`, `tstat` so they never collide with the site's `.card`, `.chip` or other classes. Keep that prefix rule for any addition.
 - All content and geometry is in the `TW_SCENES` object in the last `<script>`: per room a `win` rectangle (percent of the exterior image), the zoom origin `x,y` and scale `s`, and `spots` (marker `x,y` in percent of the room image, icon key, tag, title, description, stat tiles). Edit text and numbers there; do not restyle the block.
-- Interaction is image-only by the owner's request: no buttons. Exterior windows glow and are clickable; rooms have sonar markers opening cards; the bottom-left chip links to the matching project card (`#proj-mould`, `#proj-comfort`, `#proj-resilience`, ids on the three project articles).
+- Interaction is image-only by the owner's request: no buttons. Each exterior zone and its "… Research" title are clickable; rooms have sonar markers opening cards; the bottom-left chip links to the matching project card (`#proj-mould`, `#proj-comfort`, `#proj-resilience`, ids on the three project articles).
 - No "Next" button in cards and no project link inside cards (removed on request).
 
 ## Before replacing index.html wholesale (read this first)
