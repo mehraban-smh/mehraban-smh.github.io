@@ -7,6 +7,7 @@ const KEY = 'switch_comfort_proto_v1';
 const APPROVED_KEY = 'switch_approved';
 const INTERVAL = SWITCH.cfg.reminderIntervalMin || 60;     // minutes between reminders, same as the sender
 const GAP_MIN = 30;                                        // the sender skips a phone that checked in less than this long ago
+const MANUAL_PAUSE_H = 12;                                 // "I'll tell you when I'm back": reminders resume by themselves after this long
 const NOT_FOUND_MSG = 'This registration was not found. Please register again or contact the research team.';
 const pad = n => String(n).padStart(2,'0');
 const fmt = d => pad(d.getHours())+':'+pad(d.getMinutes());
@@ -149,12 +150,12 @@ function whenWord(d){
 /* ---------- screens ---------- */
 function statusCard(){
   const now = Date.now();
-  if(store.pausedWhy==='manual') return `<div class="status">${ic('pause')}<div><b>Paused until you are back</b><span>Tap &ldquo;Check in now&rdquo; when you are home again.</span></div></div>`;
-  if(store.paused && new Date(store.paused) > now){
-    if(store.pausedWhy==='settling') return `<div class="status">${ic('clock')}<div><b>Settling in</b><span>Next check-in ${whenWord(nextReminder())}.</span></div></div>`;
-    return `<div class="status">${ic('pause')}<div><b>Paused until ${fmt(new Date(store.paused))}</b><span>No reminders while you are out. Next one ${whenWord(nextReminder())}.</span></div></div>`;
-  }
   const remindersOn = typeof PUSH !== 'undefined' && PUSH.status && PUSH.status() === 'on';
+  if(store.paused && new Date(store.paused) > now){
+    if(store.pausedWhy==='manual') return `<div class="status">${ic('pause')}<div><b>Paused until you are back</b><span>Back home? Tap &ldquo;Check in now&rdquo;.${remindersOn ? ` Otherwise reminders resume ${whenWord(nextReminder())}.` : ''}</span></div></div>`;
+    if(store.pausedWhy==='settling') return `<div class="status">${ic('clock')}<div><b>Settling in</b><span>Next check-in ${whenWord(nextReminder())}.</span></div></div>`;
+    return `<div class="status">${ic('pause')}<div><b>Paused until ${whenWord(new Date(store.paused)).replace(/^today at /, '')}</b><span>No reminders on this phone while you are out. Next one ${whenWord(nextReminder())}.</span></div></div>`;
+  }
   if(!remindersOn) return `<div class="status">${ic('clock')}<div><b>Next check-in window ${whenWord(nextReminder())}</b><span>Turn on reminders below to get a nudge.</span></div></div>`;
   return `<div class="status">${ic('bell')}<div><b>Next reminder ${whenWord(nextReminder())}</b><span>Once an hour, only while you are at home.</span></div></div>`;
 }
@@ -323,12 +324,12 @@ const SCREENS = {
       <button class="row" data-act="home" data-v="out">${ic('out')}<div><b>No, I'm out</b><span>Pause reminders for a while</span></div>${ic('chev','go')}</button>
     </div>`,
   recent: () => `<div class="done"><div class="big">${ic('clock')}</div><h1>No rush</h1><p class="sub">Your body takes a while to adjust after coming indoors. We will check back <b>${whenWord(nextReminder())}</b>.</p><div class="actions"><button class="btn primary" data-act="go" data-to="start">OK</button></div></div>`,
-  away: () => qhead('Out and about', 'When should we check again?', 'You will get no reminders until then.') +
+  away: () => qhead('Out and about', 'When should we check again?', 'This phone stays quiet until then.') +
     `<div class="rows fill">
       <button class="row" data-act="pause" data-v="60">${ic('clock')}<div><b>In an hour</b></div>${ic('chev','go')}</button>
       <button class="row" data-act="pause" data-v="180">${ic('clock')}<div><b>In three hours</b></div>${ic('chev','go')}</button>
-      <button class="row" data-act="pause" data-v="evening">${ic('moon')}<div><b>This evening</b><span>From 19:00</span></div>${ic('chev','go')}</button>
-      <button class="row" data-act="pause" data-v="manual">${ic('pin')}<div><b>I'll tell you when I'm back</b></div>${ic('chev','go')}</button>
+      ${new Date().getHours() < 19 ? `<button class="row" data-act="pause" data-v="evening">${ic('moon')}<div><b>This evening</b><span>From 19:00</span></div>${ic('chev','go')}</button>` : ''}
+      <button class="row" data-act="pause" data-v="manual">${ic('pin')}<div><b>I'll tell you when I'm back</b><span>Or in ${MANUAL_PAUSE_H} hours at the latest</span></div>${ic('chev','go')}</button>
     </div>`,
   same: () => {
     const l = lastVote(), d = new Date(l.ts), mins = Math.round((Date.now()-d)/60000);
@@ -424,20 +425,23 @@ function onHome(v){
   S.a.home = v;
   if(v==='long'){
     store.paused=null; store.pausedWhy=''; save();
-    if(PUSH.status()==='on') quiet(SWITCH.updateSchedule(PARTICIPANT, { paused_until:null, settled_at:null }));
+    schedChange({ paused_until:null, settled_at:null });
     lastVote() ? go('same') : beginQuestions(false);
   } else if(v==='recent'){
     store.paused = new Date(Date.now()+60*60000).toISOString(); store.pausedWhy='settling'; save();
-    if(PUSH.status()==='on') quiet(SWITCH.updateSchedule(PARTICIPANT, { settled_at:new Date().toISOString(), paused_until:null }));
+    schedChange({ settled_at:new Date().toISOString(), paused_until:null });
     go('recent');
   } else { go('away'); }
 }
+/* "No, I'm out": no reminders until the chosen time. "I'll tell you when I'm back" is open-ended in the
+ * app's words, but reminders still resume after MANUAL_PAUSE_H hours, so someone who forgets to say they
+ * are home is not lost to the study; the status card says when. */
 function setPause(v){
-  if(v==='manual'){ store.paused=null; store.pausedWhy='manual'; }
+  if(v==='manual'){ store.paused = new Date(Date.now()+MANUAL_PAUSE_H*3600000).toISOString(); store.pausedWhy='manual'; }
   else if(v==='evening'){ const d=new Date(); if(d.getHours()>=19) d.setDate(d.getDate()+1); d.setHours(19,0,0,0); store.paused=d.toISOString(); store.pausedWhy='away'; }
   else { store.paused = new Date(Date.now()+Number(v)*60000).toISOString(); store.pausedWhy='away'; }
   save();
-  if(PUSH.status()==='on') quiet(SWITCH.updateSchedule(PARTICIPANT, { paused_until: store.paused || new Date(Date.now()+12*3600000).toISOString() }));
+  schedChange({ paused_until: store.paused });
   go('start');
 }
 function submit(){
@@ -449,7 +453,7 @@ function submit(){
     same:S.same, secs:Math.max(1, Math.round((Date.now()-S.t0)/1000)) };
   store.votes.push(row); store.paused=null; store.pausedWhy=''; save();
   syncVote(row);
-  if(PUSH.status()==='on') quiet(SWITCH.updateSchedule(PARTICIPANT, { last_vote_at:new Date().toISOString(), paused_until:null }));
+  schedChange({ last_vote_at:row.ts, paused_until:null, settled_at:null });
   if(DEBUG) renderTable();
   go('done'); confetti();
 }
@@ -494,7 +498,7 @@ function setIdentity(code, name){
 /* Forgets who is using this phone: the code is gone from the database (removed on the dashboard), or the
  * person on the waiting screen said it is not them. The check-ins stay on the phone. */
 function forgetIdentity(note){
-  LS.del('switch_participant'); LS.del('switch_name'); LS.del(APPROVED_KEY); LS.del('switch_push');
+  LS.del('switch_participant'); LS.del('switch_name'); LS.del(APPROVED_KEY); LS.del('switch_push'); LS.del('switch_push_lost'); LS.del('switch_sched');
   PARTICIPANT = ''; NAME = ''; welcomeNote = note || '';
   go('welcome');
 }
@@ -586,11 +590,21 @@ const HOURS_KEY = 'switch_hours';
 /* Home hours: a weekday and a weekend window, plus an optional second window for each (null when unused).
  * The same eight fields go to push_subscriptions, where the sender reads them. */
 const DEFAULT_HOURS = { weekday_start:'17:00', weekday_end:'22:30', weekend_start:'09:00', weekend_end:'22:30', weekday2_start:null, weekday2_end:null, weekend2_start:null, weekend2_end:null };
+const hhmm = s => { const m = hm(s); return m ? pad(m[0])+':'+pad(m[1]) : null; };
+/* The saved hours, always usable: "HH:MM", a missing main bound takes the default, a main window that ends
+ * at or before its start (an older version let people save "until 00:00") runs until 23:59, and a second
+ * window counts only with both ends set and ending after it starts (00:00 as its end also means 23:59).
+ * The sender (switch/push/send.js, insideHomeHours) reads stored hours the same way. */
 function hours(){
   let h; try{ h = Object.assign({}, DEFAULT_HOURS, JSON.parse(LS.get(HOURS_KEY)||'{}')); }catch(e){ h = Object.assign({}, DEFAULT_HOURS); }
-  ['weekday','weekend'].forEach(p => {                     // a second window counts only with both ends set
-    const ok = hm(h[p+'2_start']) && hm(h[p+'2_end']);
-    h[p+'2_start'] = ok ? String(h[p+'2_start']) : null; h[p+'2_end'] = ok ? String(h[p+'2_end']) : null;
+  ['weekday','weekend'].forEach(p => {
+    let s = hhmm(h[p+'_start']) || DEFAULT_HOURS[p+'_start'], e = hhmm(h[p+'_end']) || DEFAULT_HOURS[p+'_end'];
+    if(e <= s) e = '23:59';
+    if(e <= s){ s = DEFAULT_HOURS[p+'_start']; e = DEFAULT_HOURS[p+'_end']; }
+    h[p+'_start'] = s; h[p+'_end'] = e;
+    const s2 = hhmm(h[p+'2_start']), e2 = hhmm(h[p+'2_end']) === '00:00' ? '23:59' : hhmm(h[p+'2_end']);
+    const ok = s2 && e2 && s2 < e2;
+    h[p+'2_start'] = ok ? s2 : null; h[p+'2_end'] = ok ? e2 : null;
   });
   return h;
 }
@@ -599,6 +613,46 @@ let remDraft = null;                                       // unsaved hours on t
 function hoursWord(h, p){
   const w = [[h[p+'_start'], h[p+'_end']], [h[p+'2_start'], h[p+'2_end']]].filter(x => x[0] && x[1]).sort((a, b) => a[0] < b[0] ? -1 : 1);
   return w.map(x => `${x[0]}&ndash;${x[1]}`).join(' &amp; ');
+}
+/* Why these hours cannot be saved, or '' when they can: every period has to end after it starts (the
+ * sender and the database would never use one that does not). */
+function hoursProblem(h){
+  for(const [p, name] of [['weekday','Weekdays'], ['weekend','Weekends']]){
+    if(!(h[p+'_start'] < h[p+'_end'])) return `${name}: the end time must be later than the start time. For &ldquo;until midnight&rdquo; choose 23:59.`;
+    if(h[p+'2_start'] && h[p+'2_end'] && !(h[p+'2_start'] < h[p+'2_end'])) return `${name}, second period: the end time must be later than the start time.`;
+  }
+  return '';
+}
+/* The time zone of the phone's clock, e.g. Europe/London: the sender reads the home hours in it, so the
+ * clocks going back or forward need nothing from anyone. */
+const zone = () => { try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || null; }catch(e){ return null; } };
+/* The service worker registration, or null when there is none within a few seconds (it failed to install),
+ * so nothing waits on it forever. */
+const swReady = () => 'serviceWorker' in navigator ? Promise.race([navigator.serviceWorker.ready, new Promise(r => setTimeout(() => r(null), 5000))]) : Promise.resolve(null);
+/* The reminder state this phone knows: the last check-in and a pause still running. */
+function personState(){
+  const l = lastVote(), paused = store.paused && new Date(store.paused) > Date.now() ? store.paused : null;
+  return Object.assign({ paused_until: paused }, l ? { last_vote_at: l.ts } : {});
+}
+/* Changes to the schedule ("I'm out", "I just got in", a check-in) wait in SCHED_KEY until the reminder
+ * service confirms them, and go along with every later request: a change made offline still arrives, and an
+ * old pause on the server cannot come back after the participant has said they are home. A pause or "just
+ * got in" that has not arrived within the hour is dropped (the check-in time is kept): by then a newer
+ * "Not home" from the notification may be on the server, and it must win. */
+const SCHED_KEY = 'switch_sched', SCHED_MAX_AGE = 60*60000;
+let schedSeq = 0;                                          // counts schedule changes made while the app is open
+function pendingSched(){
+  let p = null; try{ p = JSON.parse(LS.get(SCHED_KEY) || 'null'); }catch(e){}
+  if(!p || typeof p !== 'object') return {};
+  const ch = Object.assign({}, p); delete ch.at;
+  if(!(Date.now() - (p.at || 0) < SCHED_MAX_AGE)){ delete ch.paused_until; delete ch.settled_at; }
+  return ch;
+}
+function schedChange(ch){
+  if(PUSH.status() !== 'on') return;
+  schedSeq++;
+  LS.set(SCHED_KEY, JSON.stringify(Object.assign(pendingSched(), ch, { at:Date.now() })));
+  quiet(PUSH.sync({}));
 }
 const PUSH = {
   supported: 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window,
@@ -611,22 +665,81 @@ const PUSH = {
     if(Notification.permission === 'denied') return 'blocked';
     return LS.get('switch_push') === 'on' ? 'on' : 'off';
   },
+  lost(){ return LS.get('switch_push_lost') === '1'; },    // reminders stopped without the participant turning them off
+  subscribe(reg){ return reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: b64ToBytes(SWITCH.cfg.vapidPublicKey) }); },
+  /* this phone in the shape save_push_subscription() takes */
+  record(sub){
+    const j = sub.toJSON();
+    return Object.assign({ endpoint:j.endpoint, participant:PARTICIPANT, p256dh:j.keys.p256dh, auth:j.keys.auth,
+      tz:zone(), tz_offset_min:-new Date().getTimezoneOffset(), interval_min:INTERVAL, user_agent:navigator.userAgent.slice(0,200) }, hours());
+  },
   async enable(){
-    const reg = await navigator.serviceWorker.ready;
+    // Asked first, straight from the tap: iPhone only shows the question in direct response to one.
     const perm = await Notification.requestPermission();
     if(perm !== 'granted') return 'blocked';
-    const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: b64ToBytes(SWITCH.cfg.vapidPublicKey) });
-    const j = sub.toJSON();
-    const ok = await SWITCH.saveSubscription(Object.assign({ endpoint:j.endpoint, participant:PARTICIPANT, p256dh:j.keys.p256dh, auth:j.keys.auth,
-      tz_offset_min:-new Date().getTimezoneOffset(), interval_min:INTERVAL, enabled:true, user_agent:navigator.userAgent.slice(0,200) }, hours()));
-    if(!ok) throw new Error('This phone could not be registered. Check the connection and try again.');
-    LS.set('switch_push','on'); return 'on';
+    const reg = await swReady();
+    if(!reg) throw new Error('Reminders could not start on this phone. Close the app, open it again and try once more.');
+    const sub = await this.subscribe(reg);
+    const saved = await SWITCH.saveSubscription(this.record(sub));
+    if(saved === 'refused'){ quiet(afterRefusal()); throw new Error('The study database did not accept this participant code. Please contact the research team.'); }
+    if(saved === 'invalid') throw new Error('Reminders do not work in this browser. On Android use Chrome; on iPhone use Safari and add the app to your home screen.');
+    if(saved === 'full') throw new Error('Too many phones are registered for reminders under your code. Please contact the research team.');
+    if(saved !== true) throw new Error('This phone could not be registered. Check the connection and try again.');
+    LS.set('switch_push','on'); LS.del('switch_push_lost');
+    quiet(this.sync(personState()));                         // no reminder during a pause or right after a check-in
+    return 'on';
   },
   async disable(){
-    try{ const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription(); if(sub){ await SWITCH.disableSubscription(sub.endpoint); await sub.unsubscribe(); } }catch(e){}
-    LS.set('switch_push','off');
+    try{ const reg = await swReady(); const sub = reg && await reg.pushManager.getSubscription(); if(sub){ await SWITCH.updateSchedule(sub.endpoint, { enabled:false }); await sub.unsubscribe(); } }catch(e){}
+    LS.set('switch_push','off'); LS.del('switch_push_lost'); LS.del(SCHED_KEY);
+  },
+  /* Sends schedule changes for this phone to the reminder service (see update_push_schedule in
+   * supabase-setup.sql), together with the phone's time zone and any change still waiting in SCHED_KEY,
+   * and keeps the registration healthy: when the service no longer knows this phone (the push service
+   * dropped its subscription, so the sender removed it) and the participant is still in the study, the
+   * phone subscribes afresh and registers again; when even that is impossible, reminders show as stopped,
+   * so the participant can turn them on again. A participant who has been removed or is no longer approved
+   * gets the waiting or welcome screen instead (afterRefusal). Resolves to the phone's state on the server
+   * ({ found:true, enabled, paused_until, settled_at }), or null when nothing could be confirmed. */
+  async sync(changes){
+    if(this.status() !== 'on') return null;
+    const reg = await swReady(); if(!reg) return null;
+    const pend = LS.get(SCHED_KEY);
+    const body = Object.assign({ tz:zone(), tz_offset_min:-new Date().getTimezoneOffset() }, pendingSched(), changes || {});
+    const done = st => { if(st && st.found && LS.get(SCHED_KEY) === pend) LS.del(SCHED_KEY); return st; };
+    let sub = null; try{ sub = await reg.pushManager.getSubscription(); }catch(e){}
+    const st = sub ? await SWITCH.updateSchedule(sub.endpoint, body) : { found:false };
+    if(!st || st.found) return done(st);
+    let ap; try{ ap = await SWITCH.approval(PARTICIPANT); }catch(e){ return null; }
+    const stop = () => { LS.set('switch_push','off'); LS.del(SCHED_KEY); quiet(afterRefusal()); return null; };
+    if(!ap || !ap.approved) return stop();
+    try{
+      if(sub) await sub.unsubscribe().catch(()=>{});
+      sub = await this.subscribe(reg);
+    }catch(e){ LS.set('switch_push','off'); LS.set('switch_push_lost','1'); return null; }
+    const saved = await SWITCH.saveSubscription(this.record(sub));
+    if(saved === 'refused') return stop();
+    if(saved !== true) return null;
+    return done(await SWITCH.updateSchedule(sub.endpoint, Object.assign(personState(), body)));
   }
 };
+let lastSync = 0;
+/* When the app opens or comes back to the screen (at most every few minutes): tells the reminder service
+ * the phone's time zone, home hours and last check-in, sends any change still waiting, repairs a
+ * registration the service has lost, and picks up a pause set from the notification's "Not home" button. */
+async function syncReminders(){
+  if(!PARTICIPANT || PUSH.status() !== 'on' || Date.now() - lastSync < 5*60000) return;
+  lastSync = Date.now();
+  const seq = schedSeq, l = lastVote(), h = hours();
+  const st = await PUSH.sync(Object.assign({ enabled:true }, hoursProblem(h) ? {} : h, l ? { last_vote_at:l.ts } : {}));
+  let changed = PUSH.status() !== 'on';
+  const until = st && st.found && st.paused_until ? new Date(st.paused_until) : null;
+  // A later pause on the server came from "Not home", unless the participant changed something meanwhile.
+  if(seq === schedSeq && until && until > Date.now() && !(store.paused && new Date(store.paused) >= until)){
+    store.paused = until.toISOString(); store.pausedWhy = 'away'; save(); changed = true;
+  }
+  if(changed && (S.screen==='start' || S.screen==='reminders')) rerender();
+}
 function b64ToBytes(s){ const p = '='.repeat((4 - s.length % 4) % 4); const b = atob((s + p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(b, c => c.charCodeAt(0)); }
 function reminderCard(){
   const st = PUSH.status();
@@ -634,7 +747,7 @@ function reminderCard(){
   const h = hours();
   const map = {
     on:          ['bell',  'Reminders are on', `Weekdays ${hoursWord(h, 'weekday')}<br>Weekends ${hoursWord(h, 'weekend')}`],
-    off:         ['bell',  'Turn on reminders', 'A nudge once an hour while you are at home'],
+    off:         PUSH.lost() ? ['bell', 'Reminders have stopped', 'Tap to turn them on again'] : ['bell',  'Turn on reminders', 'A nudge once an hour while you are at home'],
     install:     ['pin',   'Add to your home screen', 'Reminders need the app on your home screen'],
     blocked:     ['pause', 'Reminders are blocked', 'Allow notifications to turn them on'],
     unsupported: ['pause', 'Reminders not available here', 'Use Chrome on Android or Safari on iPhone']
@@ -683,14 +796,20 @@ $('#screen').addEventListener('click', async e => {
     case 'recheck': recheck(false); break;
     case 'forget': forgetIdentity(''); break;
     case 'push-on': {
-      LS.set(HOURS_KEY, JSON.stringify(readHours())); remDraft = null; b.disabled = true;
+      const h = readHours(), why = hoursProblem(h);
+      if(why){ remMsg(why); break; }
+      LS.set(HOURS_KEY, JSON.stringify(h)); remDraft = null; b.disabled = true;
       try{ await PUSH.enable(); rerender(); }
       catch(err){ b.disabled = false; remMsg(err.message || 'Something went wrong, please try again.'); }
       break; }
     case 'save-hours': {
-      const h = readHours(); LS.set(HOURS_KEY, JSON.stringify(h)); remDraft = null;
-      let ok = false; try{ ok = await SWITCH.updateSchedule(PARTICIPANT, h); }catch(err){}
-      remMsg(ok ? 'Saved.' : 'Saved on this phone. The reminder service could not be reached right now.', ok);
+      const h = readHours(), why = hoursProblem(h);
+      if(why){ remMsg(why); break; }
+      LS.set(HOURS_KEY, JSON.stringify(h)); remDraft = null; b.disabled = true;
+      const st = await PUSH.sync(h).catch(() => null);
+      b.disabled = false;
+      if(PUSH.status() !== 'on'){ rerender(); remMsg('Saved on this phone, but reminders have stopped here. Turn them on again below.'); break; }
+      remMsg(st && st.found ? 'Saved.' : 'Saved on this phone. The reminder service could not be reached right now; it gets the new hours next time you open the app.', !!(st && st.found));
       break; }
     case 'push-off': await PUSH.disable(); rerender(); break;
   }
@@ -709,7 +828,11 @@ $('#sheet').addEventListener('click', e => { if(e.target.closest('[data-act="she
 $('#backdrop').addEventListener('click', closeSheet);
 document.addEventListener('keydown', e => { if(e.key==='Escape' && SHEET) closeSheet(); });
 setInterval(() => { if(S.screen==='pending' && !document.hidden) recheck(true); }, 60000);
-document.addEventListener('visibilitychange', () => { if(!document.hidden && S.screen==='pending') recheck(true); });
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden) return;
+  if(S.screen==='pending') recheck(true);
+  else quiet(syncReminders());
+});
 
 /* ---------- celebration ---------- */
 function confetti(){
@@ -768,5 +891,6 @@ else {
   if(FROM_PUSH){ history.replaceState(null, '', location.pathname); startSession('scheduled'); }
   else { S.screen = 'start'; render(); }
   if(needsApprovalCheck()) checkApproval();
+  quiet(syncReminders());
 }
 if(DEBUG) renderTable();

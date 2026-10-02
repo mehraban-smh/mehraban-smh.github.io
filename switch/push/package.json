@@ -3,6 +3,6 @@
   "private": true,
   "description": "Hourly comfort check-in reminders and new-registration issues. Run by .github/workflows/push-reminders.yml.",
   "dependencies": {
-    "web-push": "^3.6.7"
+    "web-push": "3.6.7"
   }
 }

@@ -1,14 +1,20 @@
 name: Comfort check-in reminders
 
-# Every hour, on the hour: decide who should get a check-in reminder and send it (switch/push/send.js),
-# then, if anyone registered since the last run and is still waiting for approval, open one issue in this
-# repository listing them (switch/push/notify.js). GitHub emails the owner about the issue; approving happens on the
-# dashboard. The issue carries only the participant code, never a name or email.
+# Every hour: decide who should get a check-in reminder and send it (switch/push/send.js), then, if anyone
+# registered since the last run and is still waiting for approval, open one issue in this repository listing
+# them (switch/push/notify.js). GitHub emails the owner about the issue; approving happens on the dashboard.
+# The issue carries only the participant code, never a name or email.
+#
+# What starts it: the Supabase database, at the top of every hour, through the workflow_dispatch API (see
+# switch/supabase-reminder-clock.sql). GitHub's own schedule below is only a backup: on the free runners it
+# is delayed or dropped so often that in September 2026 it ran about every four hours. It stays off the top
+# of the hour, which GitHub says is the busiest time. The sender reminds a phone at most once per clock
+# hour, so the clock and the backup never double up.
 # "Run workflow" with a participant code sends one reminder straight away, ignoring home hours (for
 # testing). "Dry run" makes both steps log what they would do and change nothing.
 on:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "7,37 * * * *"
   workflow_dispatch:
     inputs:
       participant:

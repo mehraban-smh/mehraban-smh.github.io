@@ -6,9 +6,10 @@
  * what is stored in the browser it is opened in.
  *
  * The anon key and the VAPID public key are designed to be public. What the anon key may do is
- * limited by the row-level security policies in supabase-setup.sql (register, and for an approved
- * participant code insert check-ins and register a phone for reminders, nothing else). The matching VAPID *private* key lives only in the GitHub
- * secret VAPID_PRIVATE_KEY.
+ * limited by the row-level security policies and functions in supabase-setup.sql (register and check
+ * approval; for an approved participant code insert check-ins and register a phone for reminders; change
+ * the reminder row of the push endpoint it names, and no other row; nothing else). The matching VAPID
+ * *private* key lives only in the GitHub secret VAPID_PRIVATE_KEY.
  */
 self.SWITCH_CONFIG = {
   supabaseUrl: "https://kysovekezjdoxerykkmj.supabase.co",       // e.g. "https://abcdefghijklmnop.supabase.co"  (Settings > Data API > Project URL)
@@ -17,6 +18,7 @@ self.SWITCH_CONFIG = {
   pushTable: "push_subscriptions",
   vapidPublicKey: "BONtfcqHLMr-1AEFJ9RN9ImsM4nsfJZNTvDrkfLE2htSmt5FUZGzZqa09n6VH6z8JK9DlgsvCtDSHsbXyO5OV6g",
   reminderIntervalMin: 60,
+  timeZone: "Europe/London",   // the sender reads home hours in this zone for phones that have not reported their own
   studyName: "SWITCH personal comfort study",
-  appVersion: "0.3.0"
+  appVersion: "0.3.1"
 };

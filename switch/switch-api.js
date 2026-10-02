@@ -15,10 +15,6 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   };
   const pad = n => String(n).padStart(2, '0');
-  const SECOND_WINDOW = ['weekday2_start', 'weekday2_end', 'weekend2_start', 'weekend2_end'];
-  const stripSecondWindow = o => { const c = Object.assign({}, o); SECOND_WINDOW.forEach(k => { delete c[k]; }); return c; };
-  // True when a 400 came from PostgREST not knowing the second-window columns yet.
-  const missingSecondWindow = async r => { if (r.status !== 400) return false; const text = await r.clone().text().catch(() => ''); return /(weekday|weekend)2_(start|end)/.test(text); };
 
   /* Turns a failed dashboard write into an Error that says what the server said. A 401 keeps its
    * wording (the dashboard sends the researcher back to sign in). When the message is about a column,
@@ -169,41 +165,46 @@
       return Array.isArray(rows) && rows.length > 0;
     },
 
-    /* ---- reminders: one row per registered phone, keyed by the push endpoint ---- */
-    // The optional second reminder window lives in four columns added later. Until supabase-setup.sql
-    // has been re-run on a project, PostgREST refuses any write that names them (400, unknown column),
-    // so those writes are retried once without them rather than failing reminder sign-up outright.
-    async saveSubscription(record, retried) {
+    /* ---- reminders: one row per registered phone, keyed by the push endpoint ----
+     * The public key can neither read nor update push_subscriptions (Postgres only updates rows the
+     * caller may read), so both calls go through database functions in supabase-setup.sql. The push
+     * endpoint, which only this phone knows, is what shows a row is this phone's. */
+    // Turning reminders on: adds this phone, or refreshes its row. Resolves to true when saved,
+    // 'refused' when the database does not accept the participant code (removed, or not approved),
+    // 'invalid' when it refuses the subscription itself (not from a known push service, or bad hours),
+    // 'full' when the code already has the most phones allowed, and false when it is unreachable (or
+    // supabase-setup.sql has not been re-run yet).
+    async saveSubscription(record) {
       if (!live) return false;
-      // Insert first; if this phone is already registered (409 on the endpoint), update its row instead.
-      const t = rest(cfg.pushTable || 'push_subscriptions');
-      const r = await fetch(t, { method: 'POST', headers: headers({ Prefer: 'return=minimal' }), body: JSON.stringify(record) });
-      if (r.ok) return true;
-      if (!retried && await missingSecondWindow(r)) return S.saveSubscription(stripSecondWindow(record), true);
-      if (r.status !== 409) return false;
-      const patch = Object.assign({}, record, { updated_at: new Date().toISOString() });
-      delete patch.endpoint;
-      const u = await fetch(t + '?endpoint=eq.' + encodeURIComponent(record.endpoint), { method: 'PATCH', headers: headers({ Prefer: 'return=minimal' }), body: JSON.stringify(patch) });
-      return u.ok;
+      const body = { p_endpoint: record.endpoint, p_participant: record.participant, p_p256dh: record.p256dh, p_auth: record.auth,
+        p_tz: record.tz || null, p_tz_offset_min: record.tz_offset_min ?? null,
+        p_weekday_start: record.weekday_start, p_weekday_end: record.weekday_end, p_weekend_start: record.weekend_start, p_weekend_end: record.weekend_end,
+        p_weekday2_start: record.weekday2_start || null, p_weekday2_end: record.weekday2_end || null,
+        p_weekend2_start: record.weekend2_start || null, p_weekend2_end: record.weekend2_end || null,
+        p_interval_min: record.interval_min || 60, p_user_agent: record.user_agent || null };
+      try {
+        const r = await fetch(rest('rpc/save_push_subscription'), { method: 'POST', headers: headers(), body: JSON.stringify(body) });
+        if (r.ok) return true;
+        if (r.status === 401 || r.status === 403) return 'refused';
+        if (r.status === 400) { const j = await r.json().catch(() => null); if (j && j.code === '22023') return 'invalid'; if (j && j.code === 'P0001') return 'full'; }
+        return false;
+      } catch (e) { return false; }
     },
-    async updateSchedule(participant, patch, retried) {
-      if (!live || !participant) return false;
-      const r = await fetch(rest(cfg.pushTable || 'push_subscriptions') + '?participant=eq.' + encodeURIComponent(participant), {
-        method: 'PATCH',
-        headers: headers({ Prefer: 'return=minimal' }),
-        body: JSON.stringify(Object.assign({ updated_at: new Date().toISOString() }, patch))
-      });
-      if (!r.ok && !retried && await missingSecondWindow(r)) return S.updateSchedule(participant, stripSecondWindow(patch), true);
-      return r.ok;
-    },
-    async disableSubscription(endpoint) {
-      if (!live || !endpoint) return false;
-      const r = await fetch(rest(cfg.pushTable || 'push_subscriptions') + '?endpoint=eq.' + encodeURIComponent(endpoint), {
-        method: 'PATCH',
-        headers: headers({ Prefer: 'return=minimal' }),
-        body: JSON.stringify({ enabled: false, updated_at: new Date().toISOString() })
-      });
-      return r.ok;
+    // Changes this phone's reminder schedule (only this phone's row). `changes` holds only what changes:
+    // paused_until, settled_at, last_vote_at, the eight home-hour fields, tz, tz_offset_min, enabled.
+    // {} just asks. Resolves to
+    //   { found: true, enabled, paused_until, settled_at }  this phone's state on the server,
+    //   { found: false }                                   the phone is not registered (any more),
+    //   null                                               unreachable, or the request was refused.
+    async updateSchedule(endpoint, changes) {
+      if (!live || !endpoint) return null;
+      try {
+        const r = await fetch(rest('rpc/update_push_schedule'), { method: 'POST', headers: headers(), body: JSON.stringify({ p_endpoint: endpoint, p_changes: changes || {} }) });
+        if (!r.ok) return null;
+        const j = await r.json();
+        const row = Array.isArray(j) ? j[0] : null;
+        return row ? Object.assign({ found: true }, row) : { found: false };
+      } catch (e) { return null; }
     },
 
     /* ---- researcher side ---- */
