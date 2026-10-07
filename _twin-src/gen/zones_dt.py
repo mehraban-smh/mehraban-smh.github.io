@@ -9,11 +9,18 @@ from ext_dt import circuits, stream, ZONES, CY, CYL
 def iso_for(zone):
     return Iso(*ZONES[zone]['iso'])
 
-HUD_DY = 110   # the HUD column sits lower on the taller canvas, beside the room
+HUD_DY = 58             # the HUD column sits lower on the taller canvas, beside the room (clear of the floor plinth's corner)
+HUD_K, HUD_O = 1.12, (1562, 150)   # and is drawn 12 % larger about its top-RIGHT corner: it grows towards the room (walls end at x 1254)
+                                   # and its right edge stays at 1562, inside the canvas even at the end of the room's slow drift
+
+def hud_pt(x, y):
+    """where a point drawn in HUD coordinates lands on the canvas"""
+    return round(HUD_O[0] + (x - HUD_O[0]) * HUD_K, 1), round(HUD_O[1] + (y - HUD_O[1]) * HUD_K + HUD_DY, 1)
 
 def holo(x, y, w, h, title, body, hd=.4, cls=''):
-    return (f'<g transform="translate(0,{HUD_DY})"><g class="tw-hin" style="--hd:{hd}s"><g class="tw-hud {cls}">' + rect(x, y, w, h, '#08182C', f'rx="16" fill-opacity=".9" stroke="{CY}" stroke-opacity=".5" stroke-width="1.5"')
-            + f'<text x="{x + 20}" y="{y + 32}" font-size="12.5" font-weight="700" letter-spacing="2.4" fill="#7FE3F5">{title}</text>'
+    tx, ty = HUD_O[0] * (1 - HUD_K), HUD_O[1] * (1 - HUD_K) + HUD_DY
+    return (f'<g transform="matrix({HUD_K} 0 0 {HUD_K} {tx:.1f} {ty:.1f})"><g class="tw-hin" style="--hd:{hd}s"><g class="tw-hud {cls}">' + rect(x, y, w, h, '#08182C', f'rx="16" fill-opacity=".9" stroke="{CY}" stroke-opacity=".5" stroke-width="1.5"')
+            + f'<text x="{x + 20}" y="{y + 32}" font-size="13.5" font-weight="700" letter-spacing="2.2" fill="#7FE3F5">{title}</text>'
             + rect(x + 20, y + 44, w - 40, 1, CY, 'opacity=".25"') + body + '</g></g></g>')
 
 def ping(I, x, y, z, dl=0):
@@ -62,17 +69,20 @@ def mould():
     s.append(SC.m_items(I, True) + layers.get('m', ''))
     s.append(finish(I, 'm'))
     sx, sy = I.p(0, 7.95, 1.44)
+    # the threshold label sits at the left end of its line, where the curve is still low, so the two never cross
     chart = ('<path d="M0 96H220" stroke="#21507A" stroke-width="1.5"/><path d="M0 44H220" stroke="#EF4B3C" stroke-opacity=".7" stroke-width="1.5" stroke-dasharray="5 5"/>'
              '<path class="tw-chart" pathLength="1" d="M0 92C20 90 30 84 50 80S80 70 100 62S140 54 160 44S200 30 220 26" fill="none" stroke="#3FD8F0" stroke-width="3" stroke-linecap="round"/>'
-             '<text x="0" y="116" font-size="11" fill="#8FDDEB">1 h</text><text x="220" y="116" font-size="11" fill="#8FDDEB" text-anchor="end">7 days</text><text x="220" y="38" font-size="10.5" fill="#F59A3C" text-anchor="end">growth threshold</text>')
+             '<text x="0" y="116" font-size="12.5" fill="#8FDDEB">1 h</text><text x="220" y="116" font-size="12.5" fill="#8FDDEB" text-anchor="end">7 days</text><text x="0" y="37" font-size="12" fill="#F59A3C">growth threshold</text>')
     ty = I.p(0, 5.15, 2.4)[1] - 70
-    s.append(stream(f'M{sx} {sy}C{sx - 40} {ty} 1150 {ty} 1290 {250 + HUD_DY}', 0))
+    ex, ey = hud_pt(1290, 250)
+    s.append(stream(f'M{sx} {sy}C{sx - 40} {ty} 1150 {ty} {ex} {ey}', 0))
     s.append(holo(1290, 150, 272, 244, 'MOULD FORECAST', f'<g transform="translate(1312,206)">{chart}</g>'
-                  + '<text x="1310" y="372" font-size="12" fill="#A9E7F2">R² <tspan font-weight="700" fill="#FFFFFF">0.999</tspan> at 1 h · <tspan font-weight="700" fill="#FFFFFF">0.896</tspan> at 7 d</text>', .5))
-    rows = [('Window glass', '9.8 °C', '96 %', '#EF4B3C'), ('Cold corner', '12.1 °C', '88 %', '#F59A3C'), ('Room air', '19.5 °C', '64 %', '#38C77A')]
-    s.append(holo(1290, 420, 272, 206, 'SURFACE TWIN', ''.join(
-        f'<text x="1310" y="{488 + i * 46}" font-size="12" fill="#A9E7F2">{a}</text><text x="1310" y="{507 + i * 46}" font-size="14" font-weight="700" fill="#FFFFFF">{t}<tspan fill="#8FDDEB" font-weight="500"> · RH </tspan>{rh}</text>'
-        + f'<rect class="tw-tbar2" style="--dl:-{i}s" x="1478" y="{494 + i * 46}" width="56" height="8" rx="4" fill="{c}"/>' for i, (a, t, rh, c) in enumerate(rows)), .8))
+                  + '<text x="1310" y="372" font-size="13" fill="#A9E7F2">R² <tspan font-weight="700" fill="#FFFFFF">0.999</tspan> at 1 h · <tspan font-weight="700" fill="#FFFFFF">0.896</tspan> at 7 d</text>', .5))
+    # physically consistent: room air 20.0 °C / 55 % has a dew point of 10.7 °C, so the glass below it condenses and the corner sits above the 80 % growth limit
+    rows = [('Window glass', '9.8 °C', '100 %', '#EF4B3C'), ('Cold corner', '12.1 °C', '91 %', '#F59A3C'), ('Room air', '20.0 °C', '55 %', '#38C77A')]
+    s.append(holo(1290, 405, 272, 206, 'SURFACE TWIN', ''.join(
+        f'<text x="1310" y="{473 + i * 46}" font-size="13" fill="#A9E7F2">{a}</text><text x="1310" y="{493 + i * 46}" font-size="15" font-weight="700" fill="#FFFFFF">{t}<tspan fill="#8FDDEB" font-weight="500"> · RH </tspan>{rh}</text>'
+        + f'<rect class="tw-tbar2" style="--dl:-{i}s" x="1478" y="{480 + i * 46}" width="56" height="8" rx="4" fill="{c}"/>' for i, (a, t, rh, c) in enumerate(rows)), .8))
     markers = [mk(I, 0, 9.2, 1.4), mk(I, 0, 5.6, 2.15), mk(I, 1.0, 5.63, .7), mk(I, 0, 7.95, 1.44)]
     return '\n'.join(s) + '\n', markers, pcss
 
@@ -85,7 +95,7 @@ def comfort():
     s.append(SC.through(I, 'tw-zo2', 'y5', 5, 9.3, 'k', layers) + SC.through(I, 'tw-zo3', 'y5', 9.3, 14, 'r', layers) + SC.through(I, 'tw-zo4', 'x5', 5, 10, 'm', layers))
     s.append(SC.wall(I, 'y5', 5, 14, zone=True) + SC.wall(I, 'x5', 5, 10, zone=True) + SC.y5_l(I, True))
     tx, ty = I.p(11.6, 5.15, 1.01)
-    st = ''.join(f'<g class="tw-st" style="--dl:{dl}s"><rect x="{tx - 60}" y="{ty - 104}" width="120" height="48" rx="12" fill="#08182C" fill-opacity=".92" stroke="{CY}" stroke-opacity=".6"/>'
+    st = ''.join(f'<g class="tw-st{" tw-st0" if dl == 0 else ""}" style="--dl:{dl}s"><rect x="{tx - 60}" y="{ty - 104}" width="120" height="48" rx="12" fill="#08182C" fill-opacity=".92" stroke="{CY}" stroke-opacity=".6"/>'
                  f'<text x="{tx - 44}" y="{ty - 84}" font-size="11" fill="#8FDDEB" letter-spacing="1">{who}</text><text x="{tx - 44}" y="{ty - 64}" font-size="16" font-weight="700" fill="#FFFFFF">{t}</text></g>'
                  for who, t, dl in [('SARAH · 34', '21.5 °C', 0), ('JAMES · 37', '20.0 °C', -6), ('MAYA · 7', '22.5 °C', -3)])
     s.append(st + f'<line x1="{tx}" y1="{ty - 10}" x2="{tx}" y2="{ty - 56}" stroke="{CY}" stroke-opacity=".6" stroke-width="1.5" stroke-dasharray="4 4"/>')
@@ -94,13 +104,13 @@ def comfort():
     sg = I.p(15.6, 9.2, .3)    # outside the sunlit glass, on the ground
     s.append(f'<g class="tw-hin" style="--hd:.9s"><g class="tw-hud"><rect x="{sg[0] - 64}" y="{sg[1] - 30}" width="128" height="28" rx="14" fill="#08182C" fill-opacity=".9" stroke="#F2A541" stroke-opacity=".8"/>'
              f'<text x="{sg[0]}" y="{sg[1] - 11}" font-size="12" font-weight="700" fill="#FFD9A0" text-anchor="middle" letter-spacing="1">SOLAR GAIN ↑</text></g></g>')
-    occ = ''.join(f'<text x="1312" y="{222 + i * 32}" font-size="12" fill="#A9E7F2">{who}</text><rect x="1408" y="{213 + i * 32}" width="132" height="8" rx="4" fill="#21507A"/>'
+    occ = ''.join(f'<text x="1312" y="{222 + i * 32}" font-size="13" fill="#A9E7F2">{who}</text><rect x="1408" y="{213 + i * 32}" width="132" height="8" rx="4" fill="#21507A"/>'
                   f'<g class="tw-pmv2" style="--dl:-{i * 1.7:.1f}s"><circle cx="{1462 + i * 8}" cy="{217 + i * 32}" r="6.5" fill="#FFFFFF" stroke="{CY}" stroke-width="2"/></g>' for i, who in enumerate(['Sarah', 'James', 'Maya']))
-    xai = ''.join(f'<text x="1312" y="{354 + i * 26}" font-size="12" fill="#A9E7F2">{a}</text><rect class="tw-xai" style="--dl:-{i * .9:.1f}s" x="1420" y="{345 + i * 26}" width="{w}" height="9" rx="4.5" fill="{c}"/>'
+    xai = ''.join(f'<text x="1312" y="{354 + i * 26}" font-size="13" fill="#A9E7F2">{a}</text><rect class="tw-xai" style="--dl:-{i * .9:.1f}s" x="1420" y="{345 + i * 26}" width="{w}" height="9" rx="4.5" fill="{c}"/>'
                   for i, (a, w, c) in enumerate([('Solar gain', 110, '#F2A541'), ('Clothing', 74, '#3FD8F0'), ('Activity', 52, '#38C77A')]))
-    s.append(holo(1290, 150, 272, 290, 'PERSONAL COMFORT', '<text x="1408" y="204" font-size="10.5" fill="#8FDDEB">cool</text><text x="1540" y="204" font-size="10.5" fill="#8FDDEB" text-anchor="end">warm</text>'
-                  + occ + '<text x="1312" y="326" font-size="11" font-weight="700" letter-spacing="1.6" fill="#7FE3F5">WHY · EXPLAINABLE AI</text>' + xai, .5))
-    markers = [mk(I, 11.6, 5.15, 1.01), mk(I, 5.62, 7.4, 1.85), mk(I, 14, 8.6, 1.3), mk(I, 12.8, 5.25, .78)]
+    s.append(holo(1290, 150, 272, 290, 'PERSONAL COMFORT', '<text x="1408" y="204" font-size="11.5" fill="#8FDDEB">cool</text><text x="1540" y="204" font-size="11.5" fill="#8FDDEB" text-anchor="end">warm</text>'
+                  + occ + '<text x="1312" y="326" font-size="12" font-weight="700" letter-spacing="1.5" fill="#7FE3F5">WHY · EXPLAINABLE AI</text>' + xai, .5))
+    markers = [mk(I, 11.6, 5.15, 1.01), mk(I, 5.62, 7.4, 1.85), mk(I, 14, 8.6, 1.3), mk(I, 13.1, 5.25, .6)]   # heater marker low and right, clear of the thermostat
     return '\n'.join(s) + '\n', markers, pcss
 
 # --------------------------------------------------------------------------- thermal resilience (bedroom x9-14 y0-5)
@@ -122,7 +132,7 @@ def resilience():
     s.append(rect(0, 0, CW, CH, '#FF8A2A', 'class="tw-hot tw-sync"') + rect(0, 0, CW, CH, '#03080F', 'class="tw-dim tw-sync"') + rect(0, 0, CW, CH, '#E9FFF4', 'class="tw-restore tw-sync"'))
     hours = ''.join(f'<text x="0" y="{i * 30}" font-size="15" font-weight="700" fill="#FFFFFF">HOUR {h}</text>' for i, h in enumerate([0, 6, 12, 18, 24]))
     bolt = 'M0 -10L-6 2H-1L-3 10L6 -3H1Z'
-    s.append('<g class="tw-hin" style="--hd:.3s">'
+    s.append('<g class="tw-banner"><g class="tw-hin" style="--hd:.3s">'   # .tw-banner: phones draw the banner larger
              '<g class="tw-on2 tw-sync"><rect x="680" y="22" width="240" height="40" rx="20" fill="#0B2A1E" fill-opacity=".92" stroke="#38E08A" stroke-width="1.6"/>'
              f'<g transform="translate(708,42)"><path d="{bolt}" fill="#38E08A"/></g><text x="726" y="47" font-size="14" font-weight="700" letter-spacing="1.6" fill="#BFFFD9">GRID POWER ON</text></g>'
              '<g class="tw-off2 tw-sync"><rect x="640" y="22" width="320" height="40" rx="20" fill="#2A0E0E" fill-opacity=".94" stroke="#FF6B5B" stroke-width="1.8"/>'
@@ -130,14 +140,14 @@ def resilience():
              '<text x="688" y="47" font-size="14" font-weight="700" letter-spacing="1.6" fill="#FFD3CC">POWER OUTAGE</text>'
              '<svg x="842" y="28" width="104" height="28" viewBox="0 -21 104 28" overflow="hidden"><g class="tw-hours tw-sync">' + hours + '</g></svg></g>'
              '<g class="tw-rest tw-sync"><rect x="660" y="22" width="280" height="40" rx="20" fill="#0B2A1E" fill-opacity=".94" stroke="#38E08A" stroke-width="2.4"/>'
-             f'<g transform="translate(688,42)"><path d="{bolt}" fill="#38E08A"/></g><text x="706" y="47" font-size="14" font-weight="700" letter-spacing="1.6" fill="#BFFFD9">POWER RESTORED</text></g></g>')
+             f'<g transform="translate(688,42)"><path d="{bolt}" fill="#38E08A"/></g><text x="706" y="47" font-size="14" font-weight="700" letter-spacing="1.6" fill="#BFFFD9">POWER RESTORED</text></g></g></g>')
     temps = ['26.0', '27.6', '29.3', '30.9', '32.4', '33.8']
     roll = ''.join(f'<text x="0" y="{i * 40}" font-size="34" font-weight="700" fill="#FFFFFF">{t}<tspan font-size="18" dx="3" fill="#8FDDEB">°C</tspan></text>' for i, t in enumerate(temps))
-    body = ('<text x="1310" y="214" font-size="12" fill="#A9E7F2">Indoor temperature</text>'
+    body = ('<text x="1310" y="214" font-size="13" fill="#A9E7F2">Indoor temperature</text>'
             '<svg x="1310" y="222" width="220" height="46" viewBox="0 -34 220 46" overflow="hidden"><g class="tw-roll tw-sync">' + roll + '</g></svg>'
             + rect(1310, 282, 232, 10, '#21507A', 'rx="5"') + '<g class="tw-tbar tw-sync">' + rect(1310, 282, 232, 10, '#F59A3C', 'rx="5"') + '</g>'
-            '<text x="1310" y="310" font-size="11" fill="#8FDDEB">safe</text><text x="1542" y="310" font-size="11" fill="#8FDDEB" text-anchor="end">overheating</text>'
-            '<text x="1310" y="342" font-size="12.5" font-weight="700" fill="#FFFFFF">+72.1 % passive survivability</text>')
+            '<text x="1310" y="310" font-size="12" fill="#8FDDEB">safe</text><text x="1542" y="310" font-size="12" fill="#8FDDEB" text-anchor="end">overheating</text>'
+            '<text x="1310" y="342" font-size="13.5" font-weight="700" fill="#FFFFFF">+72.1 % passive survivability</text>')
     s.append(holo(1290, 150, 272, 216, 'HEATWAVE TWIN', body, .5))
-    markers = [mk(I, 13.35, 3.95, 2.15), mk(I, 13.15, 0, 1.7), mk(I, 12.0, 1.0, .62), mk(I, 10.05, .37, .58)]
+    markers = [mk(I, 13.35, 3.95, 2.15), mk(I, 13.15, 0, 1.7), mk(I, 12.0, 1.0, .62), mk(I, 10.05, .8, .3)]   # recovery marker on the nightstand front, below the arrow
     return '\n'.join(s) + '\n', markers, pcss

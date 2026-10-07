@@ -22,10 +22,10 @@ ROOMS = {
                    'Isometric bedroom twin in a heatwave power outage: the air conditioner and fan stop and the room heats up while a child rests, then power returns'),
 }
 TITLES = ('Mould and Dampness', 'Thermal Comfort', 'Thermal Resilience')
-HINT_OLD, HINT_NEW = 'Click a glowing window to step inside', 'Click a coloured zone to step inside'
+HINT_OLD, HINT_NEW = 'Click a glowing window to step inside', 'Pick a research zone to step inside'
 # live read-outs shown under each callout title (cross-fading)
-CALLOUT_VALS = {'mould': [('Mould risk', 'HIGH ↑'), ('Surface RH', '82 %')], 'comfort': [('Setpoint', '21.0 °C'), ('PMV', '−0.2 neutral')],
-                'resilience': [('Survivability', '+72 %'), ('Indoor', '31.6 °C')]}
+CALLOUT_VALS = {'mould': [('Mould risk', 'HIGH ↑'), ('Surface RH', '91 %')], 'comfort': [('Setpoints', '20.0–22.5 °C'), ('PMV', '−0.2 neutral')],
+                'resilience': [('Survivability', '+72 %'), ('Indoor', '32.4 °C')]}   # the same values the rooms show
 
 CSS_ANCHOR = '  @media (max-width:640px){\n    .tw-winlabel'          # the site's own phone rules for the block; ours go just before
 CSS_START = '  /* digital-twin art (inline SVG'                          # first line of dt.css
@@ -33,7 +33,9 @@ JS_Z_OLD = "    b.className = 'tw-win'; b.type = 'button';\n"
 JS_Z_NEW = "    b.className = 'tw-win'; b.type = 'button'; b.dataset.z = name;\n"
 JS_LABEL_OLD = "    b.innerHTML = '<span class=\"tw-winlabel\">' + sc.title + '</span>';\n"
 JS_LABEL_NEW = ("    const vals = sc.vals.map(v => '<i>' + v[0] + '<b>' + v[1] + '</b></i>').join('');\n"
-                "    b.innerHTML = '<span class=\"tw-winlabel tw-co\"><span class=\"tw-co-h\"><span>' + sc.title.replace(/ (\\S+) Research$/, '<span class=\"tw-ph\"></span> $1<br>Research') + '</span></span><span class=\"tw-co-v\">' + vals + '</span></span>';\n"
+                "    b.innerHTML = '<span class=\"tw-winlabel tw-co\"><span class=\"tw-co-n\" aria-hidden=\"true\"><b>' + (Object.keys(TW_SCENES).indexOf(name) + 1) + '</b></span>'\n"
+                "      + '<span class=\"tw-co-h\"><span>' + sc.title.replace(/ (\\S+) Research$/, '<span class=\"tw-ph\"></span> $1<br>Research') + '</span></span><span class=\"tw-co-v\">' + vals + '</span>'\n"
+                "      + '<span class=\"tw-co-go\">Step inside <span class=\"tw-co-arw\" aria-hidden=\"true\">&rarr;</span></span></span>';\n"
                 "    placeCallout(b, sc);\n")
 JS_LOOP = "  Object.keys(TW_SCENES).forEach(name => {\n"
 JS_PHONE = ("  const phone = window.matchMedia('(max-width:640px)');\n"
@@ -116,11 +118,12 @@ def build(h):
         lx, ly, la = z['lab']
         px, py, pa = z['labPhone']
         vals = ','.join(f"['{k}','{v}']" for k, v in CALLOUT_VALS[name])
+        hit = ','.join(f'[{a:g},{b:g}]' for a, b in z['hit'])
         pat = re.compile(name + r": \{ (title:'[^']*', link:'[^']*', )win:\{l:[\d.]+,t:[\d.]+,w:[\d.]+,h:[\d.]+\}, x:-?[\d.]+, y:-?[\d.]+, s:[\d.]+,"
-                         r"(?: lab:\{[^}]*\},)?(?: labPhone:\{[^}]*\},)?(?: vals:\[.*?\]\],)?")
+                         r"(?: lab:\{[^}]*\},)?(?: labPhone:\{[^}]*\},)?(?: vals:\[.*?\]\],)?(?: hit:\[[\d.,\[\]-]*\],)?")
         assert len(pat.findall(h)) == 1, name
         h = pat.sub(lambda m: f"{name}: {{ {m.group(1)}win:{{l:{l},t:{t},w:{w},h:{hh}}}, x:{zx}, y:{zy}, s:{z['s']}, "
-                              f"lab:{{x:{lx},y:{ly},a:'{la}'}}, labPhone:{{x:{px},y:{py},a:'{pa}'}}, vals:[{vals}],", h)
+                              f"lab:{{x:{lx},y:{ly},a:'{la}'}}, labPhone:{{x:{px},y:{py},a:'{pa}'}}, vals:[{vals}], hit:[{hit}],", h)
         start = h.index(name + ': { title:')
         end = h.index('\n      ]}', start)
         it = iter(markers[name])

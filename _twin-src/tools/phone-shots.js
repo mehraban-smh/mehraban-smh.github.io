@@ -8,7 +8,7 @@
 // Taps are real touch taps at element centres (no element.scrollIntoView, which would scroll the overflow:hidden stage).
 // Output per width W: W-1-ext.png, W-2-mould.png, W-3-comfort.png, W-4-resilience.png, W-5-card.png (resilience, first marker),
 // W-6-card-comfort.png, plus report.json (page errors, horizontal overflow, smallest tap targets, element boxes).
-const { chromium } = require('/opt/node22/lib/node_modules/playwright');
+const { chromium } = require(process.env.PLAYWRIGHT || '/opt/node22/lib/node_modules/playwright');
 const fs = require('fs');
 (async () => {
   const [,, file, out, widthsArg, freezeArg] = process.argv;
@@ -16,7 +16,7 @@ const fs = require('fs');
   const freeze = +(freezeArg || 38000);
   fs.mkdirSync(out, { recursive: true });
   const report = {};
-  const b = await chromium.launch();
+  const b = await chromium.launch(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {});
   for (const W of widths) {
     const H = { 360: 780, 390: 844, 430: 932 }[W] || 844;
     const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });

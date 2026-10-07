@@ -1,9 +1,9 @@
 // Zoom hand-off check: for each zone, render the exterior at its final zoom (no blur, no transition) and the room view,
 // both frozen at the same time, and save them side by side plus a 50% blend. usage: node handoff.js <html> <outprefix>
-const { chromium } = require('/opt/node22/lib/node_modules/playwright');
+const { chromium } = require(process.env.PLAYWRIGHT || '/opt/node22/lib/node_modules/playwright');
 (async () => {
   const [,, file, out] = process.argv;
-  const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1280, height: 1000 } });
+  const b = await chromium.launch(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {}); const p = await b.newPage({ viewport: { width: 1280, height: 1000 } });
   await p.goto('file://' + file);
   await p.evaluate(() => document.getElementById('twStage').scrollIntoView({ block: 'start' }));
   await p.waitForTimeout(5200);

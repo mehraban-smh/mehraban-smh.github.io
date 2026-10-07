@@ -1,8 +1,8 @@
 // usage: node inspect.js <html> <outprefix> <times csv> <scene: ext|0|1|2> <regions: x,y,w,h;...  in viewBox units>
-const { chromium } = require('/opt/node22/lib/node_modules/playwright');
+const { chromium } = require(process.env.PLAYWRIGHT || '/opt/node22/lib/node_modules/playwright');
 (async () => {
   const [,, file, out, times, scene, regions] = process.argv;
-  const b = await chromium.launch(); const page = await b.newPage({ viewport: { width: 1625, height: 1300 }, deviceScaleFactor: 2 });
+  const b = await chromium.launch(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {}); const page = await b.newPage({ viewport: { width: 1625, height: 1300 }, deviceScaleFactor: 2 });
   await page.goto('file://' + file);
   await page.addStyleTag({ content: '.wrap{max-width:none!important}' });
   await page.evaluate(() => document.getElementById('twStage').scrollIntoView({block: 'start', behavior: 'instant'}));

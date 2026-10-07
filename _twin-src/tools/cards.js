@@ -1,8 +1,8 @@
 // Open every marker card of one room and screenshot each. usage: node cards.js <html> <outprefix> <viewport width> <scene-index 0..2> 0
-const { chromium } = require('/opt/node22/lib/node_modules/playwright');
+const { chromium } = require(process.env.PLAYWRIGHT || '/opt/node22/lib/node_modules/playwright');
 (async () => {
   const [,, file, out, width, idx, mk] = process.argv;
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {});
   const page = await browser.newPage({ viewport: { width: +width, height: 900 } });
   const errs = []; page.on('pageerror', e => errs.push(e.message));
   await page.goto('file://' + file);

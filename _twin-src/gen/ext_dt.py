@@ -20,8 +20,8 @@ ZCOL = {'mould': '#5AA9FF', 'comfort': '#3DDC97', 'resilience': '#FF8A45'}   # o
 # node = where the leader leaves the zone (plan metres), lab = callout anchor in SVG units and how the callout hangs off it:
 # 'br' its bottom-right corner sits on the anchor, 'bl' its bottom-left corner, 'tr' its top-right corner
 # ph = the same idea on phones, where each title is bigger relative to the picture (three short lines, no read-out)
-CALLOUT = {'mould': dict(node=(-.08, 8.2, 2.4), lab=(335, 258, 'br'), ph=(350, 262, 'br')),          # right above the bedroom's back wall
-           'comfort': dict(node=(7.56, 9.88, .03), lab=(565, 939, 'tr'), ph=(565, 936, 'tr')),        # just under the living room's front, to the left
+CALLOUT = {'mould': dict(node=(-.08, 8.2, 2.4), lab=(322, 290, 'br'), ph=(378, 258, 'br')),          # right above the bedroom's back wall, under the cloud's caption
+           'comfort': dict(node=(7.56, 9.88, .03), lab=(600, 985, 'tr'), ph=(638, 985, 'tr')),        # under the living room's front, clear of the LIVE TWIN panel
            'resilience': dict(node=(11.2, -.08, 2.4), lab=(1245, 400, 'bl'), ph=(1240, 400, 'bl'))}   # right above the air conditioner
 PX, PY = CW / 100, CH / 100
 for _n, _z in ZONES.items():
@@ -44,6 +44,8 @@ for _n, _z in ZONES.items():
     _z['lab'] = (round(lx / PX, 2), round(ly / PY, 2), la)
     lx, ly, la = CALLOUT[_n]['ph']
     _z['labPhone'] = (round(lx / PX, 2), round(ly / PY, 2), la)
+    # click target: the zone's floor plus its walls up to their tops (the same outline that stays bright on hover), percent of the picture
+    _z['hit'] = None   # filled in below, once zone_outline() is defined
 
 room_of = SC.room_of
 
@@ -142,12 +144,60 @@ def sensor(x, y, z, dl=0):
 def pool(x, y, r):
     return f'<circle cx="{x}" cy="{y}" r="{r}" fill="url(#tw-dlamp)"/>'
 
+BEACON = {'mould': (3.6, 8.8), 'comfort': (9.9, 9.0), 'resilience': (10.95, 3.3)}   # open floor in each zone: the rug, by the glass, the rug
+
+def beacon(name):
+    """ripples on the zone's open floor in its colour, saying "this room opens"; the three take turns (CSS attract cycle)"""
+    col = ZCOL[name]
+    X, Y, rx, ry = I.floor_ell(*BEACON[name], .95)
+    rings = ''.join(f'<ellipse class="tw-bcnr" style="--dl:{-k * 1.3:.1f}s" cx="{X}" cy="{Y}" rx="{rx}" ry="{ry}" fill="none" stroke="{col}" stroke-width="2.2" vector-effect="non-scaling-stroke"/>' for k in range(2))
+    core = ell(X, Y, round(rx * .3, 1), round(ry * .3, 1), col, 'opacity=".45"') + ell(X, Y, round(rx * .12, 1), round(ry * .12, 1), '#FFFFFF')
+    return f'<g class="tw-bld tw-fade" style="--bd:3.1s"><g class="tw-bcn tw-bcn-{name}">{rings}{core}</g></g>'
+
+def zone_hl(name):
+    """hover highlight of a whole zone, part 1: a tint of its colour on its floor (under the furniture)"""
+    x0, y0, x1, y1 = ZPLAN[name]
+    q = [(x0, y0, .02), (x1, y0, .02), (x1, y1, .02), (x0, y1, .02)]
+    return f'<g class="tw-zhl tw-zhl-{name}">' + I.poly(q, ZCOL[name], 'opacity=".34"') + '</g>'
+
+def hull(pts):
+    """convex hull of 2D points (monotone chain), counter-clockwise"""
+    pts = sorted(set(pts))
+    cross = lambda o, a, b: (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lo, hi = [], []
+    for p in pts:
+        while len(lo) >= 2 and cross(lo[-2], lo[-1], p) <= 0:
+            lo.pop()
+        lo.append(p)
+    for p in reversed(pts):
+        while len(hi) >= 2 and cross(hi[-2], hi[-1], p) <= 0:
+            hi.pop()
+        hi.append(p)
+    return lo[:-1] + hi[:-1]
+
+def zone_outline(name):
+    """screen outline of a zone: its floor and its walls up to their tops (partitions 1.3 m, exterior walls 2.4 m), as a convex hull"""
+    x0, y0, x1, y1 = ZPLAN[name]
+    q = [(u, v, 0) for u in (x0, x1) for v in (y0, y1)] + [(u, v, 1.3) for u in (x0, x1) for v in (y0, y1)]
+    q += [(0, v, 2.4) for v in (y0, y1) if x0 == 0] + [(u, 0, 2.4) for u in (x0, x1) if y0 == 0]   # exterior walls rise to 2.4 m
+    return hull([I.p(*v) for v in q])
+
+for _n, _z in ZONES.items():   # click outline: the zone outline, stretched to take in the end of its leader line
+    _z['hit'] = [(round(X / PX, 1), round(Y / PY, 1)) for X, Y in hull(zone_outline(_n) + [I.p(*CALLOUT[_n]['node'])])]
+
+def zone_dim(name):
+    """hover highlight, part 2: the rest of the picture dims a little; the zone (floor, its walls up to their tops) stays bright.
+    No outline is drawn. It sits under the data lines, leaders and panels, which stay bright."""
+    h = zone_outline(name)
+    d = f'M0 0H{CW}V{CH}H0Z M' + ' L'.join(f'{a:g} {b:g}' for a, b in h) + 'Z'
+    return f'<path class="tw-zdim tw-zdim-{name}" d="{d}" fill="#030A14" fill-opacity=".5" fill-rule="evenodd"/>'
+
 def build():
     rnd = random.Random(3)
     people, people_css = SC.people_layers(I, 'ext')
     s = [defs()]
     s.append(rect(0, 0, CW, CH, '#050D19') + rect(0, 0, CW, CH, 'url(#tw-dbg)') + circuits(21, 36))
-    s.append('<g class="tw-bld tw-fade" style="--bd:.15s">' + cloud_node(166, 90, .8, side=True) + ai_node(1150, 79) + '</g>')
+    s.append('<g class="tw-bld tw-fade" style="--bd:.15s">' + cloud_node(166, 82, .8, side=True) + ai_node(1150, 79) + '</g>')   # cloud a little high: its caption clears the mould callout
     # no garden: a slim plinth hugging the house, and a pad for the heat pump outside the living room
     P0, P1, Q0, Q1 = -.3, 14.3, -.3, 10.3
     plat = (I.poly([(P1, Q0, -.12), (P1, Q1, -.12), (P1, Q1, -.32), (P1, Q0, -.32)], '#081629') + I.poly([(P0, Q1, -.12), (P1, Q1, -.12), (P1, Q1, -.32), (P0, Q1, -.32)], '#0A1C33')
@@ -165,7 +215,7 @@ def build():
             '<circle cx="13.4" cy=".5" r="2.8" fill="url(#tw-hr)"/><circle cx="11" cy="1.4" r="2" fill="url(#tw-ho)"/><circle cx="10" cy="4.2" r="1.8" fill="url(#tw-hy)"/></g>')
     # floors, light pools, heat maps
     s.append('<g class="tw-bld tw-fade" style="--bd:1.1s">' + I.box(0, 0, -.12, 14, 10, .12, '#C7D1DA', '#0F2440', '#12294A') + SC.floors(I) + '</g>')
-    s.append(f'<g class="tw-bld tw-fade" style="--bd:1.6s"><g transform="{I.fm(.01)}">{heat}</g></g>')
+    s.append(f'<g class="tw-bld tw-fade" style="--bd:1.6s"><g transform="{I.fm(.01)}">{heat}</g></g>' + ''.join(zone_hl(n) for n in ZONES))
     # back walls with their fittings
     s.append('<g class="tw-bld tw-up" style="--bd:1.25s">' + SC.corner(I) + SC.wall(I, 'x0') + SC.wall(I, 'y0') + '</g>'
              + '<g class="tw-bld tw-fade" style="--bd:1.5s">' + SC.x0_fittings(I, False) + SC.y0_k(I, False) + SC.y0_r(I, False) + '</g>')
@@ -174,16 +224,16 @@ def build():
     s.append(f'<g class="tw-bld tw-pop" style="--bd:1.7s">{SC.k_back(I)}</g>' + f'<g class="tw-bld tw-fade" style="--bd:3.0s">{people.get("k", "")}</g>'
              + f'<g class="tw-bld tw-pop" style="--bd:1.75s">{SC.k_front(I)}</g>')
     s.append('<g class="tw-bld tw-up" style="--bd:1.45s">' + SC.wall(I, 'x9') + '</g>' + SC.x9_fittings(I, False))
-    s.append(f'<g class="tw-bld tw-pop" style="--bd:1.9s">{SC.r_items(I)}</g>' + f'<g class="tw-bld tw-fade" style="--bd:3.0s">{people.get("r", "")}</g>')
+    s.append(f'<g class="tw-bld tw-pop" style="--bd:1.9s">{SC.r_items(I)}</g>' + beacon('resilience') + f'<g class="tw-bld tw-fade" style="--bd:3.0s">{people.get("r", "")}</g>')
     s.append('<g class="tw-bld tw-up" style="--bd:1.5s">' + SC.wall(I, 'y5') + '</g>' + SC.y5_fittings(I, False))
-    s.append(f'<g class="tw-bld tw-pop" style="--bd:2.0s">{SC.m_items(I)}</g>' + f'<g class="tw-bld tw-fade" style="--bd:3.0s">{people.get("m", "")}</g>')
+    s.append(f'<g class="tw-bld tw-pop" style="--bd:2.0s">{SC.m_items(I)}</g>' + beacon('mould') + f'<g class="tw-bld tw-fade" style="--bd:3.0s">{people.get("m", "")}</g>')
     s.append('<g class="tw-bld tw-up" style="--bd:1.55s">' + SC.wall(I, 'x5') + '</g>')
-    s.append(f'<g class="tw-bld tw-pop" style="--bd:2.1s">{SC.l_items(I)}</g>' + f'<g class="tw-bld tw-fade" style="--bd:3.0s">{people.get("l", "")}</g>')
+    s.append(f'<g class="tw-bld tw-pop" style="--bd:2.1s">{SC.l_items(I)}</g>' + beacon('comfort') + f'<g class="tw-bld tw-fade" style="--bd:3.0s">{people.get("l", "")}</g>')
     # glass front walls with a sweeping reflection, then the garden in front of them
     sweep_x = f'<g clip-path="url(#tw-dgx)"><polygon class="tw-gsheen" points="{pts((14, -1.5, .25), (14, -.6, .25), (14, -1.4, 2.4), (14, -2.3, 2.4))}" fill="#FFFFFF" opacity=".14"/></g>'
     sweep_y = f'<g clip-path="url(#tw-dgy)"><polygon class="tw-gsheen2" points="{pts((-1.5, 10, .25), (-.6, 10, .25), (-1.4, 10, 2.4), (-2.3, 10, 2.4))}" fill="#FFFFFF" opacity=".14"/></g>'
     s.append(f'<g class="tw-bld tw-fade" style="--bd:2.3s">{SC.glass_front(I)}{sweep_x}{sweep_y}</g>')
-    s.append(f'<g class="tw-bld tw-pop" style="--bd:1.0s">{SC.outdoor_unit(I)}</g>')
+    s.append(f'<g class="tw-bld tw-pop" style="--bd:1.0s">{SC.outdoor_unit(I)}</g>' + ''.join(zone_dim(n) for n in ZONES))
     # digital-twin scan plane
     s.append('<g class="tw-bld tw-fade" style="--bd:2.4s"><g class="tw-dscan">' + I.poly([(-1, -1, -.1), (-1, 11, -.1), (-1, 11, 3), (-1, -1, 3)], CY, 'opacity=".08"')
              + f'<path d="M{pts((-1, -1, 3), (-1, 11, 3), (-1, 11, -.1)).replace(" ", " L").replace(",", " ")}" fill="none" stroke="{CYL}" stroke-width="2.4"/></g></g>')
@@ -194,9 +244,10 @@ def build():
     LY = 60                                   # the straight data line above the roof
     jx = hubX                                 # junction right above the hub
     k = I.S / 44
-    streams = (stream(f'M{sm[0]} {sm[1]}C{sm[0] + 30 * k} {sm[1] - 110 * k} {hubX - 90 * k} {hubY - 60 * k} {hubX} {hubY}', 0)
-               + stream(f'M{sl[0]} {sl[1]}C{sl[0] - 40 * k} {sl[1] - 150 * k} {hubX + 140 * k} {hubY - 80 * k} {hubX} {hubY}', -.6)
-               + stream(f'M{sr[0]} {sr[1]}C{sr[0] - 20 * k} {sr[1] - 120 * k} {hubX + 100 * k} {hubY - 70 * k} {hubX} {hubY}', -1.2)
+    # each zone's stream is grouped so it can take the zone colour while that zone is pointed at
+    streams = (f'<g class="tw-str tw-str-mould">' + stream(f'M{sm[0]} {sm[1]}C{sm[0] + 30 * k} {sm[1] - 110 * k} {hubX - 90 * k} {hubY - 60 * k} {hubX} {hubY}', 0) + '</g>'
+               + f'<g class="tw-str tw-str-comfort">' + stream(f'M{sl[0]} {sl[1]}C{sl[0] - 40 * k} {sl[1] - 150 * k} {hubX + 140 * k} {hubY - 80 * k} {hubX} {hubY}', -.6) + '</g>'
+               + f'<g class="tw-str tw-str-resilience">' + stream(f'M{sr[0]} {sr[1]}C{sr[0] - 20 * k} {sr[1] - 120 * k} {hubX + 100 * k} {hubY - 70 * k} {hubX} {hubY}', -1.2) + '</g>'
                + f'<rect x="{hubX - 3}" y="{LY}" width="6" height="{hubY - LY}" fill="url(#tw-dbeam)" opacity=".8"/>' + stream(f'M{hubX} {hubY}V{LY}', -.2, 3.4, .6)
                + stream(f'M{jx} {LY}H252', -.4, 3.2) + stream(f'M{jx} {LY}H1068', -.9, 3.2))
     s.append(f'<g class="tw-bld tw-fade" style="--bd:2.8s">{streams}' + sensor(0, 7.95, 1.44, 0) + sensor(11.6, 5.15, 1.0, -.8) + sensor(9.46, .1, 1.4, -1.6)
@@ -208,11 +259,14 @@ def build():
         col = ZCOL[name]
         nx, ny = I.p(*CALLOUT[name]['node'])
         lx, ly, la = CALLOUT[name]['lab']
-        # the leader runs on under the callout, so it always meets the callout's edge whatever the text size
-        d = f'M{nx:.1f} {ny:.1f}V{ly - 30}' if la in ('br', 'bl') else f'M{nx:.1f} {ny:.1f}V{ly + 30}'
-        lead = (f'<path d="{d}" fill="none" stroke="{col}" stroke-opacity=".22" stroke-width="8" stroke-linecap="round"/>'
-                + f'<path class="tw-zl" d="{d}" fill="none" stroke="{col}" stroke-width="2.2"/>'
-                + f'<path class="tw-zspark" pathLength="1" d="{d}" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-dasharray=".1 .9" stroke-linecap="round"/>'
+        py = CALLOUT[name]['ph'][1]
+        # the leader runs on under the callout (desktop and phone spot), so it always meets the callout's edge whatever the text size
+        d = f'M{nx:.1f} {ny:.1f}V{min(ly, py) - 30}' if la in ('br', 'bl') else f'M{nx:.1f} {ny:.1f}V{max(ly, py) + 30}'
+        # line widths in screen pixels (non-scaling), so the leaders stay visible on a phone-sized picture too
+        ns = 'vector-effect="non-scaling-stroke"'
+        lead = (f'<path d="{d}" fill="none" stroke="{col}" stroke-opacity=".22" stroke-width="5" stroke-linecap="round" {ns}/>'
+                + f'<path class="tw-zl" d="{d}" fill="none" stroke="{col}" stroke-width="1.6" {ns}/>'
+                + f'<path class="tw-zspark" pathLength="1" d="{d}" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-dasharray=".1 .9" stroke-linecap="round" {ns}/>'
                 + f'<circle class="tw-ping" cx="{nx:.1f}" cy="{ny:.1f}" r="8" fill="none" stroke="{col}" stroke-width="2.2"/>'
                 + circ(round(nx, 1), round(ny, 1), 10, col, 'opacity=".3"') + circ(round(nx, 1), round(ny, 1), 5, '#FFFFFF'))
         pins += f'<g class="tw-pin tw-pin-{name}"><g class="tw-zlead">{lead}</g></g>'
@@ -220,17 +274,19 @@ def build():
     # live read-out panel (south-west, under the house)
     ic = {'drop': 'M0 -7s6 6.5 6 10.5a6 6 0 0 1-12 0c0-4 6-10.5 6-10.5z', 'person': 'M0 -8a3.4 3.4 0 1 1 0 6.8a3.4 3.4 0 1 1 0-6.8zM-6 8a6 6 0 0 1 12 0z',
           'sun': 'M0 -4a4 4 0 1 1 0 8a4 4 0 1 1 0-8zM0 -9v2.5M0 6.5V9M-9 0h2.5M6.5 0H9'}
-    rows = [('drop', 'Surface RH', '82 %', 'M0 22L18 18L36 20L54 12L72 14L90 6L108 8L126 2'), ('person', 'Comfort (PMV)', '−0.2', 'M0 12L18 14L36 10L54 12L72 9L90 13L108 11L126 12'),
-            ('sun', 'Indoor temperature', '31.6 °C', 'M0 22L18 20L36 17L54 15L72 10L90 8L108 5L126 3')]
-    hud = (rect(1376, 250, 210, 226, '#08182C', 'rx="16" fill-opacity=".86" stroke="#3FD8F0" stroke-opacity=".45" stroke-width="1.5"')
-           + '<text x="1396" y="280" font-size="12" font-weight="700" letter-spacing="2.4" fill="#7FE3F5">LIVE TWIN</text>'
-           + circ(1532, 276, 4.5, '#38C77A', 'class="tw-blink"') + '<text x="1542" y="280" font-size="11" font-weight="700" fill="#38C77A">LIVE</text>'
-           + rect(1396, 292, 170, 1, '#3FD8F0', 'opacity=".25"')
-           + ''.join(f'<g transform="translate(1404,{318 + i * 52})"><path d="{ic[icn]}" fill="none" stroke="#7FE3F5" stroke-width="1.6"/></g>'
-                     f'<text x="1420" y="{322 + i * 52}" font-size="11.5" font-weight="500" fill="#A9E7F2">{a}</text><text x="1566" y="{322 + i * 52}" font-size="13" font-weight="700" fill="#FFFFFF" text-anchor="end">{b}</text>'
-                     f'<g transform="translate(1420,{330 + i * 52})"><path class="tw-spark" style="--dl:-{i * 1.3:.1f}s" pathLength="1" d="{d}" fill="none" stroke="#3FD8F0" stroke-width="2" stroke-linecap="round"/></g>' for i, (icn, a, b, d) in enumerate(rows))
-           + '<text x="1396" y="462" font-size="10.5" fill="#6FB5C8">Streaming from 3 research zones</text>')
-    s.append(f'<g class="tw-bld tw-fade" style="--bd:2.6s"><g transform="translate(-1336,540)"><g class="tw-hud">{hud}</g></g></g>')
+    # one row per research zone, in that zone's colour; wide enough that the longest label never meets its value
+    rows = [('drop', 'Surface RH', '91 %', 'M0 22L18 18L36 20L54 12L72 14L90 6L108 8L126 2', ZCOL['mould']),
+            ('person', 'Comfort (PMV)', '−0.2', 'M0 12L18 14L36 10L54 12L72 9L90 13L108 11L126 12', ZCOL['comfort']),
+            ('sun', 'Indoor temperature', '32.4 °C', 'M0 22L18 20L36 17L54 15L72 10L90 8L108 5L126 3', ZCOL['resilience'])]
+    hud = (rect(1376, 250, 252, 232, '#08182C', 'rx="16" fill-opacity=".86" stroke="#3FD8F0" stroke-opacity=".45" stroke-width="1.5"')
+           + '<text x="1396" y="281" font-size="13" font-weight="700" letter-spacing="2.4" fill="#7FE3F5">LIVE TWIN</text>'
+           + circ(1570, 277, 4.5, '#38C77A', 'class="tw-blink"') + '<text x="1580" y="281" font-size="12" font-weight="700" fill="#38C77A">LIVE</text>'
+           + rect(1396, 294, 212, 1, '#3FD8F0', 'opacity=".25"')
+           + ''.join(f'<g transform="translate(1404,{320 + i * 52})"><path d="{ic[icn]}" fill="none" stroke="{c}" stroke-width="1.8"/></g>'
+                     f'<text x="1420" y="{325 + i * 52}" font-size="13" font-weight="500" fill="#A9E7F2">{a}</text><text x="1608" y="{325 + i * 52}" font-size="14.5" font-weight="700" fill="#FFFFFF" text-anchor="end">{b}</text>'
+                     f'<g transform="translate(1420,{333 + i * 52}) scale(1.4,1)"><path class="tw-spark" style="--dl:-{i * 1.3:.1f}s" pathLength="1" d="{d}" fill="none" stroke="{c}" stroke-width="2" stroke-linecap="round"/></g>' for i, (icn, a, b, d, c) in enumerate(rows))
+           + '<text x="1396" y="467" font-size="11.5" fill="#6FB5C8">Streaming from 3 research zones</text>')
+    s.append(f'<g class="tw-bld tw-fade" style="--bd:2.6s"><g transform="translate(-1336,548)"><g class="tw-hud">{hud}</g></g></g>')
     # wireframe for the build-up
     W = [[(P0, Q0, -.12), (P1, Q0, -.12), (P1, Q1, -.12), (P0, Q1, -.12)], [(0, 0, 0), (14, 0, 0), (14, 10, 0), (0, 10, 0)],
          [(0, 0, 2.4), (14, 0, 2.4), (14, 10, 2.4), (0, 10, 2.4)], [(0, 5, 0), (14, 5, 0), (14, 5, 1.3), (0, 5, 1.3)],
