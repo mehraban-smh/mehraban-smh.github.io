@@ -515,7 +515,7 @@
       <div class="side-card-h">Enrollment <span>${enrolled} of ${ENROLLMENT_TARGET}</span></div>
       <div class="sqgrid" style="--cols:20" role="img" aria-label="${enrolled} enrolled${wait ? ', ' + wait + ' waiting for approval' : ''}, target ${ENROLLMENT_TARGET}">${cells.join('')}</div>
       <div class="sq-legend" aria-hidden="true"><span><i class="is-on"></i>Enrolled</span>${wait ? `<span><i class="is-wait"></i>Waiting ${wait}</span>` : ''}<span>${pct(enrolled, ENROLLMENT_TARGET)} of target</span></div>
-      <small class="caption"><span class="placeholder">[PLACEHOLDER: target and end date]</span></small>
+      <small class="caption">Study length: two months.</small>
     </div>`;
   }
 

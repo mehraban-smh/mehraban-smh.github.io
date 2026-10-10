@@ -15,12 +15,13 @@ Three pages, all unlisted (no links from the main site, `noindex` on every page)
 Until `config.js` holds the study's Supabase project, the app and the dashboard run in **local mode**:
 check-ins stay in the participant's browser, and the dashboard shows only the browser it is opened in.
 
-## Placeholders to replace before recruiting
+## Study details on the pages
 
-The study page (`index.html`) uses placeholders for the study details, each marked `[PLACEHOLDER: ...]`
-in the text: the full study title, the principal investigator and department, the funder, the IRB protocol
-number and approval date, the contact email, the study length, compensation, and any home sensor.
-Search the file for `PLACEHOLDER` and replace each one.
+The study page (`index.html`) states: two months, one or two small room sensors (temperature and
+humidity) lent to each participant and returned at the end, and two contacts, info@mehraban.uk and
+smirzabeigi@esf.edu (also `TEAM` in `checkin/app.js`). By the owner's choice it names no study title,
+investigator, funder, IRB protocol or payment, and describes the data collected in general terms. The one
+value still to confirm is `ENROLLMENT_TARGET` (60) in `dashboard/dashboard.js`, the recruitment target.
 
 ## One-time setup (about 20 minutes)
 

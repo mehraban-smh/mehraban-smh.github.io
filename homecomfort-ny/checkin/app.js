@@ -21,7 +21,7 @@ const MANUAL_PAUSE_H = 12;                                  // "I'll tell you wh
 const HOLD_MS = 6000;                                       // a new check-in waits this long (Undo) before it is sent
 const LOCAL_CODE = 'NY000';                                 // the participant code in local mode
 const NOT_FOUND_MSG = 'This registration was not found. Please join again or contact the study team.';
-const TEAM = '<span class="placeholder">[PLACEHOLDER: study team email]</span>';
+const TEAM = '<a href="mailto:info@mehraban.uk">info@mehraban.uk</a> or <a href="mailto:smirzabeigi@esf.edu">smirzabeigi@esf.edu</a>';
 /* Safari's Share glyph (a box with an arrow), drawn like the HCI icons, for the "Add to Home Screen" steps */
 const SHARE_IC = '<span class="share-ic" aria-hidden="true"><svg class="ic ic-sm" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M12 14V3.5M8.5 7 12 3.5 15.5 7"/><path d="M9 10H7a1.5 1.5 0 0 0-1.5 1.5V19A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5v-7.5A1.5 1.5 0 0 0 17 10h-2"/></svg></span>';
 const pad = n => String(n).padStart(2,'0');
@@ -1405,7 +1405,7 @@ const REGS = {
       </div>
       <div class="grid grid-2 g-tight">${height}${weight}</div>
       ${fieldBlock('sens', 'In general, I&hellip;', '', `<div class="ptile-grid cols-3" role="radiogroup" aria-labelledby="lab-sens">${SENSITIVITY.map(o => regTile('sens', o, r.sens===o.id, ic(o.ic,'ic-lg'), 'ptile-sm')).join('')}</div>`, true)}
-      <p class="caption">Used only to understand comfort differences between people. Your check-ins are stored under a participant code, not your name. The research team sees your name and email next to that code, to run the study and contact you.</p>
+      <p class="caption">Used only to understand comfort differences between people. Your check-ins are stored under a participant code, not your name. The study team sees your name and email next to that code, to run the study and contact you.</p>
     </div>`;
   },
   where: () => {
@@ -1467,7 +1467,7 @@ const REGS = {
       <section class="card glance-card"><div class="card-head"><h2 class="card-title">About you</h2><button class="btn btn-quiet btn-sm" data-act="reg-edit" data-step="1" aria-label="Edit about you">${ic('edit')}Edit</button></div>
         <div class="glance">${you.map(([i, k, v]) => glanceItem(ic(i), k, v, k === 'Name' || k === 'Email')).join('')}</div></section>
       ${homeGlance(r.home, u, true)}
-      <div class="note">${ic('shield')}<div>Joining means you agree to take part as described on the <a href="../">study page</a>. <span class="placeholder">[PLACEHOLDER: IRB protocol number and consent wording]</span></div></div>
+      <div class="note">${ic('shield')}<div>Joining means you agree to take part as described on the <a href="../">study page</a>.</div></div>
     </div>`;
   }
 };
