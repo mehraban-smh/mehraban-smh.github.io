@@ -420,6 +420,21 @@ create policy "researchers can remove registered phones"
   using (true);
 
 -- ===================================================================================================
+-- Table permissions
+-- ===================================================================================================
+-- Spelled out, so the script works whether or not the project was created with "Automatically expose
+-- new tables": the row-level security policies above still decide which rows each role may touch.
+-- The public key (anon) may only add check-ins; it reaches participants and phones only through the
+-- functions. Signed-in researchers (authenticated) read everything and may approve and remove. The
+-- reminder scripts use a secret key (service_role).
+grant usage on schema public to anon, authenticated, service_role;
+grant insert on public.comfort_votes to anon;
+grant select on public.participants, public.comfort_votes, public.push_subscriptions to authenticated;
+grant update, delete on public.participants to authenticated;
+grant delete on public.push_subscriptions to authenticated;
+grant select, insert, update, delete on public.participants, public.comfort_votes, public.push_subscriptions to service_role;
+
+-- ===================================================================================================
 -- Room sensors (for later)
 -- ===================================================================================================
 -- Room readings (for example every 5 minutes) loaded by the research team, one row per participant per timestamp.
@@ -437,3 +452,5 @@ drop policy if exists "researchers can read readings" on public.sensor_readings;
 create policy "researchers can read readings"
   on public.sensor_readings for select to authenticated
   using (true);
+grant select on public.sensor_readings to authenticated;
+grant select, insert, update, delete on public.sensor_readings to service_role;
