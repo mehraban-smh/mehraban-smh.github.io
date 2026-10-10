@@ -13,8 +13,8 @@
  * private key lives only in the GitHub secret NY_VAPID_PRIVATE_KEY.
  */
 self.HC_CONFIG = {
-  supabaseUrl: "",          // Settings > Data API > Project URL, e.g. "https://abcdefghijklmnop.supabase.co"
-  supabaseAnonKey: "",      // Settings > API Keys > Publishable key (sb_publishable_...)
+  supabaseUrl: "https://xhyudpnlnsmaqzsfpted.supabase.co",   // Settings > Data API > Project URL, e.g. "https://abcdefghijklmnop.supabase.co"
+  supabaseAnonKey: "sb_publishable_ta2Pkvpxs-3d6XOPfZiQKA_5EsCpcXe",   // Settings > API Keys > Publishable key (sb_publishable_...)
   table: "comfort_votes",
   pushTable: "push_subscriptions",
   vapidPublicKey: "BDqHJMzCcb8e8NZLfcw0mAyV2C9ouZvzrlAyil3MzaC9ZYUGYhroQTWMZBTUHvH5-uoyLAT88W1-jA-0B2e7IY4",
