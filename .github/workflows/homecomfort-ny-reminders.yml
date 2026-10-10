@@ -1,0 +1,85 @@
+name: Home Comfort NY reminders
+
+# Home Comfort NY (SUNY ESF), separate from every other study in this repository: its own database
+# (supabaseUrl in homecomfort-ny/config.js), its own secrets (NY_SUPABASE_SECRET_KEY, NY_VAPID_PRIVATE_KEY)
+# and its own scripts in homecomfort-ny/push/.
+#
+# Every hour: decide who should get a check-in reminder and send it (homecomfort-ny/push/send.js), then, if
+# anyone registered since the last run and is still waiting for approval, open one issue titled
+# "Home Comfort NY: ..." listing them (homecomfort-ny/push/notify.js). The issue carries only the participant
+# code, never a name or email.
+#
+# What starts it: the study's Supabase database, at the top of every hour, through the workflow_dispatch API
+# (see homecomfort-ny/supabase-reminder-clock.sql). GitHub's own schedule below is only a backup (it is often
+# delayed or dropped on the free runners). The sender reminds a phone at most once per clock hour, so the
+# clock and the backup never double up.
+# Until the study's database and the two secrets are set up (homecomfort-ny/README.md), every run stops
+# quietly at the first step instead of failing.
+# "Run workflow" with a participant code sends one reminder straight away, ignoring home hours (for
+# testing). "Dry run" makes both steps log what they would do and change nothing.
+on:
+  schedule:
+    - cron: "12,42 * * * *"
+  workflow_dispatch:
+    inputs:
+      participant:
+        description: "Send a test reminder now to this participant code, e.g. NY007"
+        required: false
+        default: ""
+      dry_run:
+        description: "Only log what would be sent and which issues would be opened"
+        type: boolean
+        default: false
+
+# contents: read to check out the repository; issues: write so notify.js can open issues.
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: homecomfort-ny-reminders
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check the study is set up
+        id: setup
+        env:
+          KEY: ${{ secrets.NY_SUPABASE_SECRET_KEY }}
+        run: |
+          if grep -q 'supabaseUrl: "https://' homecomfort-ny/config.js && [ -n "$KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Home Comfort NY is not set up yet (no supabaseUrl in homecomfort-ny/config.js, or no NY_SUPABASE_SECRET_KEY secret): nothing to do."
+          fi
+      - uses: actions/setup-node@v5
+        if: steps.setup.outputs.ready == 'true'
+        with:
+          node-version: "22"
+      - name: Install web-push
+        if: steps.setup.outputs.ready == 'true'
+        working-directory: homecomfort-ny/push
+        run: npm install --no-audit --no-fund --loglevel=error
+      - name: Send reminders
+        if: steps.setup.outputs.ready == 'true'
+        working-directory: homecomfort-ny/push
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.NY_SUPABASE_SECRET_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.NY_VAPID_PRIVATE_KEY }}
+          FORCE_PARTICIPANT: ${{ github.event.inputs.participant }}
+        run: node send.js
+      # Runs even when sending failed (a push problem should not delay an approval email).
+      - name: Notify about new participants
+        if: ${{ !cancelled() && steps.setup.outputs.ready == 'true' }}
+        working-directory: homecomfort-ny/push
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.NY_SUPABASE_SECRET_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: node notify.js

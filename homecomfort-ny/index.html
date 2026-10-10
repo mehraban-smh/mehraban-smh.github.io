@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Home Comfort NY | SUNY ESF</title>
+<meta name="description" content="Home Comfort NY is a SUNY ESF research study of how warm or cool people feel in their own homes in New York State. Check in from your phone in about ten seconds, a few times a day.">
+<meta name="theme-color" content="#F6F4FD">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Home Comfort NY | SUNY ESF">
+<meta property="og:description" content="How warm or cool do you really feel at home? A SUNY ESF research study you take part in from your phone.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Plus+Jakarta+Sans:wght@400..800&display=swap">
+<link rel="stylesheet" href="brand.css">
+<script src="icons.js"></script>
+<!--
+  Home Comfort NY: the participant information page (https://mehraban.uk/homecomfort-ny/).
+  Study details that are not known yet are shown as visible "[PLACEHOLDER: ...]" markers: search this file for
+  PLACEHOLDER and replace each <span class="placeholder">...</span> with the final text (no span).
+  Icons and pictures come from icons.js: <i data-ic="name"></i> and <i data-art="group:value"></i> are swapped for
+  the SVG by the script at the end of the page. Page-only classes start with "ip-" so they never meet brand.css.
+-->
+<style>
+#main:focus{outline:none}
+/* viewport-fit=cover lets the aurora run edge to edge on iPhone; keep the content clear of the notch and the
+   rounded corners in landscape (in portrait the side insets are 0, so the usual gutter wins) */
+.wrap-wide{padding-left:max(var(--gutter),env(safe-area-inset-left));padding-right:max(var(--gutter),env(safe-area-inset-right))}
+.skip-link{left:max(12px,env(safe-area-inset-left))}
+
+/* ------------------------------------------------------------------ header */
+.ip-header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;padding-top:14px;padding-bottom:6px}
+.ip-header .logo{order:1;min-height:44px}
+.ip-header .ip-signin{order:2}
+.ip-nav{order:3;flex:1 1 100%;margin-left:-12px}
+.ip-nav ul{display:flex;flex-wrap:wrap;gap:2px;list-style:none;margin:0;padding:0}
+.ip-nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;border-radius:var(--r-pill);color:var(--ink-2);font-size:14.5px;font-weight:600;text-decoration:none;transition:background-color var(--dur-2),color var(--dur-2)}
+.ip-nav a:hover{color:var(--ink);background:rgba(255,255,255,.75)}
+@media (max-width:359px){
+  .ip-header .logo{gap:8px}
+  .ip-header .logo-mark{width:36px;height:36px;border-radius:12px}
+  .ip-header .logo-name{font-size:16.5px}
+  .ip-header .ip-signin{padding:0 14px}
+  .ip-header .ip-signin .ic{display:none}
+}
+@media (min-width:720px){
+  .ip-header{flex-wrap:nowrap;min-height:84px;padding-top:12px;padding-bottom:12px}
+  .ip-nav{order:2;flex:0 1 auto;margin:0 4px 0 auto}
+  .ip-header .ip-signin{order:3}
+  .ip-nav ul{gap:6px}
+}
+
+/* -------------------------------------------------------------------- hero */
+.ip-hero{position:relative;isolation:isolate;overflow:hidden;display:grid;gap:4px;margin-top:6px;padding:28px 20px 6px;border-radius:28px;background:var(--aurora-soft);border:1px solid rgba(255,255,255,.9);--ink-3:#585475}
+.ip-hero::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:
+  radial-gradient(260px 200px at 84% 22%,rgba(169,220,255,.75),transparent 70%),
+  radial-gradient(300px 230px at 78% 96%,rgba(255,206,186,.85),transparent 70%),
+  radial-gradient(320px 250px at 6% 0%,rgba(205,189,255,.7),transparent 70%)}
+.ip-hero-copy{min-width:0}
+.ip-kicker .ic{color:var(--violet)}
+.ip-hero h1{margin:18px 0 14px}
+.ip-hero .lede{max-width:31em;color:var(--ink-2)}
+.ip-ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
+.ip-ctas .btn{flex:1 1 100%}
+.ip-note{display:flex;align-items:flex-start;gap:8px;margin-top:14px;font-size:14px;line-height:1.45;color:var(--ink-2)}
+.ip-note .ic{width:18px;height:18px;margin-top:1px;color:var(--violet)}
+.ip-note+.ip-note{margin-top:8px}
+ul.ip-facts{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;list-style:none}
+.ip-fact{display:flex;align-items:center;gap:10px;min-width:0;padding:8px 14px 8px 8px;border-radius:16px;background:rgba(255,255,255,.82)}
+.ip-fact .icon-tile{--it-size:34px;border-radius:11px}
+.ip-fact .icon-tile .ic{width:18px;height:18px}
+.ip-fact b{display:block;font-size:14px;line-height:1.2}
+.ip-fact small{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);line-height:1.3}
+.ip-hero-art{justify-self:center;width:100%;max-width:300px;margin-top:18px}
+.ip-hero-art svg{display:block;width:100%;height:auto;overflow:visible;font-family:var(--font-ui)}
+@keyframes ip-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.ip-bob{animation:ip-bob 6s ease-in-out infinite}
+.ip-bob-2{animation-delay:-3s}
+@media (min-width:480px){ .ip-ctas .btn{flex:0 0 auto} }
+@media (min-width:900px){
+  .ip-hero{grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:24px;align-items:center;margin-top:4px;padding:56px 28px 52px 56px;border-radius:36px}
+  .ip-hero-art{max-width:400px;margin:0}
+  .ip-hero::before{background:
+    radial-gradient(300px 230px at 82% 18%,rgba(169,220,255,.75),transparent 70%),
+    radial-gradient(320px 250px at 78% 94%,rgba(255,206,186,.85),transparent 70%),
+    radial-gradient(360px 280px at 6% 0%,rgba(205,189,255,.7),transparent 70%)}
+}
+
+/* ---------------------------------------------------------------- sections */
+.ip-section{padding-top:64px;scroll-margin-top:12px}
+.ip-section .section-head{margin-bottom:28px}
+.ip-section .section-title{text-wrap:balance}
+@media (min-width:720px){ .ip-section{padding-top:88px} }
+
+/* steps */
+ol.ip-steps{display:grid;gap:16px;margin:0;padding:0;list-style:none}
+.ip-step{display:flex;flex-direction:column;padding:14px 14px 24px;border-radius:28px;background:#fff;border:1px solid var(--line);box-shadow:var(--sh-1)}
+.ip-step-art{position:relative;display:grid;place-items:center;height:172px;margin-bottom:18px;border-radius:20px;overflow:hidden}
+.ip-step:nth-child(1) .ip-step-art{background:linear-gradient(160deg,#F1ECFF,#E7E0FF)}
+.ip-step:nth-child(2) .ip-step-art{background:linear-gradient(160deg,#EAF6FF,#DCEFFF)}
+.ip-step:nth-child(3) .ip-step-art{background:linear-gradient(160deg,#FFF3EC,#FFE6DA)}
+.ip-step-art svg{display:block;font-family:var(--font-ui)}
+.ip-step-no{position:absolute;top:12px;left:12px;width:32px;height:32px;border-radius:50%;background:#fff;display:grid;place-items:center;font-family:var(--font-display);font-size:16px;font-weight:800;box-shadow:var(--sh-1)}
+.ip-when{align-self:flex-start;margin:0 8px 10px}
+.ip-step h3{margin:0 8px 8px;font-size:21px}
+.ip-step p{margin:0 8px;font-size:15px;line-height:1.55;color:var(--ink-2)}
+@media (min-width:600px) and (max-width:899px){
+  .ip-step{display:grid;grid-template-columns:250px minmax(0,1fr);grid-template-rows:auto auto 1fr;column-gap:18px;align-items:start;padding:14px}
+  .ip-step-art{grid-row:1 / span 3;height:100%;min-height:172px;margin:0}
+  .ip-when{margin:10px 0 10px;justify-self:start}
+  .ip-step h3,.ip-step p{margin-left:0;margin-right:4px}
+}
+@media (min-width:900px){ ol.ip-steps{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px} }
+
+/* step 1 picture: a small phone with home-type tiles (HTML so it can use the real icons.js pictures) */
+.ip-stage{position:relative;width:230px;height:150px}
+.ip-mphone{position:absolute;left:62px;top:7px;display:flex;flex-direction:column;gap:6px;width:106px;height:136px;padding:12px 8px 10px;border:1.75px solid var(--ink);border-radius:18px;background:#fff;box-shadow:0 10px 18px -8px rgba(76,52,190,.35)}
+.ip-mgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ip-mtile{--duo:var(--violet-300);--duo-o:.32;position:relative;display:grid;place-items:center;height:40px;border-radius:10px;background:var(--surface-2);color:var(--ink-2)}
+.ip-mtile .art{width:30px;height:30px}
+.ip-mtile.is-sel{--duo:var(--violet);--duo-o:.2;background:var(--violet-50);color:var(--violet-700);box-shadow:inset 0 0 0 2px var(--violet)}
+.ip-mtick{position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:var(--violet);color:#fff;box-shadow:0 0 0 2px #fff}
+.ip-mtick .ic{width:11px;height:11px;stroke-width:3}
+.ip-mbtn{margin-top:auto;height:12px;border-radius:6px;background:var(--violet)}
+.ip-fpill{position:absolute;display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px 0 8px;border-radius:14px;background:#fff;box-shadow:0 8px 16px -8px rgba(76,52,190,.4);font-size:11px;font-weight:800;color:var(--ink);white-space:nowrap}
+.ip-fpill .ic{width:14px;height:14px;color:var(--violet-700)}
+
+/* the question and its seven answers */
+.ip-scale{margin-top:20px;padding:20px;border-radius:28px;background:#fff;border:1px solid var(--line);box-shadow:var(--sh-1)}
+.ip-scale-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.ip-scale-q{margin-top:2px;font-family:var(--font-display);font-size:clamp(20px,5.4vw,24px);font-weight:800;letter-spacing:-.02em;line-height:1.15}
+ul.ip-sv-list{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.ip-sv{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:4px 14px 4px 4px;border-radius:var(--r-pill);background:var(--sc-tint);font-size:14px;font-weight:700;line-height:1.2}
+.ip-sv .orb{--size:32px}
+.ip-sv .num{margin-left:2px;color:var(--ink-2);font-weight:800}
+.ip-scale-foot{margin-top:16px;font-size:13.5px;color:var(--ink-2)}
+@media (min-width:760px){
+  .ip-scale{padding:24px 28px 26px}
+  ul.ip-sv-list{position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+  .ip-sv-list::before{content:"";position:absolute;left:calc(100% / 14);right:calc(100% / 14);top:25px;height:6px;border-radius:3px;background:var(--thermal);opacity:.45}
+  .ip-sv{position:relative;flex-direction:column;gap:8px;padding:0;border-radius:0;background:none;text-align:center}
+  .ip-sv .orb{--size:56px;box-shadow:0 0 0 5px #fff}
+  .ip-sv-txt{display:flex;flex-direction:column;gap:2px}
+  .ip-sv-word{font-size:14.5px;font-weight:800}
+  .ip-sv .num{margin:0;font-size:13.5px}
+}
+
+/* who can take part */
+.ip-who{display:grid;gap:16px}
+.ip-checks-card{padding:20px 20px 6px}
+ul.ip-checks{display:flex;flex-direction:column;margin:4px 0 0;padding:0;list-style:none}
+.ip-check{display:flex;align-items:flex-start;gap:14px;padding:14px 0}
+.ip-check+.ip-check{border-top:1px solid var(--line)}
+.ip-check .icon-tile{--it-size:44px;border-radius:14px}
+.ip-check .icon-tile .ic{width:22px;height:22px}
+.ip-check-t{display:block;font-size:16px;font-weight:800;line-height:1.3}
+.ip-check-s{display:block;margin-top:2px;font-size:14px;color:var(--ink-2);line-height:1.45}
+ul.ip-homes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:16px 0 0;padding:0;list-style:none}
+.ip-home{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px 10px;border-radius:16px;background:var(--surface-2);font-size:12.5px;font-weight:700;color:var(--ink-2);text-align:center;line-height:1.2}
+.ip-home .art{width:40px;height:40px;color:var(--violet-700);--duo:var(--violet);--duo-o:.16}
+@media (min-width:900px){
+  .ip-who{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+}
+@media (min-width:600px) and (max-width:899px){ ul.ip-homes{grid-template-columns:repeat(6,minmax(0,1fr))} }
+
+/* your data */
+.ip-data{display:grid;gap:16px}
+.ip-code-card{padding:28px 24px}
+.ip-code{display:block;margin:8px 0 6px;font-family:var(--font-display);font-size:42px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.ip-code-card p{font-size:14.5px;line-height:1.55}
+.ip-dc{display:flex;flex-direction:column;gap:16px;margin-top:20px;padding-top:18px;border-top:1px solid rgba(255,255,255,.14)}
+.ip-dc-h{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13.5px;font-weight:800;color:#fff}
+.ip-dc-h .ic{width:22px;height:22px;padding:3px;border-radius:50%;background:var(--mint);color:#0B3B2B;stroke-width:2.4}
+.ip-dc-h.is-no .ic{background:var(--peach-200);color:#6B200F}
+.ip-dc ul{display:flex;flex-direction:column;gap:4px;margin:0;padding:0 0 0 30px;list-style:none}
+.ip-dc li{font-size:14px;line-height:1.45;color:var(--on-dark-2)}
+ul.ip-dl{display:grid;gap:12px;margin:0;padding:0;list-style:none}
+.ip-dl-item{padding:18px 18px 20px;border-radius:22px;border:1px solid var(--line);background:#fff}
+.ip-dl-item .icon-tile{--it-size:42px;border-radius:14px;margin-bottom:12px}
+.ip-dl-item .icon-tile .ic{width:22px;height:22px}
+.ip-dl-item h3{font-family:var(--font-ui);font-size:16px;font-weight:800;letter-spacing:-.01em;line-height:1.3}
+.ip-dl-item p{margin-top:4px;font-size:14.5px;line-height:1.5;color:var(--ink-2)}
+@media (max-width:599px){
+  .ip-dl-item{display:flex;align-items:flex-start;gap:14px;padding:16px}
+  .ip-dl-item .icon-tile{margin:0}
+}
+@media (min-width:600px){ ul.ip-dl{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px} }
+@media (min-width:980px){ .ip-data{grid-template-columns:minmax(340px,400px) minmax(0,1fr);gap:20px;align-items:stretch} }
+
+/* FAQ */
+.ip-faq-wrap{display:grid;gap:4px}
+.ip-faq{display:flex;flex-direction:column;gap:10px}
+.ip-faq details{border-radius:20px;border:1px solid var(--line);background:#fff;transition:box-shadow var(--dur-2),border-color var(--dur-2)}
+.ip-faq details[open]{border-color:var(--violet-100);box-shadow:var(--sh-1)}
+.ip-faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:64px;padding:10px 12px 10px 20px;border-radius:20px;font-size:16.5px;font-weight:800;letter-spacing:-.01em;line-height:1.3;cursor:pointer;list-style:none;-webkit-user-select:none;user-select:none}
+.ip-faq summary::-webkit-details-marker{display:none}
+.ip-faq summary::marker{content:""}
+.ip-faq summary:hover .ip-chev{background:var(--violet-50);color:var(--violet-700)}
+.ip-chev{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--surface-2);color:var(--ink-2);transition:transform var(--dur-2) var(--ease),background-color var(--dur-2),color var(--dur-2)}
+.ip-chev .ic{width:20px;height:20px}
+.ip-faq details[open] .ip-chev{transform:rotate(180deg);background:var(--violet-50);color:var(--violet-700)}
+.ip-faq-a{padding:0 20px 20px;font-size:15px;line-height:1.6;color:var(--ink-2)}
+.ip-faq-a>*+*{margin-top:10px}
+.ip-faq-a b{color:var(--ink)}
+.ip-os{display:grid;gap:10px;margin-top:12px}
+.ip-os>div{padding:14px 16px;border-radius:16px;background:var(--surface-2)}
+.ip-os-h{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--ink)}
+.ip-os-h .ic{width:18px;height:18px;color:var(--violet-700)}
+.ip-os ol{margin:6px 0 0;padding-left:20px;font-size:14.5px}
+.ip-os li+li{margin-top:2px}
+@media (min-width:600px){ .ip-os{grid-template-columns:1fr 1fr} }
+@media (min-width:960px){
+  .ip-faq-wrap{grid-template-columns:minmax(0,1fr) minmax(0,1.75fr);gap:40px;align-items:start}
+  .ip-faq-wrap .section-head{position:sticky;top:24px}
+}
+
+/* who runs the study */
+ul.ip-team{display:grid;gap:12px;margin:0;padding:0;list-style:none}
+.ip-team-item{display:flex;align-items:flex-start;gap:14px;padding:18px;border-radius:22px;border:1px solid var(--line);background:#fff}
+.ip-team-item .icon-tile{--it-size:42px;border-radius:14px}
+.ip-team-item .icon-tile .ic{width:22px;height:22px}
+.ip-team-k{display:block;margin-bottom:4px;font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--violet-700)}
+.ip-team-v{font-size:15px;font-weight:600;line-height:1.5;color:var(--ink)}
+.ip-team-v small{display:block;margin-top:4px;font-size:13.5px;font-weight:500;color:var(--ink-2)}
+@media (min-width:640px){ ul.ip-team{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px} }
+@media (min-width:1000px){ ul.ip-team{grid-template-columns:repeat(3,minmax(0,1fr))} }
+
+/* closing band */
+.ip-final{position:relative;isolation:isolate;overflow:hidden;display:flex;flex-direction:column;gap:20px;margin-top:72px;padding:28px 22px}
+.ip-final::after{content:"";position:absolute;right:-80px;top:-90px;z-index:-1;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.55),transparent 65%)}
+.ip-final h2{font-size:clamp(26px,6.6vw,34px)}
+.ip-final p{margin-top:6px;font-size:15.5px}
+.ip-final .ip-ctas{margin-top:0}
+@media (min-width:860px){
+  .ip-final{flex-direction:row;align-items:center;justify-content:space-between;gap:28px;margin-top:96px;padding:36px 40px}
+  .ip-final .ip-ctas{flex-wrap:nowrap;flex:none}
+}
+
+/* footer */
+.ip-foot{margin-top:36px;padding-bottom:calc(28px + env(safe-area-inset-bottom));font-size:13.5px;color:var(--ink-2)}
+.ip-foot-in{padding-top:18px;border-top:1px solid var(--line)}
+.ip-foot-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 24px}
+.ip-foot-links{display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px}
+.ip-team-link{display:inline-flex;align-items:center;gap:6px;min-height:44px;font-size:13.5px;text-decoration:none}
+.ip-team-link .ic{width:16px;height:16px}
+.ip-team-link:hover{text-decoration:underline}
+.ip-foot .caption{margin-top:4px}
+</style>
+</head>
+<body class="bg-aurora">
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="ip-header wrap-wide">
+  <div class="logo">
+    <span class="logo-mark"><i data-ic="home"></i></span>
+    <span><span class="logo-name">Home Comfort NY</span><span class="logo-sub">A SUNY ESF research study</span></span>
+  </div>
+  <nav class="ip-nav" aria-label="On this page">
+    <ul>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#data">Your data</a></li>
+      <li><a href="#faq">FAQ</a></li>
+    </ul>
+  </nav>
+  <a class="btn btn-secondary btn-sm ip-signin" href="checkin/?start=signin"><i data-ic="signin"></i>Sign in</a>
+</header>
+
+<main id="main" tabindex="-1">
+  <div class="wrap-wide">
+    <!-- ============================================================== hero -->
+    <section class="ip-hero" aria-labelledby="hero-title">
+      <div class="ip-hero-copy">
+        <span class="pill pill-glass pill-lg ip-kicker"><i data-ic="map-pin"></i>SUNY ESF · Syracuse, New York</span>
+        <h1 id="hero-title" class="display-xl">Home <br>Comfort <span class="text-gradient">NY</span></h1>
+        <p class="lede">How warm or cool do you really feel at home? Tell us with a quick tap, a few times a day, and help New York homes learn to heat and cool around people instead of a number on the thermostat.</p>
+        <div class="ip-ctas">
+          <a class="btn btn-primary btn-lg" href="checkin/?start=join">Join the study<i data-ic="arrow-right"></i></a>
+          <a class="btn btn-secondary btn-lg" href="checkin/?start=signin"><i data-ic="signin"></i>Sign in</a>
+        </div>
+        <p class="ip-note"><i data-ic="key"></i><span>Already taking part? <a href="checkin/?start=signin">Sign in</a> with the email you joined with.</span></p>
+        <p class="ip-note"><i data-ic="phone"></i><span>On an iPhone? Add the check-in app to your Home Screen first, then join or sign in from there. <a href="#faq-reminders">Here&rsquo;s how</a></span></p>
+        <ul class="ip-facts" role="list">
+          <li class="ip-fact"><span class="icon-tile"><i data-ic="clock"></i></span><span><b>About 10 seconds</b><small>per check-in</small></span></li>
+          <li class="ip-fact"><span class="icon-tile it-sky"><i data-ic="calendar"></i></span><span><b><span class="placeholder">[PLACEHOLDER: study length]</span></b><small>from start to finish</small></span></li>
+          <li class="ip-fact"><span class="icon-tile it-peach"><i data-ic="phone"></i></span><span><b>Your phone</b><small>nothing to download</small></span></li>
+        </ul>
+      </div>
+
+      <div class="ip-hero-art">
+        <svg viewBox="0 0 360 500" width="360" height="500" role="img" aria-labelledby="hero-art-title" focusable="false">
+          <title id="hero-art-title">A house with a phone beside it. The phone shows the seven answers from hot to cold, with "Slightly warm" picked.</title>
+          <defs>
+            <filter id="ipHs" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#4C34BE" flood-opacity=".16"/></filter>
+            <linearGradient id="ipStreak" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD3C1"/><stop offset="1" stop-color="#C9B8FF"/></linearGradient>
+            <radialGradient id="ipWin" cx=".5" cy=".5" r=".6"><stop offset="0" stop-color="#FFEBD0"/><stop offset="1" stop-color="#FFC6AA"/></radialGradient>
+          </defs>
+          <ellipse cx="176" cy="470" rx="176" ry="20" fill="#fff" opacity=".92"/>
+          <!-- pine -->
+          <path d="M28 470v-16" stroke="#1E1B3A" stroke-width="1.75" stroke-linecap="round"/>
+          <path d="M28 372l-20 34h10l-16 28h11l-9 20h48l-9-20h11l-16-28h10z" fill="#BDEBD6" stroke="#1E1B3A" stroke-width="1.75" stroke-linejoin="round"/>
+          <path d="M17 406h22M13 434h30" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+          <!-- chimney and warm air -->
+          <path d="M236 236c-7-9 7-15 0-24s7-15 0-24" stroke="#C9B8FF" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+          <rect x="222" y="252" width="28" height="56" fill="#fff" stroke="#1E1B3A" stroke-width="1.75" stroke-linejoin="round"/>
+          <rect x="216" y="244" width="40" height="13" rx="6.5" fill="#fff" stroke="#1E1B3A" stroke-width="1.75"/>
+          <!-- house -->
+          <path d="M60 468V334l110-92 110 92v134z" fill="#fff" stroke="#1E1B3A" stroke-width="1.75" stroke-linejoin="round"/>
+          <path d="M34 348 170 232l136 116h-26L170 256 60 348z" fill="#C9B8FF" stroke="#1E1B3A" stroke-width="1.75" stroke-linejoin="round"/>
+          <path d="M50 339 170 238l120 101" stroke="#fff" stroke-width="6" stroke-linecap="round" fill="none"/>
+          <circle cx="170" cy="300" r="15" fill="#BFE3FF" stroke="#1E1B3A" stroke-width="1.75"/><path d="M170 285v30M155 300h30" stroke="#1E1B3A" stroke-width="1.5"/>
+          <rect x="80" y="352" width="54" height="50" rx="7" fill="url(#ipWin)" stroke="#1E1B3A" stroke-width="1.75"/><path d="M107 352v50M80 377h54" stroke="#1E1B3A" stroke-width="1.5"/>
+          <rect x="206" y="352" width="54" height="50" rx="7" fill="url(#ipWin)" stroke="#1E1B3A" stroke-width="1.75"/><path d="M233 352v50M206 377h54" stroke="#1E1B3A" stroke-width="1.5"/>
+          <rect x="148" y="384" width="44" height="84" rx="8" fill="#6246EA" stroke="#1E1B3A" stroke-width="1.75"/><circle cx="182" cy="428" r="3.2" fill="#fff"/>
+          <path d="M136 468h68" stroke="#1E1B3A" stroke-width="1.75" stroke-linecap="round"/>
+          <!-- phone: the seven answers, hot at the top; "Slightly warm" (+1) picked, in its own step colour -->
+          <g transform="translate(238 262) rotate(9)" filter="url(#ipHs)">
+            <rect width="108" height="190" rx="22" fill="#1E1B3A"/>
+            <rect x="6" y="6" width="96" height="178" rx="17" fill="#fff"/>
+            <rect x="38" y="12" width="32" height="8" rx="4" fill="#1E1B3A"/>
+            <rect x="16" y="28" width="58" height="7" rx="3.5" fill="#1E1B3A"/>
+            <rect x="16" y="40" width="40" height="5" rx="2.5" fill="#D5CFEA"/>
+            <rect x="14" y="56" width="80" height="14" rx="7" fill="#F4F2FC"/><circle cx="22" cy="63" r="4.3" fill="#A92A1D"/><rect x="30" y="61" width="30" height="4" rx="2" fill="#C9C4DD"/>
+            <rect x="14" y="73" width="80" height="14" rx="7" fill="#F4F2FC"/><circle cx="22" cy="80" r="4.3" fill="#E2622A"/><rect x="30" y="78" width="22" height="4" rx="2" fill="#C9C4DD"/>
+            <rect x="14" y="90" width="80" height="14" rx="7" fill="#FEEFE4" stroke="#F6A46C" stroke-width="1.6"/><circle cx="22" cy="97" r="4.3" fill="#F6A46C"/><rect x="30" y="95" width="38" height="4" rx="2" fill="#1E1B3A"/><circle cx="86" cy="97" r="4.6" fill="#F6A46C"/><path d="m83.8 97.1 1.5 1.4 3-3.1" stroke="#1E1B3A" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="14" y="107" width="80" height="14" rx="7" fill="#F4F2FC"/><circle cx="22" cy="114" r="4.3" fill="#A7A3BA"/><rect x="30" y="112" width="28" height="4" rx="2" fill="#C9C4DD"/>
+            <rect x="14" y="124" width="80" height="14" rx="7" fill="#F4F2FC"/><circle cx="22" cy="131" r="4.3" fill="#6EA6EE"/><rect x="30" y="129" width="36" height="4" rx="2" fill="#C9C4DD"/>
+            <rect x="14" y="141" width="80" height="14" rx="7" fill="#F4F2FC"/><circle cx="22" cy="148" r="4.3" fill="#3B72D9"/><rect x="30" y="146" width="22" height="4" rx="2" fill="#C9C4DD"/>
+            <rect x="14" y="158" width="80" height="14" rx="7" fill="#F4F2FC"/><circle cx="22" cy="165" r="4.3" fill="#2C3A9E"/><rect x="30" y="163" width="26" height="4" rx="2" fill="#C9C4DD"/>
+          </g>
+          <!-- floating chips -->
+          <g transform="translate(0 168)"><g class="ip-bob" filter="url(#ipHs)">
+            <rect width="168" height="58" rx="20" fill="#fff"/>
+            <circle cx="29" cy="29" r="17" fill="#F6A46C"/>
+            <g transform="translate(19 19) scale(.8333)" fill="none" stroke="#1E1B3A" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.8"/><path d="M12 4.2v1.8M12 18v1.8M4.2 12H6M18 12h1.8"/></g>
+            <text x="56" y="26" font-size="15" font-weight="800" fill="#1E1B3A">Slightly warm</text>
+            <text x="56" y="44" font-size="12" font-weight="600" fill="#585475">+1 · just now · 72°F</text>
+          </g></g>
+          <g transform="translate(186 92)"><g class="ip-bob ip-bob-2" filter="url(#ipHs)">
+            <rect width="168" height="58" rx="20" fill="#fff"/>
+            <rect x="10" y="11" width="36" height="36" rx="12" fill="url(#ipStreak)"/>
+            <g transform="translate(17 18) scale(.9167)" fill="none" stroke="#1E1B3A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13.4 3 5.6 13.4h5.8L10.4 21l8-10.6h-5.8z"/></g>
+            <text x="56" y="26" font-size="15" font-weight="800" fill="#1E1B3A">12-day streak</text>
+            <text x="56" y="44" font-size="12" font-weight="600" fill="#585475">Your best yet</text>
+          </g></g>
+          <g transform="translate(64 64)" filter="url(#ipHs)"><circle cx="24" cy="24" r="24" fill="#fff"/><g transform="translate(12 12)" fill="none" stroke="#1F6FB0" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/><path d="m9.6 4.4 2.4 2 2.4-2M9.6 19.6l2.4-2 2.4 2M3.9 10.6l3.1.5-1.1 2.9M20.1 13.4l-3.1-.5 1.1-2.9"/></g></g>
+          <path d="M176 60c1.8 6.2 3.8 8.2 10 10-6.2 1.8-8.2 3.8-10 10-1.8-6.2-3.8-8.2-10-10 6.2-1.8 8.2-3.8 10-10z" fill="#fff"/>
+          <path d="M322 203c1.26 4.34 2.66 5.74 7 7-4.34 1.26-5.74 2.66-7 7-1.26-4.34-2.66-5.74-7-7 4.34-1.26 5.74-2.66 7-7z" fill="#fff"/>
+          <path d="M36 294c1.08 3.72 2.28 4.92 6 6-3.72 1.08-4.92 2.28-6 6-1.08-3.72-2.28-4.92-6-6 3.72-1.08 4.92-2.28 6-6z" fill="#fff"/>
+          <path d="M150 25c.9 3.1 1.9 4.1 5 5-3.1.9-4.1 1.9-5 5-.9-3.1-1.9-4.1-5-5 3.1-.9 4.1-1.9 5-5z" fill="#6246EA"/>
+          <path d="M300 46c1.08 3.72 2.28 4.92 6 6-3.72 1.08-4.92 2.28-6 6-1.08-3.72-2.28-4.92-6-6 3.72-1.08 4.92-2.28 6-6z" fill="#FF9E7A"/>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ====================================================== how it works -->
+    <section class="ip-section" id="how" aria-labelledby="how-title">
+      <div class="section-head">
+        <span class="eyebrow">What taking part involves</span>
+        <h2 class="section-title" id="how-title">Three small things, about a minute a day</h2>
+        <p class="section-sub">No diary to keep and no forms to fill in. Everything happens on your phone, whenever you are at home.</p>
+      </div>
+
+      <ol class="ip-steps" role="list">
+        <li class="ip-step">
+          <div class="ip-step-art" aria-hidden="true">
+            <span class="ip-step-no">1</span>
+            <div class="ip-stage">
+              <div class="ip-mphone">
+                <div class="ip-mgrid">
+                  <span class="ip-mtile"><i data-art="home_type:detached"></i></span>
+                  <span class="ip-mtile is-sel"><i data-art="home_type:townhouse"></i><span class="ip-mtick"><i data-ic="check"></i></span></span>
+                  <span class="ip-mtile"><i data-art="home_type:apartment"></i></span>
+                  <span class="ip-mtile"><i data-art="home_type:duplex"></i></span>
+                </div>
+                <span class="ip-mbtn"></span>
+              </div>
+              <span class="ip-fpill" style="left:4px;top:58px"><i data-ic="stairs"></i>2 floors</span>
+              <span class="ip-fpill" style="left:148px;top:96px"><i data-ic="users"></i>3 people</span>
+            </div>
+          </div>
+          <span class="pill ip-when"><i data-ic="clock"></i>Once · about 5 min</span>
+          <h3>Picture your home</h3>
+          <p>Tap through a short visual home profile: the type of home, its size and floors, who lives with you, and how you heat and cool it. Pictures, not paperwork.</p>
+        </li>
+
+        <li class="ip-step">
+          <div class="ip-step-art" aria-hidden="true">
+            <span class="ip-step-no">2</span>
+            <svg viewBox="0 0 230 150" width="230" height="150" focusable="false">
+              <defs><filter id="ipS2" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#4C34BE" flood-opacity=".16"/></filter></defs>
+              <g transform="translate(70 12) rotate(-5)" filter="url(#ipS2)">
+                <rect width="78" height="134" rx="16" fill="#1E1B3A"/><rect x="4" y="4" width="70" height="126" rx="12.5" fill="#fff"/>
+                <rect x="12" y="14" width="40" height="5" rx="2.5" fill="#1E1B3A"/>
+                <rect x="9" y="26" width="60" height="11.5" rx="5.75" fill="#F4F2FC"/><circle cx="15.5" cy="31.75" r="3.6" fill="#A92A1D"/><rect x="22" y="30.2" width="22" height="3" rx="1.5" fill="#C9C4DD"/>
+                <rect x="9" y="40.5" width="60" height="11.5" rx="5.75" fill="#F4F2FC"/><circle cx="15.5" cy="46.25" r="3.6" fill="#E2622A"/><rect x="22" y="44.7" width="18" height="3" rx="1.5" fill="#C9C4DD"/>
+                <rect x="9" y="55" width="60" height="11.5" rx="5.75" fill="#FEEFE4" stroke="#F6A46C" stroke-width="1.3"/><circle cx="15.5" cy="60.75" r="3.6" fill="#F6A46C"/><rect x="22" y="59.2" width="28" height="3" rx="1.5" fill="#1E1B3A"/><circle cx="62" cy="60.75" r="3.8" fill="#F6A46C"/><path d="m60.2 60.85 1.2 1.15 2.4-2.5" stroke="#1E1B3A" stroke-width="1.1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="9" y="69.5" width="60" height="11.5" rx="5.75" fill="#F4F2FC"/><circle cx="15.5" cy="75.25" r="3.6" fill="#A7A3BA"/><rect x="22" y="73.7" width="24" height="3" rx="1.5" fill="#C9C4DD"/>
+                <rect x="9" y="84" width="60" height="11.5" rx="5.75" fill="#F4F2FC"/><circle cx="15.5" cy="89.75" r="3.6" fill="#6EA6EE"/><rect x="22" y="88.2" width="30" height="3" rx="1.5" fill="#C9C4DD"/>
+                <rect x="9" y="98.5" width="60" height="11.5" rx="5.75" fill="#F4F2FC"/><circle cx="15.5" cy="104.25" r="3.6" fill="#3B72D9"/><rect x="22" y="102.7" width="18" height="3" rx="1.5" fill="#C9C4DD"/>
+                <rect x="9" y="113" width="60" height="11.5" rx="5.75" fill="#F4F2FC"/><circle cx="15.5" cy="118.75" r="3.6" fill="#2C3A9E"/><rect x="22" y="117.2" width="20" height="3" rx="1.5" fill="#C9C4DD"/>
+              </g>
+              <circle cx="128" cy="70" r="9" fill="#6246EA" opacity=".22"/><circle cx="128" cy="70" r="16" fill="none" stroke="#6246EA" stroke-width="1.5" opacity=".35"/><circle cx="128" cy="70" r="24" fill="none" stroke="#6246EA" stroke-width="1.2" opacity=".18"/>
+              <g filter="url(#ipS2)"><rect x="148" y="18" width="76" height="30" rx="15" fill="#fff"/><g transform="translate(156 25) scale(.6667)" fill="none" stroke="#4B30C9" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5v-5.3a6 6 0 0 1 12 0v5.3l1.5 1.8h-15z"/><path d="M10 20.6a2.3 2.3 0 0 0 4 0"/></g><text x="176" y="37.5" font-size="11" font-weight="800" fill="#1E1B3A">7:00 PM</text></g>
+              <g filter="url(#ipS2)"><rect x="8" y="94" width="76" height="30" rx="15" fill="#fff"/><g transform="translate(16 101) scale(.6667)" fill="none" stroke="#4B30C9" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></g><text x="37" y="113.5" font-size="11" font-weight="800" fill="#1E1B3A">10 sec</text></g>
+            </svg>
+          </div>
+          <span class="pill ip-when"><i data-ic="bell"></i>A few times a day</span>
+          <h3>One tap: how do you feel?</h3>
+          <p>While you are home, a gentle reminder asks how you feel, from cold to hot, then a few quick taps about what you are wearing and doing. When nothing has changed, one tap confirms it all. You pick the hours, so nights stay quiet.</p>
+        </li>
+
+        <li class="ip-step">
+          <div class="ip-step-art" aria-hidden="true">
+            <span class="ip-step-no">3</span>
+            <svg viewBox="0 0 230 150" width="230" height="150" focusable="false">
+              <defs><filter id="ipS3" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#4C34BE" flood-opacity=".16"/></filter></defs>
+              <g filter="url(#ipS3)"><rect x="30" y="22" width="160" height="112" rx="18" fill="#fff"/></g>
+              <rect x="44" y="36" width="64" height="6" rx="3" fill="#1E1B3A"/><rect x="44" y="47" width="42" height="4.5" rx="2.25" fill="#D5CFEA"/>
+              <g stroke="#fff" stroke-width="1.5">
+                <text x="44" y="74" font-size="8.5" font-weight="800" fill="#6B6788" stroke="none">M</text><circle cx="62" cy="71" r="5" fill="#6EA6EE"/><circle cx="84" cy="71" r="5" fill="#A7A3BA"/><circle cx="106" cy="71" r="5" fill="#A7A3BA"/><circle cx="128" cy="71" r="5" fill="#F6A46C"/>
+                <text x="44" y="90" font-size="8.5" font-weight="800" fill="#6B6788" stroke="none">T</text><circle cx="69" cy="87" r="5" fill="#6EA6EE"/><circle cx="91" cy="87" r="5" fill="#A7A3BA"/><circle cx="113" cy="87" r="5" fill="#F6A46C"/><circle cx="135" cy="87" r="5" fill="#F6A46C"/><circle cx="157" cy="87" r="5" fill="#A7A3BA"/>
+                <text x="44" y="106" font-size="8.5" font-weight="800" fill="#6B6788" stroke="none">W</text><circle cx="62" cy="103" r="5" fill="#3B72D9"/><circle cx="84" cy="103" r="5" fill="#6EA6EE"/><circle cx="106" cy="103" r="5" fill="#A7A3BA"/><circle cx="128" cy="103" r="5" fill="#A7A3BA"/><circle cx="150" cy="103" r="5" fill="#F6A46C"/>
+                <text x="44" y="122" font-size="8.5" font-weight="800" fill="#6B6788" stroke="none">T</text><circle cx="69" cy="119" r="5" fill="#6EA6EE"/><circle cx="91" cy="119" r="5" fill="#A7A3BA"/><circle cx="113" cy="119" r="5" fill="#F6A46C"/><circle cx="135" cy="119" r="5" fill="#A7A3BA"/>
+              </g>
+              <g filter="url(#ipS3)"><circle cx="184" cy="30" r="24" fill="#fff"/></g>
+              <circle cx="184" cy="30" r="17" fill="none" stroke="#E9E4FF" stroke-width="5"/>
+              <circle cx="184" cy="30" r="17" fill="none" stroke="#6246EA" stroke-width="5" stroke-linecap="round" stroke-dasharray="74.77 200" transform="rotate(-90 184 30)"/>
+              <g transform="translate(176 22) scale(.6667)" fill="none" stroke="#4B30C9" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.4 3 5.6 13.4h5.8L10.4 21l8-10.6h-5.8z"/></g>
+              <path d="M18 101c1.26 4.34 2.66 5.74 7 7-4.34 1.26-5.74 2.66-7 7-1.26-4.34-2.66-5.74-7-7 4.34-1.26 5.74-2.66 7-7z" fill="#fff"/>
+              <path d="M210 114c1.08 3.72 2.28 4.92 6 6-3.72 1.08-4.92 2.28-6 6-1.08-3.72-2.28-4.92-6-6 3.72-1.08 4.92-2.28 6-6z" fill="#FF9E7A"/>
+            </svg>
+          </div>
+          <span class="pill ip-when"><i data-ic="sparkle"></i>Every week</span>
+          <h3>Watch your comfort story</h3>
+          <p>Your week fills with color as you check in. Keep a streak going, and see a personal summary of when you feel most comfortable at home.</p>
+        </li>
+      </ol>
+
+      <div class="ip-scale">
+        <div class="ip-scale-head">
+          <span class="icon-tile it-lg"><i data-ic="thermometer"></i></span>
+          <div><span class="eyebrow">The question you will answer</span><p class="ip-scale-q">How do you feel right now?</p></div>
+        </div>
+        <ul class="ip-sv-list" role="list" aria-label="The seven answers, from cold to hot">
+          <li class="ip-sv sv-n3"><span class="orb"><i data-ic="snow"></i></span><span class="ip-sv-txt"><span class="ip-sv-word">Cold</span> <span class="num">−3</span></span></li>
+          <li class="ip-sv sv-n2"><span class="orb"><i data-ic="wind"></i></span><span class="ip-sv-txt"><span class="ip-sv-word">Cool</span> <span class="num">−2</span></span></li>
+          <li class="ip-sv sv-n1"><span class="orb"><i data-ic="breeze"></i></span><span class="ip-sv-txt"><span class="ip-sv-word">Slightly cool</span> <span class="num">−1</span></span></li>
+          <li class="ip-sv sv-0"><span class="orb"><i data-ic="leaf"></i></span><span class="ip-sv-txt"><span class="ip-sv-word">Neutral</span> <span class="num">0</span></span></li>
+          <li class="ip-sv sv-p1"><span class="orb"><i data-ic="sun-small"></i></span><span class="ip-sv-txt"><span class="ip-sv-word">Slightly warm</span> <span class="num">+1</span></span></li>
+          <li class="ip-sv sv-p2"><span class="orb"><i data-ic="sun"></i></span><span class="ip-sv-txt"><span class="ip-sv-word">Warm</span> <span class="num">+2</span></span></li>
+          <li class="ip-sv sv-p3"><span class="orb"><i data-ic="flame"></i></span><span class="ip-sv-txt"><span class="ip-sv-word">Hot</span> <span class="num">+3</span></span></li>
+        </ul>
+        <p class="ip-scale-foot">There are no right answers. Neutral, in the middle, means neither warm nor cool, and every answer is useful.</p>
+      </div>
+    </section>
+
+    <!-- =================================================== who can take part -->
+    <section class="ip-section" id="who" aria-labelledby="who-title">
+      <div class="ip-who">
+        <div>
+          <div class="section-head">
+            <span class="eyebrow">Who can take part</span>
+            <h2 class="section-title" id="who-title">Most New Yorkers with a phone</h2>
+            <p class="section-sub">You don't need a new home, a smart thermostat or any technical know-how. Owners and renters are both welcome.</p>
+          </div>
+          <div class="card card-raised">
+            <span class="card-title">Any kind of home counts</span>
+            <ul class="ip-homes" role="list">
+              <li class="ip-home"><i data-art="home_type:detached"></i>House</li>
+              <li class="ip-home"><i data-art="home_type:townhouse"></i>Townhouse</li>
+              <li class="ip-home"><i data-art="home_type:apartment"></i>Apartment</li>
+              <li class="ip-home"><i data-art="home_type:duplex"></i>Duplex</li>
+              <li class="ip-home"><i data-art="home_type:mobile"></i>Mobile home</li>
+              <li class="ip-home"><i data-art="home_type:dorm"></i>Dorm</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card card-raised ip-checks-card">
+          <span class="card-title" id="who-list-title">You can take part if</span>
+          <ul class="ip-checks" role="list" aria-labelledby="who-list-title">
+            <li class="ip-check"><span class="icon-tile it-mint"><i data-ic="user"></i></span><span><span class="ip-check-t">You are 18 or older</span><span class="ip-check-s">Adults only.</span></span></li>
+            <li class="ip-check"><span class="icon-tile it-mint"><i data-ic="map-pin"></i></span><span><span class="ip-check-t">You live in New York State</span><span class="ip-check-s">Any town or city, in any kind of home.</span></span></li>
+            <li class="ip-check"><span class="icon-tile it-mint"><i data-ic="phone"></i></span><span><span class="ip-check-t">You have a smartphone</span><span class="ip-check-s">An iPhone with iOS 16.4 or later, or an Android phone with Chrome.</span></span></li>
+            <li class="ip-check"><span class="icon-tile it-mint"><i data-ic="check"></i></span><span><span class="ip-check-t"><span class="placeholder">[PLACEHOLDER: other criteria]</span></span><span class="ip-check-s"><span class="placeholder">[PLACEHOLDER: confirm all criteria against the IRB protocol]</span></span></span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================== your data -->
+    <section class="ip-section" id="data" aria-labelledby="data-title">
+      <div class="section-head">
+        <span class="eyebrow">Your data</span>
+        <h2 class="section-title" id="data-title">Private by design</h2>
+        <p class="section-sub">You decide what to share, and you can stop at any time.</p>
+      </div>
+      <div class="ip-data">
+        <div class="card card-ink ip-code-card">
+          <span class="eyebrow">Your study code</span>
+          <span class="ip-code num">NY027</span>
+          <p>Your check-ins are filed under a code like this, never under your name. Your name and email are kept in a separate list, used to sign you in and to contact you about the study.</p>
+          <div class="ip-dc">
+            <div>
+              <span class="ip-dc-h"><i data-ic="check"></i>We collect</span>
+              <ul>
+                <li>Your name and email, and a short profile if you fill it in: year of birth, gender, height, weight, and whether you tend to run warm or cold</li>
+                <li>Your home profile, and your ZIP code if you give it</li>
+                <li>At each check-in: how you feel, what you wear and are doing, which room you are in, air movement and sunlight, anything you changed since your last check-in, when you checked in and how long it took</li>
+                <li>Anything you choose to note, such as a hot or cold drink, having just eaten, hunger, tiredness or feeling unwell</li>
+                <li>Whether you are at home, and when you tell the app you are out or have just got home</li>
+                <li>Your reminder hours, plus your phone&rsquo;s time zone, browser type and the address its browser uses to receive reminders</li>
+              </ul>
+            </div>
+            <div>
+              <span class="ip-dc-h is-no"><i data-ic="x"></i>We never collect</span>
+              <ul>
+                <li>Your street address or GPS location</li>
+                <li>Contacts, photos, camera or microphone</li>
+                <li>Anything from other apps</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <ul class="ip-dl" role="list">
+          <li class="ip-dl-item"><span class="icon-tile"><i data-ic="lock"></i></span><div><h3>Stored securely in the US</h3><p>Answers travel over an encrypted connection to a protected research database hosted in the United States.</p></div></li>
+          <li class="ip-dl-item"><span class="icon-tile it-sky"><i data-ic="map-pin"></i></span><div><h3>No location tracking</h3><p>The app never uses GPS. Each check-in simply asks whether you are at home. Your ZIP code is optional and only matches check-ins to the local weather.</p></div></li>
+          <li class="ip-dl-item"><span class="icon-tile it-peach"><i data-ic="pause"></i></span><div><h3>Pause or withdraw any time</h3><p>Pause reminders from the app whenever you like, or leave the study without giving a reason.</p></div></li>
+          <li class="ip-dl-item"><span class="icon-tile it-plain"><i data-ic="eye"></i></span><div><h3>Seen by the study team only</h3><p>Only the SUNY ESF research team can see your answers, together with your name and email, to run the study and contact you. Anything published shows group results, never names.</p></div></li>
+          <li class="ip-dl-item"><span class="icon-tile it-mint"><i data-ic="shield"></i></span><div><h3>Ethics review</h3><p><span class="placeholder">[PLACEHOLDER: IRB statement, e.g. "Reviewed and approved by the SUNY ESF Institutional Review Board, protocol number ..."]</span></p></div></li>
+          <li class="ip-dl-item"><span class="icon-tile"><i data-ic="clock"></i></span><div><h3>How long we keep it</h3><p><span class="placeholder">[PLACEHOLDER: data retention: how long the data are kept, in what form, and when names and emails are deleted]</span></p></div></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================================================================ FAQ -->
+    <section class="ip-section" id="faq" aria-labelledby="faq-title">
+      <div class="ip-faq-wrap">
+        <div class="section-head">
+          <span class="eyebrow">FAQ</span>
+          <h2 class="section-title" id="faq-title">Questions people ask</h2>
+          <p class="section-sub">Anything else? Write to the study team at <span class="placeholder">[PLACEHOLDER: study email]</span>.</p>
+        </div>
+        <div class="ip-faq">
+          <details id="faq-time">
+            <summary>How much time does it take?<span class="ip-chev"><i data-ic="chevron-down"></i></span></summary>
+            <div class="ip-faq-a">
+              <p>Joining takes about five minutes, once: a short profile about you and a picture-based profile of your home. After that, most check-ins take about ten seconds, a few times a day while you are at home.</p>
+              <p>The study runs for <span class="placeholder">[PLACEHOLDER: study length]</span>.</p>
+            </div>
+          </details>
+          <details id="faq-after">
+            <summary>What happens after I join?<span class="ip-chev"><i data-ic="chevron-down"></i></span></summary>
+            <div class="ip-faq-a">
+              <p>You get your study code right away. The research team then confirms your registration, usually within a day, and the app lets you know when you can start checking in.</p>
+            </div>
+          </details>
+          <details id="faq-pay">
+            <summary>Will I be paid for taking part?<span class="ip-chev"><i data-ic="chevron-down"></i></span></summary>
+            <div class="ip-faq-a">
+              <p><span class="placeholder">[PLACEHOLDER: compensation: the amount, how and when it is paid, and whether it depends on the number of check-ins]</span></p>
+            </div>
+          </details>
+          <details id="faq-sensor">
+            <summary>Do I need a sensor or any equipment?<span class="ip-chev"><i data-ic="chevron-down"></i></span></summary>
+            <div class="ip-faq-a">
+              <p>Your phone is all you need to check in.</p>
+              <p><span class="placeholder">[PLACEHOLDER: home sensor details if any: whether a small temperature sensor is part of the study, how it reaches you, where it goes and how it is returned]</span></p>
+            </div>
+          </details>
+          <details id="faq-reminders">
+            <summary>How do reminders reach my phone?<span class="ip-chev"><i data-ic="chevron-down"></i></span></summary>
+            <div class="ip-faq-a">
+              <p>Reminders are notifications from the Home Comfort NY check-in app. It runs in your phone&rsquo;s browser, so there is nothing to download from an app store. Reminders only come during the home hours you choose, at most about once an hour.</p>
+              <p>To get them, add the check-in app to your home screen once. This information page is not the app, so open <a href="checkin/">the check-in app</a> first and add that page:</p>
+              <div class="ip-os">
+                <div>
+                  <p class="ip-os-h"><i data-ic="phone"></i>iPhone</p>
+                  <ol>
+                    <li>Open <a href="checkin/">the check-in app</a> in Safari.</li>
+                    <li>Tap Share, then <b>Add to Home Screen</b>, then <b>Add</b>.</li>
+                    <li>Open <b>Home Comfort</b> from your Home Screen, join or sign in there, and allow notifications.</li>
+                  </ol>
+                </div>
+                <div>
+                  <p class="ip-os-h"><i data-ic="phone"></i>Android</p>
+                  <ol>
+                    <li>Open <a href="checkin/">the check-in app</a> in Chrome.</li>
+                    <li>Tap the ⋮ menu, then <b>Add to Home screen</b> or <b>Install app</b>.</li>
+                    <li>Open it and allow notifications.</li>
+                  </ol>
+                </div>
+              </div>
+              <p><b>On iPhone, add the app before you join.</b> The Home Screen app keeps its own copy of your answers, separate from Safari, and reminders only work in the Home Screen app. Already joined in Safari? Open the Home Screen app, choose <b>I have registered before</b> and enter the same email. Your study code comes back, and the check-ins you already sent stay saved with the study; only the history shown in Safari stays behind in Safari.</p>
+              <p>On iPhone, reminders need iOS 16.4 or later.</p>
+            </div>
+          </details>
+          <details id="faq-away">
+            <summary>What if I'm away from home?<span class="ip-chev"><i data-ic="chevron-down"></i></span></summary>
+            <div class="ip-faq-a">
+              <p>Only check in while you are at home. If a reminder arrives while you are out, tap <b>No, I'm out</b> and reminders pause for a few hours, or until you are back.</p>
+              <p>Going away for a few days? Turn reminders off in the app, and back on when you return.</p>
+            </div>
+          </details>
+          <details id="faq-who">
+            <summary>Who sees my answers?<span class="ip-chev"><i data-ic="chevron-down"></i></span></summary>
+            <div class="ip-faq-a">
+              <p>Only the research team at SUNY ESF. Your check-ins are stored under your study code, and your name and email sit in a separate list that only the team can open. When the team signs in to the study&rsquo;s research dashboard, they see the two together, so they can follow the study and contact you.</p>
+              <p>Anything we publish shows group results, never names or individual homes.</p>
+            </div>
+          </details>
+          <details id="faq-withdraw">
+            <summary>How do I withdraw?<span class="ip-chev"><i data-ic="chevron-down"></i></span></summary>
+            <div class="ip-faq-a">
+              <p>Email the study team at <span class="placeholder">[PLACEHOLDER: study email]</span> at any time. You don't need to give a reason. If you just need a break, pause or turn off reminders in the app instead.</p>
+              <p><span class="placeholder">[PLACEHOLDER: what happens to answers already given when someone withdraws]</span></p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================== who runs it -->
+    <section class="ip-section" id="team" aria-labelledby="team-title">
+      <div class="section-head">
+        <span class="eyebrow">Who runs the study</span>
+        <h2 class="section-title" id="team-title">A research study at SUNY ESF</h2>
+        <p class="section-sub">SUNY College of Environmental Science and Forestry, Syracuse, New York.</p>
+      </div>
+      <ul class="ip-team" role="list">
+        <li class="ip-team-item"><span class="icon-tile"><i data-ic="list"></i></span><div><span class="ip-team-k">Full study title</span><p class="ip-team-v"><span class="placeholder">[PLACEHOLDER: full study title]</span></p></div></li>
+        <li class="ip-team-item"><span class="icon-tile"><i data-ic="user"></i></span><div><span class="ip-team-k">Principal investigator</span><p class="ip-team-v"><span class="placeholder">[PLACEHOLDER: Principal investigator, department, SUNY ESF]</span></p></div></li>
+        <li class="ip-team-item"><span class="icon-tile"><i data-ic="bulb"></i></span><div><span class="ip-team-k">Funding</span><p class="ip-team-v"><span class="placeholder">[PLACEHOLDER: funder]</span></p></div></li>
+        <li class="ip-team-item"><span class="icon-tile it-mint"><i data-ic="shield"></i></span><div><span class="ip-team-k">Ethics approval</span><p class="ip-team-v">IRB protocol <span class="placeholder">[PLACEHOLDER: number, approval date]</span></p></div></li>
+        <li class="ip-team-item"><span class="icon-tile it-sky"><i data-ic="mail"></i></span><div><span class="ip-team-k">Contact</span><p class="ip-team-v"><span class="placeholder">[PLACEHOLDER: study email]</span><small>Questions about the study, or to withdraw.</small></p></div></li>
+        <li class="ip-team-item"><span class="icon-tile it-peach"><i data-ic="help"></i></span><div><span class="ip-team-k">Your rights</span><p class="ip-team-v"><span class="placeholder">[PLACEHOLDER: IRB office contact]</span><small>For questions about your rights as a research participant.</small></p></div></li>
+      </ul>
+    </section>
+
+    <!-- ===================================================== closing band -->
+    <section class="card card-glow ip-final" aria-labelledby="final-title">
+      <div>
+        <h2 id="final-title">Ready when you are</h2>
+        <p>Joining takes about five minutes. On an iPhone, add the check-in app to your Home Screen first and join from there (<a href="#faq-reminders">how</a>). Already taking part? Sign in to check in.</p>
+      </div>
+      <div class="ip-ctas">
+        <a class="btn btn-primary btn-lg" href="checkin/?start=join">Join the study<i data-ic="arrow-right"></i></a>
+        <a class="btn btn-secondary btn-lg" href="checkin/?start=signin"><i data-ic="signin"></i>Sign in</a>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="ip-foot wrap-wide">
+  <div class="ip-foot-in">
+  <div class="ip-foot-row">
+    <span>SUNY College of Environmental Science and Forestry · Syracuse, NY</span>
+    <span class="ip-foot-links">
+      <span>Contact: <span class="placeholder">[PLACEHOLDER: study email]</span></span>
+      <a class="ip-team-link" href="dashboard/"><i data-ic="users"></i>Research team</a>
+    </span>
+  </div>
+  <p class="caption">Home Comfort NY · This page is shared by link only.</p>
+  </div>
+</footer>
+
+<script>
+/* Swap the <i data-ic> / <i data-art> markers for icons.js SVGs (decorative; the page reads fine without them),
+   and open a FAQ answer when the address points at it (e.g. #faq-withdraw). */
+(function () {
+  'use strict';
+  if (window.HCI) {
+    var each = function (sel, fn) { Array.prototype.forEach.call(document.querySelectorAll(sel), fn); };
+    each('[data-ic]', function (el) { el.outerHTML = HCI.icon(el.getAttribute('data-ic'), el.getAttribute('data-cls') || ''); });
+    each('[data-art]', function (el) { el.outerHTML = HCI.art(el.getAttribute('data-art'), el.getAttribute('data-cls') || ''); });
+  }
+  function openAnswer(id) {
+    var el = id && document.getElementById(id);
+    if (el && el.tagName === 'DETAILS') el.open = true;
+  }
+  function openFromHash() {
+    // a cut-off link such as #faq%E2 cannot be decoded and cannot name an answer either
+    var id; try { id = decodeURIComponent((location.hash || '').slice(1)); } catch (e) { return; }
+    openAnswer(id);
+  }
+  openFromHash();
+  window.addEventListener('hashchange', openFromHash);
+  // "Here's how" links: open the answer even when the address already ends in that #faq-... (no hashchange then)
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href^="#faq-"]') : null;
+    if (a) openAnswer(a.getAttribute('href').slice(1));
+  });
+})();
+</script>
+</body>
+</html>

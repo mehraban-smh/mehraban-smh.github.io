@@ -1,0 +1,307 @@
+/* Home Comfort NY (SUNY ESF) - check-in app styles, on top of ../brand.css (the "Aurora" design system).
+ * Plain CSS (no nesting, no layers) for iOS 16.4+. Colors come from the brand tokens; the seven --s*
+ * colors appear only for thermal sensation, always with the step's word and number. */
+
+/* ============================================================================================ shell */
+.app{position:relative;min-height:100vh;min-height:100dvh}
+.appbar{position:sticky;top:0;z-index:30;padding-top:env(safe-area-inset-top);background:rgba(246,244,253,.86);-webkit-backdrop-filter:saturate(1.4) blur(14px);backdrop-filter:saturate(1.4) blur(14px)}
+.appbar .topbar{min-height:60px}
+.appbar .meter{height:6px;margin:0 0 6px}
+.screen-wrap{padding-top:calc(16px + env(safe-area-inset-top));padding-bottom:28px}
+.appbar:not([hidden])~.screen-wrap{padding-top:10px}
+.screen{display:flex;flex-direction:column;gap:20px}
+.screen.enter{animation:hc-enter var(--dur-3) var(--ease) both}
+@keyframes hc-enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* links inside sentences keep their line but get a 44px tall hit area */
+#screen p a,#screen .note a{display:inline-block;padding:11px 0;margin:-11px 0}
+#main:focus,h1[tabindex="-1"]:focus,h2[tabindex="-1"]:focus,section[tabindex="-1"]:focus,.field[tabindex="-1"]:focus{outline:none}
+body.toast-open .screen-wrap{padding-bottom:110px}
+body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))}   /* the sticky buttons rise above a toast while it shows */
+.confetti{position:fixed;inset:0;z-index:80;pointer-events:none;width:100%;height:100%}
+
+/* sticky action bar at the end of a long screen (multi-select questions, the quick check, the review, the sign-up wizard) */
+.footbar{position:sticky;bottom:0;z-index:5;display:flex;flex-direction:column;gap:8px;margin:4px calc(-1 * var(--gutter)) -28px;padding:14px var(--gutter) calc(14px + env(safe-area-inset-bottom));background:linear-gradient(to top,var(--canvas) 72%,rgba(246,244,253,0))}
+.footbar .caption{color:var(--ink-2)}
+.footbar .field-error{justify-content:center}
+
+/* headings of the screens */
+.q-head,.tab-head{margin-bottom:2px}
+.section-h{font-family:var(--font-display);font-size:21px;font-weight:800;letter-spacing:-.02em;margin-top:6px}
+
+/* ========================================================================================= welcome */
+.welcome{padding-top:6px}
+.welcome-hero{padding:26px 22px 24px}
+.welcome-hero .display-xl{font-size:clamp(40px,11vw,60px)}
+.welcome .option-row>.ic:last-child,.athome-list .option-row>.ic:last-child{width:22px;height:22px}
+/* "Add Home Comfort to your Home Screen first" (iPhone, Safari) */
+.install .card-hero{padding:24px 22px 22px}
+.share-ic{display:inline-block;vertical-align:-3px;color:var(--violet-700)}
+.pending{padding-top:24px}
+.pending .card-hero{align-items:center;padding:30px 22px}
+.pending-ic{--it-size:60px;border-radius:20px}
+.pending-ic .ic{width:30px;height:30px}
+
+/* ================================================================================= check-in screens */
+.option-row>.ic:last-child{flex:none}
+.option-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.option-grid .span-2,.ptile-grid .span-2{grid-column:1 / -1}
+.option-row.is-compact{min-height:64px;gap:10px;padding:8px 10px 8px 9px;border-radius:18px}
+.option-row.is-compact .icon-tile{--it-size:38px;border-radius:12px}
+.option-row.is-compact .icon-tile .ic{width:21px;height:21px}
+.option-row.is-compact .option-title{font-size:14.5px;line-height:1.2;letter-spacing:-.005em}
+.option-row.is-compact>.tick{width:22px;height:22px}
+.option-row.is-compact>.tick .ic{width:13px;height:13px}
+.option-row[aria-checked="true"] .icon-tile,.option-row[aria-pressed="true"] .icon-tile{background:var(--violet);color:#fff}
+/* multi-select lists: one column, an empty ring on each row until it is chosen */
+.option-list.is-multi{gap:8px}
+.option-list .option-row.is-compact{min-height:58px;padding-right:14px}
+.is-multi .option-row>.tick{display:grid;background:#fff;color:transparent;box-shadow:inset 0 0 0 2px var(--line-2)}
+.is-multi .option-row[aria-pressed="true"]>.tick{background:var(--violet);color:#fff;box-shadow:none}
+.option-row.is-none{margin-top:4px}
+/* two-column single choice (activity, room): the check badge sits on the corner of the icon */
+.option-grid .option-row.is-compact>.tick{position:absolute;top:3px;left:35px;box-shadow:0 0 0 2px #fff}
+.foot-note{margin-bottom:-2px}
+.option-row .open{color:var(--warn)}
+.skip-line{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:0 2px;font-size:14.5px;color:var(--ink-2);text-align:center}
+.skip-line .btn-quiet{padding:0 8px;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px}
+
+/* clothing: the figure, the clo total and the garment tiles */
+.fig{--fig-skin:#F4EAE1;--fig-hair:#4A3F6B;--g-tshirt:#A9DCFF;--g-long:#C9B8FF;--g-sweater:#FFC2A8;--g-hoodie:#9C8BF0;--g-shorts:#8EC5F0;--g-pants:#6F7FC9;--g-sweatpants:#B9B4CF;--g-skirt:#F4B3D0;--g-socks:#FFFFFF;--g-slippers:#FFD3C1;--g-blanket:#BDEBD6;--g-comforter:#EDE8FF;display:block;flex:none}
+.fig svg{display:block;width:100%;height:100%}
+.dress{display:flex;align-items:center;gap:16px;padding:12px 18px 12px 12px}
+.dress .fig{width:92px;height:160px}
+.dress-side{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.clo-val{display:flex;align-items:baseline;gap:6px;line-height:1}
+.clo-val b{font-family:var(--font-display);font-size:44px;font-weight:800;letter-spacing:-.03em;color:var(--violet-700)}
+.clo-val span{font-size:16px;font-weight:800;color:var(--ink-2)}
+.garments .ptile-art{color:var(--ink)}
+.garments .ptile-art .ic{width:30px;height:30px}
+.garments .ptile[aria-pressed="true"] .ptile-art{color:var(--violet-700)}
+.garments .ptile-hint{font-size:11.5px}
+
+/* quick check and review */
+.quick{display:flex;flex-direction:column;gap:6px;padding:14px 14px 8px 16px}
+.quick-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.fig-sm{width:54px;height:94px;margin:-4px 0 -6px}
+.answers{display:flex;flex-direction:column;margin:0;padding:0;list-style:none}
+.ans{display:flex;align-items:center;gap:12px;min-height:52px;padding:4px 0}
+.ans+.ans{border-top:1px solid var(--line)}
+.ans-ic{display:grid;place-items:center;width:32px;height:32px;flex:none;color:var(--violet-700)}
+.ans-ic .ic{width:22px;height:22px}
+.ans-text{flex:1;min-width:0;font-size:15px;line-height:1.35;color:var(--ink)}
+.ans-text b{font-weight:800}
+.ans-text .open{color:var(--warn);font-weight:700}
+.ans-edit{flex:none;margin-right:-6px}
+.review .list-item{min-height:62px}
+.review .li-title{font-size:15.5px;font-weight:700;line-height:1.35}
+.review .li-sub{margin:0 0 2px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.sense-inline{display:inline-flex;align-items:center;gap:8px}
+
+/* done */
+.done{padding-top:8px}
+.done-hero{align-items:center;padding:28px 20px 24px}
+.done-ring{display:grid;place-items:center}
+.done-hero .ring-value{font-size:34px}
+.done-hero .ring-value small{font-size:18px;font-weight:700;color:var(--ink-2)}
+.done-hero .pill .icon-tile{margin-left:-4px}
+
+/* ============================================================================================ today */
+.today-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.today-head .avatar{width:48px;height:48px;font-size:17px;margin-top:2px}
+.goal-card{display:flex;flex-direction:column;gap:14px;padding:16px}
+.goal-top{display:flex;align-items:center;gap:18px}
+.goal-legend{display:flex;flex-direction:column;gap:14px;min-width:0}
+/* "100%" is wider than the inner ring's 66px opening at 24px: a little smaller only then */
+.goal-card .ring-value.is-full{font-size:20px}
+.gl{display:flex;align-items:flex-start;gap:10px;line-height:1.2}
+.gl b{display:block;font-size:19px;font-weight:800;letter-spacing:-.02em}
+.gl b+span{display:block;margin-top:2px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.gl-dot{width:11px;height:11px;border-radius:50%;margin-top:5px;flex:none}
+.gl-week{background:var(--violet)}
+.gl-day{background:var(--sky)}
+.streak-card{display:flex;align-items:center;gap:10px;padding:10px;border-radius:18px;background:rgba(255,255,255,.84)}
+.streak-card .daypips{gap:2px}
+.streak-card .daypips i{width:17px;height:17px;border-radius:5px}
+.streak-card .icon-tile{--it-size:38px;border-radius:12px}
+.streak-text{flex:1;min-width:0;line-height:1.2}
+.streak-text b{display:block;font-size:14.5px;font-weight:800}
+.streak-text span{display:block;margin-top:2px;font-size:12px;font-weight:600;color:var(--ink-2)}
+.status-card{display:flex;align-items:center;gap:12px;width:100%;padding:14px 14px 14px 14px;text-align:left;font:inherit;color:var(--ink)}
+.status-card .li-title{font-size:15px;line-height:1.3}
+.status-card .chev{color:var(--ink-3);flex:none}
+.status-card .badge{margin-bottom:5px}
+.week-card .card-head{margin-bottom:6px}
+.wd-svg{display:block;width:100%;height:auto;margin-top:4px;overflow:visible}
+.wd-grid{stroke:var(--grid);stroke-width:1}
+.wd-row{fill:var(--surface-2)}
+.wd-row.is-today{fill:var(--violet-50)}
+.wd-day{font-size:11.5px;font-weight:600;fill:var(--ink-2)}
+.wd-day.is-today{font-weight:800;fill:var(--violet-700)}
+.wd-axis{font-size:10.5px;font-weight:600;fill:var(--ink-3)}
+.wd-dot{stroke:#fff;stroke-width:2}
+.chart-legend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:10px}
+.foot-line{color:var(--ink-3)}
+.sync{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--good);flex:none}
+.sync.is-wait i{background:var(--violet)}
+.sync.is-local i{background:var(--warn)}
+
+/* ======================================================================================= my comfort */
+.freq{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.freq-row{display:grid;grid-template-columns:28px 122px minmax(0,1fr) 40px;align-items:center;gap:10px;min-height:32px}
+.freq-k{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.freq-sign{color:var(--ink-3);font-weight:800}
+.freq-track{height:12px;border-radius:6px;background:var(--surface-2);overflow:hidden}
+.freq-track i{display:block;height:100%;border-radius:6px;background:var(--sc)}
+.freq-n{text-align:right;font-size:15px;font-weight:800;line-height:1.1}
+.freq-n small{display:block;font-size:11px;font-weight:600;color:var(--ink-3)}
+.dv{display:flex;flex-direction:column;gap:12px;margin:0;padding:0;list-style:none}
+.dv-row{display:grid;grid-template-columns:86px 1fr 30px;align-items:center;gap:10px}
+.dv-k{font-size:14px;font-weight:800;line-height:1.15}
+.dv-k small{display:block;font-size:11px;font-weight:600;color:var(--ink-3)}
+.dv-track{position:relative;height:20px;border-radius:6px;background:var(--surface-2)}
+.dv-track.hatch{background:var(--hatch);box-shadow:inset 0 0 0 1px var(--line)}
+.dv-bar{position:absolute;top:0;bottom:0;width:50%;display:flex;gap:1px;border-radius:6px;overflow:hidden}
+.dv-bar i{display:block;height:100%;background:var(--sc)}
+.dv-axis{position:absolute;left:50%;top:-4px;bottom:-4px;width:2px;margin-left:-1px;border-radius:1px;background:var(--ink)}
+.dv-n{text-align:right;font-size:14px;font-weight:800;color:var(--ink-2)}
+.dv-scale{display:grid;grid-template-columns:1fr auto 1fr;margin:8px 40px 0 96px;font-size:11.5px;font-weight:700;color:var(--ink-3)}
+.dv-scale span:last-child{text-align:right}
+.d14-plot{position:relative;display:grid;grid-template-columns:repeat(14,minmax(0,1fr));align-items:end;gap:4px;height:120px;margin-top:18px;padding-top:4px}
+.d14{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;height:100%;min-width:0}
+.d14 i{display:block;border-radius:5px 5px 2px 2px;background:var(--violet-300)}
+.d14.is-goal i{background:var(--violet)}
+.d14.is-today .d14-n{color:var(--violet-700)}
+.d14-n{text-align:center;font-size:10.5px;font-weight:800;color:var(--ink-2);line-height:1.4}
+.d14-goal{position:absolute;left:0;right:0;height:0;border-top:1.5px dashed var(--ink-3);pointer-events:none}
+.d14-goal span{position:absolute;left:0;bottom:2px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,.9);font-size:10.5px;font-weight:800;color:var(--ink-2)}
+.d14-axis{display:flex;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid var(--line);font-size:11.5px;font-weight:600;color:var(--ink-3)}
+.d14-axis .is-today{color:var(--violet-700);font-weight:800}
+.hist-group{display:flex;flex-direction:column;gap:8px}
+.hist-day{font-family:var(--font-ui);font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.hist-item .li-title .num{font-weight:800}
+.hist-item .li-end .num{color:var(--ink-2)}
+.chart-card .card-head{margin-bottom:14px}
+
+/* the detail sheet */
+.detail{display:flex;gap:14px;align-items:flex-start}
+.detail .fig{width:74px;height:128px;margin-top:6px}
+.detail .answers{flex:1;min-width:0}
+.detail-meta{margin-top:14px}
+.sheet-sub{max-width:44ch}
+
+/* ===================================================================================== my home / settings */
+.glance-card .card-head{align-items:center;margin-bottom:10px}
+.glance-card .card-head .btn-quiet{margin:-8px -8px -8px 0}
+.glance-card{padding:16px}
+.glance-card .glance-item{gap:8px;padding:10px}
+.glance-card .glance-item .art{width:30px;height:30px}
+.glance-item.is-wide{grid-column:1 / -1}
+.glance-v{overflow-wrap:break-word}
+.glance-item.is-empty .glance-v{color:var(--ink-3);font-weight:600}
+.glance-item.is-empty .art{color:var(--ink-3);--duo:var(--ink-4)}
+.glance-item>.ic{width:22px;height:22px;flex:none}
+.about a{white-space:nowrap}
+.hours-group{display:flex;flex-direction:column;gap:10px}
+.hours-group>legend{margin-bottom:8px}
+.hrow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px}
+.hrow .to{font-size:14px;font-weight:700;color:var(--ink-2)}
+.time-in{min-width:0;padding-left:12px;padding-right:6px;font-variant-numeric:tabular-nums}
+.hrow-label{margin:4px 0 -4px;font-size:13px;font-weight:700;color:var(--ink-2)}
+.hours-btns{display:flex;flex-wrap:wrap;gap:0 12px}
+.addw{align-self:flex-start;margin-left:-12px}
+.hours-strip{margin-top:4px}
+.steps{display:flex;flex-direction:column;gap:10px;margin:0;padding-left:22px;font-size:15px;line-height:1.45}
+
+/* ======================================================================================= sign-up wizard */
+.reg-track{margin:2px 0 -4px}
+.progress-steps.is-compact.reg-track .ps-step+.ps-step::before{min-width:4px;margin:0 2px}
+.reg-head{margin-top:4px}
+.reg-body{display:flex;flex-direction:column;gap:20px}
+.reg-q{gap:10px}
+.reg-q-head{display:flex;flex-direction:column;gap:4px}
+.reg-q-title{font-family:var(--font-ui);font-size:16.5px;font-weight:800;letter-spacing:-.01em;line-height:1.25;color:var(--ink)}
+.reg-q-title .opt{font-size:14px;font-weight:600;color:var(--ink-3)}
+.reg-group-head{display:flex;align-items:center;gap:10px}
+.reg-group-head .reg-q-title{flex:1}
+.reg-group-head .caption{text-align:right}
+.g-tight{--gap:12px}
+.g-tight .input-group .input{padding-left:14px;padding-right:38px}
+.g-tight .input-suffix{right:13px}
+.form .field-hint .ic{vertical-align:-3px;margin-right:2px;color:var(--violet-700)}
+.zip-in{max-width:180px;font-variant-numeric:tabular-nums}
+.unit-art{font-family:var(--font-display);font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--violet-700)}
+.ptile-row .ptile-label{font-size:16px}
+.ptile-grid.cols-5{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.ptile-grid.cols-5 .ptile-art .art{width:42px;height:42px}
+.ptile-grid.cols-5 .ptile-label{font-size:15px}
+.ptile-grid.cols-5 .tick{top:4px;right:4px;width:20px;height:20px}
+.ptile-grid.cols-4 .ptile-label,.ptile-grid.cols-3 .ptile-sm .ptile-label{font-size:12.5px;line-height:1.2}
+.ptile-sm .ptile-art .ic-lg{width:30px;height:30px}
+.home-types .ptile-row{padding-right:44px}
+.home-types .ptile-row .ptile-art{width:72px;height:60px}
+.scale-ends{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--ink-2)}
+.area-card{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px}
+.area-card .area-art{width:56px;height:56px;color:var(--violet-700);--duo:var(--violet);--duo-o:.16}
+.area-main{width:100%;text-align:center}
+.area-main .range-value{margin-bottom:2px}
+.chip-sm{font-size:14px}
+.rows-card{display:flex;flex-direction:column;padding:6px 14px}
+.rows-card .stepper-row+.stepper-row{border-top:1px solid var(--line)}
+.stepper-row{gap:10px;padding:6px 0}
+.sr-art .art,.row-art{width:40px;height:40px;color:var(--violet-700);--duo:var(--violet);--duo-o:.16}
+.sr-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.sr-lab{font-size:15.5px;font-weight:800}
+.stepper{background:#fff;box-shadow:inset 0 0 0 1px var(--line)}
+.stepper-btn{background:var(--surface-2);box-shadow:none}
+.stepper-btn:hover{background:var(--violet-50);color:var(--violet-700)}
+/* a stepper button at its limit: inert but still focusable (aria-disabled), so focus is not lost */
+.stepper-btn[aria-disabled="true"],.stepper-btn[aria-disabled="true"]:hover{background:transparent;color:var(--ink-4);box-shadow:none;transform:none;cursor:not-allowed}
+/* a count not answered yet */
+.stepper-unset{color:var(--ink-3);font-weight:700}
+.household{display:flex;flex-wrap:wrap;align-items:flex-end;gap:2px;min-height:52px;padding:10px 0 6px;border-bottom:1px solid var(--line)}
+.pfig{display:grid;place-items:center;color:var(--violet-700);--duo:var(--violet);--duo-o:.18}
+.pfig .art{width:38px;height:38px}
+.pfig.is-child .art{width:30px;height:30px}
+.pfig.is-pet .art{width:30px;height:30px;color:var(--peach-700);--duo:var(--peach)}
+.pfig-more{align-self:center;padding:0 4px;font-size:13px;font-weight:800;color:var(--ink-2)}
+/* thermostat dial */
+.dial-card{display:flex;align-items:center;gap:8px;padding:8px 14px 10px 6px;border-radius:var(--r-lg);background:var(--surface-2)}
+.dial{width:150px;max-width:46%;flex:none;border-radius:50%;touch-action:none;cursor:pointer;-webkit-user-select:none;user-select:none}
+.dial svg{display:block;width:100%;height:auto;overflow:visible}
+.dial-track{fill:none;stroke:var(--surface-3);stroke-width:11;stroke-linecap:round}
+.dial-fill{fill:none;stroke-width:11;stroke-linecap:round}
+.dial-knob{fill:#fff;stroke:var(--violet);stroke-width:4}
+.is-unset .dial-knob{stroke:var(--ink-4);fill:var(--surface-2)}
+.dial-num{font-family:var(--font-display);font-size:34px;font-weight:800;letter-spacing:-.03em;fill:var(--ink)}
+.is-unset .dial-num{fill:var(--ink-3)}
+.dial-unit{font-size:10px;font-weight:800;letter-spacing:.1em;fill:var(--ink-2)}
+.dial-end{font-size:11.5px;font-weight:700;fill:var(--ink-3)}
+.dial:focus-visible{outline-offset:4px}
+.dial-side{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.dial-side .label{font-size:15.5px}
+.dial-pm{display:flex;gap:8px}
+.dial-pm .stepper-btn{background:#fff;box-shadow:var(--sh-1)}
+/* compass: eight directions around the living-room windows */
+.compass{position:relative;width:min(272px,100%);aspect-ratio:1 / 1;margin:4px auto 2px;border-radius:50%;background:radial-gradient(circle,#fff 0 46%,var(--surface-2) 47% 100%);box-shadow:inset 0 0 0 1px var(--line)}
+.compass-art{position:absolute;left:50%;top:50%;width:76px;height:76px;transform:translate(-50%,-50%);color:var(--violet-700);--duo:var(--violet);--duo-o:.16}
+.compass-pt{position:absolute;width:48px;height:48px;padding:0;border:2px solid var(--line-2);border-radius:50%;background:#fff;color:var(--ink);font-size:14px;font-weight:800;transform:translate(-50%,-50%);cursor:pointer;transition:background-color var(--dur-2),border-color var(--dur-2),box-shadow var(--dur-2)}
+.compass-pt:hover{border-color:var(--violet-200);background:var(--violet-50)}
+.compass-pt[aria-checked="true"]{border-color:var(--violet);background:var(--violet);color:#fff;box-shadow:var(--halo)}
+
+/* ============================================================================================ debug */
+.debug{margin-top:8px;padding-bottom:40px}
+.has-tabbar .debug{padding-bottom:calc(var(--tabbar-h) + 40px)}
+.debug .data-table{font-size:12px;white-space:nowrap}
+.debug code{font-size:12.5px}
+
+/* ======================================================================================= wider screens */
+@media (min-width:720px){
+  .screen-wrap{padding-top:28px}
+  .dress .fig{width:110px;height:190px}
+  .detail .fig{width:90px;height:156px}
+}
+@media (max-width:359px){
+  .goal-top{gap:12px}
+  .freq-row{grid-template-columns:28px 112px minmax(0,1fr) 36px;gap:8px}
+}

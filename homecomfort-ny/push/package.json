@@ -1,0 +1,8 @@
+{
+  "name": "homecomfort-ny-push-reminders",
+  "private": true,
+  "description": "Hourly check-in reminders and new-registration issues for Home Comfort NY. Run by .github/workflows/homecomfort-ny-reminders.yml.",
+  "dependencies": {
+    "web-push": "3.6.7"
+  }
+}
