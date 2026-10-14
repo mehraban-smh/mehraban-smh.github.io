@@ -14,8 +14,10 @@
   const headers = extra => Object.assign({ apikey: cfg.supabaseAnonKey, 'Content-Type': 'application/json' }, extra || {});
   const LS = {
     get(k, fallback) { try { const v = localStorage.getItem(k); return v === null ? fallback : v; } catch (e) { return fallback; } },
-    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+    del(k) { try { localStorage.removeItem(k); } catch (e) {} }
   };
+  const KEY_KEY = 'hcny_key';   // this device's key: given by joining or signing in with email and PIN
   const pad = n => String(n).padStart(2, '0');
 
   /* Turns a failed dashboard write into an Error that says what the server said. A 401 keeps its
@@ -71,39 +73,65 @@
       };
     },
 
-    /* ---- participant side: save with an offline queue ---- */
+    /* ---- this device's key (see "One participant on any number of devices" in supabase-setup.sql) ---- */
+    key() { return LS.get(KEY_KEY, null); },
+    setKey(k) { if (k) LS.set(KEY_KEY, k); else LS.del(KEY_KEY); },
+
+    /* ---- participant side: save with an offline queue ----
+     * One check-in through submit_checkin() with this device's key; the database files it under the
+     * key's participant. Resolves to { ok, status, verdict }: verdict ok (also a retry of a row already
+     * saved), not_signed_in (no key, or the key no longer works), not_approved or invalid. A network
+     * failure rejects, and the row stays in the queue. */
     async insert(record) {
       if (!live) return { ok: false, status: 0 };
-      // A plain insert. The public key cannot read rows, so an "upsert" (which compares against the
-      // existing row) is refused by row-level security. A retry of a row that already exists comes
-      // back as 409 from the unique client_id, which counts as success.
-      const rec = Object.assign({}, record);
-      const r = await fetch(rest(table), {
-        method: 'POST',
-        headers: headers({ Prefer: 'return=minimal' }),
-        body: JSON.stringify(rec)
-      });
-      const ok = r.ok || r.status === 409;
-      return { ok, status: r.status, text: ok ? '' : await r.text() };
+      const key = S.key();
+      if (!key) return { ok: false, status: 0, verdict: 'not_signed_in' };
+      const r = await fetch(rest('rpc/submit_checkin'), { method: 'POST', headers: headers(), body: JSON.stringify({ p_key: key, p_row: record }) });
+      if (!r.ok) return { ok: false, status: r.status, text: await r.text() };
+      const verdict = await r.json().catch(() => null);
+      return { ok: verdict === 'ok', status: r.status, verdict };
     },
     pending() { try { return JSON.parse(LS.get('hcny_pending', '[]')); } catch (e) { return []; } },
     queue(record) { const q = S.pending(); q.push(record); LS.set('hcny_pending', JSON.stringify(q)); },
 
-    /* ---- registration: the database assigns the participant code ---- */
-    // fields: email (and, to create a profile: name, gender, birth_year, height_cm, weight_kg, sensitivity,
-    // units 'us' | 'metric', home: the home profile object, metric values).
+    /* ---- joining and signing in: the database assigns the code and gives this device a key ----
+     * Both resolve to the outcome row { status, tries_left, wait_min, code, name, is_new, approved, units,
+     * home, device_key, pin_set }; status is ok, wrong (PIN), locked or pin_needed. An email that is not
+     * registered, or values the database refuses, reject with the database's message. */
+    // fields: email, pin (4 digits) and, to create a profile: name, gender, birth_year, height_cm,
+    // weight_kg, sensitivity, units, home (the home profile object, metric values).
     async register(fields) {
       if (!live) return null;
       const body = { p_email: fields.email, p_name: fields.name || null, p_gender: fields.gender || null, p_birth_year: fields.birth_year ?? null,
         p_height_cm: fields.height_cm ?? null, p_weight_kg: fields.weight_kg ?? null, p_sensitivity: fields.sensitivity || null,
-        p_units: fields.units || null, p_home: fields.home || null };
-      const r = await fetch(rest('rpc/register_participant'), { method: 'POST', headers: headers(), body: JSON.stringify(body) });
-      const j = await r.json().catch(() => null);
-      if (!r.ok) throw new Error((j && (j.message || j.hint)) || ('Registration failed (' + r.status + ')'));
-      const row = Array.isArray(j) ? j[0] : j;
-      if (!row || !row.code) throw new Error('Registration failed');
-      return row; // { code, name, is_new, approved }
+        p_units: fields.units || null, p_home: fields.home || null, p_pin: fields.pin || null };
+      return S.rpcRow('register_participant', body, 'Registration failed');
     },
+    async signIn(email, pin) { return S.rpcRow('participant_sign_in', { p_email: email, p_pin: pin || null }, 'Sign-in failed'); },
+    async rpcRow(fn, body, what) {
+      const r = await fetch(rest('rpc/' + fn), { method: 'POST', headers: headers(), body: JSON.stringify(body) });
+      const j = await r.json().catch(() => null);
+      if (!r.ok) { const e = new Error((j && (j.message || j.hint)) || (what + ' (' + r.status + ')')); e.code = j && j.code; throw e; }
+      const row = Array.isArray(j) ? j[0] : j;
+      if (!row || !row.status) throw new Error(what);
+      return row;
+    },
+    /* The participant's own check-ins from every device (newest first) and their profile, for this
+     * device's key. A key the database no longer knows rejects with notSignedIn set. */
+    async myCheckins() { return S.keyed('my_checkins'); },
+    async myProfile() { const rows = await S.keyed('my_profile'); return rows[0] || null; },
+    async keyed(fn) {
+      const key = S.key();
+      const fail = () => { const e = new Error('This device is not signed in'); e.notSignedIn = true; return e; };
+      if (!live || !key) throw fail();
+      const r = await fetch(rest('rpc/' + fn), { method: 'POST', headers: headers(), body: JSON.stringify({ p_key: key }) });
+      if (r.status === 401 || r.status === 403) throw fail();
+      if (!r.ok) throw new Error('Could not load (' + r.status + ')');
+      const j = await r.json();
+      return Array.isArray(j) ? j : [];
+    },
+    // Signing out on this device: its key stops working on the server too.
+    async forgetDevice() { const key = S.key(); if (!live || !key) return; try { await fetch(rest('rpc/forget_device'), { method: 'POST', headers: headers(), body: JSON.stringify({ p_key: key }) }); } catch (e) {} },
     // Asked by the app while it waits for the research team to let the participant in.
     // Resolves to { approved } (nothing else: the function gives away no name for a guessed code),
     // or null when the code is not registered (or was removed); rejects when the request itself
@@ -194,6 +222,19 @@
     },
 
     /* ---- researcher side ---- */
+    // PIN set, locked, devices and last use, per participant (Map by code); empty when not available.
+    async signInInfo(token) {
+      try {
+        const r = await fetch(rest('rpc/participant_sign_in_info'), { method: 'POST', headers: headers({ Authorization: 'Bearer ' + token }), body: '{}' });
+        if (!r.ok) return new Map();
+        return new Map((await r.json()).map(x => [x.code, x]));
+      } catch (e) { return new Map(); }
+    },
+    async researcherRpc(token, fn, code) {
+      const r = await fetch(rest('rpc/' + fn), { method: 'POST', headers: headers({ Authorization: 'Bearer ' + token }), body: JSON.stringify({ p_code: code }) });
+      if (!r.ok) throw await writeError(r, 'Could not update the participant');
+      return r.json();
+    },
     async login(email, password) {
       const r = await fetch(auth('token?grant_type=password'), { method: 'POST', headers: headers(), body: JSON.stringify({ email, password }) });
       const j = await r.json().catch(() => ({}));

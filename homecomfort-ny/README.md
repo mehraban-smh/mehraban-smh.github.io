@@ -64,17 +64,28 @@ at its first step on every run.
 ## Participants, codes and approval
 
 Everyone opens the study page and taps **Join the study** (new) or **Sign in** (registered before, with
-their email). Joining asks a short personal profile (name, email, gender, year of birth, height and weight
-are required; US units only) and a tap-through home profile (below), then calls
-`register_participant`, which assigns the next code: `NY001`, `NY002`, ... Only the code travels with the
-check-ins; the dashboard joins it back to the name.
+their email and PIN). Joining takes eight steps (about you, location, home type, size and age, rooms and
+people, heating, windows, review); **every question is required** ("Not sure" counts as an answer) and the
+app does not move on until it is answered, US units only. On the last step the participant chooses a 4-digit
+PIN. `register_participant` then assigns the next code: `NY001`, `NY002`, ... Only the code travels with
+the check-ins; the dashboard joins it back to the name.
 
 A new participant waits for approval: within the hour `homecomfort-ny/push/notify.js` opens one issue in this
 repository titled "Home Comfort NY: 1 new participant waiting for approval" (codes and times only), assigned
 to the owner, so GitHub emails you. Approve or remove them on the dashboard, then close the issue.
 
-The email is the participant's only credential ("Sign in" returns the code for an email on the list), as in
-SWITCH; the codes are pseudonymous and nobody can read anyone's data through the app.
+**One person, any number of devices (since 1.2).** Email and PIN sign a participant in on any phone or
+tablet; one email is always one participant (joining again with the same email is a sign-in). Each device
+gets a random key (`participant_devices`, stored hashed); with it the device sends check-ins
+(`submit_checkin`) and loads the participant's own check-ins from all their devices (`my_checkins`, newest
+first, merged by client id) and home profile (`my_profile`), when it opens and every few minutes. The public
+key can no longer write `comfort_votes` directly, so nobody can send check-ins under someone else's code.
+Five wrong PINs lock signing in for 15 minutes. On the dashboard, **Reset PIN** clears a forgotten PIN (the
+next sign-in with that email sets a new one; devices already in use keep working) and **Sign out devices**
+makes every device of that participant ask for the email and PIN again (a lost phone). A device that joined
+before 1.2 has no key: the app asks once for the email and a PIN ("One more step"), which becomes the PIN if
+the participant has none yet. Signing out on a phone also clears that person's check-ins from it.
+**After changing `supabase-setup.sql` for 1.2, run it again in Supabase**: the app needs these functions.
 
 ## The home profile
 

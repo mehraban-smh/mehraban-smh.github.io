@@ -352,8 +352,8 @@
     if (!keepView) app.innerHTML = '<div class="state" role="status"><span class="spinner" aria-hidden="true"></span><span>Loading check-ins&hellip;</span></div>';
     try {
       const token = session.token;
-      const [rows, people, phones] = await Promise.all([HC.fetchAll(token), HC.fetchParticipants(token), fetchPhones(token)]);
-      st.rows = Array.isArray(rows) ? rows : []; st.people = Array.isArray(people) ? people : []; st.phones = phones;
+      const [rows, people, phones, pins] = await Promise.all([HC.fetchAll(token), HC.fetchParticipants(token), fetchPhones(token), HC.signInInfo(token)]);
+      st.rows = Array.isArray(rows) ? rows : []; st.people = Array.isArray(people) ? people : []; st.phones = phones; st.pins = pins;
       st.local = false; st.loadedAt = Date.now();
       index(); dataView({ focusMain: !keepView });
     } catch (err) {
@@ -375,7 +375,7 @@
     if (session.expired()) { session.clear(); loginView(EXPIRED); return false; }
     // lock the Approve / Remove pair for this code while the call runs, so the two can never race
     const host = btn.closest('[data-errhost]') || btn.parentElement;
-    const pair = $$('[data-act="approve"],[data-act="remove"]', host);
+    const pair = $$('[data-act="approve"],[data-act="remove"],[data-act="pinreset"],[data-act="devout"]', host);
     if (!pair.includes(btn)) pair.push(btn);
     pair.forEach(b => { b.disabled = true; });
     btn.classList.add('is-busy'); btn.setAttribute('aria-busy', 'true');
@@ -411,6 +411,27 @@
     if (!(await writeAction(btn, code, 'remove', () => HC.removeParticipant(session.token, code)))) return;
     if (st.sel === code) st.sel = 'ALL';
     toast(code + ' removed', n ? 'Their check-ins stay in the database under the code.' : 'Their profile has been deleted.');
+    await loadData(true);
+    focusAfterWrite();
+  }
+  /* A participant who forgot their PIN: the next sign-in with their email sets a new one. Their devices keep working. */
+  async function resetPin(code, btn) {
+    if (st.local) return;
+    const p = person(code);
+    if (!confirm(`Reset the PIN of ${p ? p.name + ' (' + code + ')' : code}?\n\nOnly do this when they asked for it. The next time someone signs in with their email, the PIN typed becomes their new PIN. The devices they already use keep working.`)) return;
+    if (!(await writeAction(btn, code, 'reset the PIN of', async () => { await HC.researcherRpc(session.token, 'reset_participant_pin', code); return true; }))) return;
+    toast('PIN reset for ' + code, 'Ask them to sign in with their email and choose a new PIN.');
+    await loadData(true);
+    focusAfterWrite();
+  }
+  /* A lost or shared phone: every device of the participant has to sign in again (email and PIN). */
+  async function signOutDevices(code, btn) {
+    if (st.local) return;
+    const p = person(code);
+    if (!confirm(`Sign ${p ? p.name + ' (' + code + ')' : code} out on all their devices?\n\nEach phone or tablet then asks for their email and PIN before it shows anything. Check-ins already sent are kept.`)) return;
+    let n = 0;
+    if (!(await writeAction(btn, code, 'sign out', async () => { n = await HC.researcherRpc(session.token, 'sign_out_devices', code); return true; }))) return;
+    toast(code + ' signed out', plural(Number(n) || 0, 'device') + ' will ask for the email and PIN.');
     await loadData(true);
     focusAfterWrite();
   }
@@ -993,6 +1014,11 @@
   }
 
   /* ---------------------------------------------------------------- (7) participant drill-down */
+  function pinWords(code) {
+    const x = st.pins && st.pins.get(code);
+    if (!x) return st.pins && st.pins.size ? 'No PIN yet' : '';
+    return (x.locked ? 'Locked after wrong PINs' : x.pin_set ? 'PIN set' : 'No PIN yet (set at the next sign-in)') + ' · ' + plural(x.devices || 0, 'device') + (x.last_seen ? ' · last used ' + ago(new Date(x.last_seen)) : '');
+  }
   function profileHtml(ctx) {
     const code = ctx.sel, p = ctx.p;
     if (!p) return `<section class="card"><div class="note">${icon('info')}<div>No profile is stored for <b>${esc(code)}</b>. ${st.local ? 'Local mode shows only the check-ins kept in this browser.' : 'It may be test data, or the participant was removed (their check-ins are kept under the code).'}</div></div></section>`;
@@ -1004,7 +1030,7 @@
     const last = (st.rowsBy.get(code) || [])[0];
     const status = dbStale() ? '<span class="badge badge-warn">Status unknown until the database is updated</span>' : p.approved ? `<span class="badge badge-good">${icon('check')}Approved</span>` : `<span class="badge badge-violet badge-dot">Waiting for approval</span>`;
     const f = (k, v) => `<div><dt>${k}</dt><dd>${v ? esc(v) : '–'}</dd></div>`;
-    const actions = (st.local || dbStale()) ? '' : `<div class="p-actions" data-errhost>${p.approved ? '' : `<button class="btn btn-primary btn-sm" type="button" data-act="approve" data-code="${esc(code)}">${icon('check')}Approve</button>`}<button class="btn btn-danger btn-sm" type="button" data-act="remove" data-code="${esc(code)}">Remove from the study</button><span class="caption">${p.approved ? 'Remove deletes the profile and any registered phones; check-ins already submitted are kept under the code.' : 'They cannot check in until approved. Remove anyone you do not recognize.'}</span></div>`;
+    const actions = (st.local || dbStale()) ? '' : `<div class="p-actions" data-errhost>${p.approved ? '' : `<button class="btn btn-primary btn-sm" type="button" data-act="approve" data-code="${esc(code)}">${icon('check')}Approve</button>`}<button class="btn btn-ghost btn-sm" type="button" data-act="pinreset" data-code="${esc(code)}">${icon('key')}Reset PIN</button><button class="btn btn-ghost btn-sm" type="button" data-act="devout" data-code="${esc(code)}">${icon('signout')}Sign out devices</button><button class="btn btn-danger btn-sm" type="button" data-act="remove" data-code="${esc(code)}">Remove from the study</button><span class="caption">${p.approved ? 'Remove deletes the profile and any registered phones; check-ins already submitted are kept under the code.' : 'They cannot check in until approved. Remove anyone you do not recognize.'}</span></div>`;
     const g = (art, k, v) => v ? `<div class="glance-item">${art}<span class="glance-text"><span class="glance-k">${k}</span><span class="glance-v">${esc(v)}</span></span></div>` : '';
     const heat = listOf(h.heating), cool = listOf(h.cooling);
     const ppl = [num(h.adults) ? plural(num(h.adults), 'adult') : '', num(h.children) ? plural(num(h.children), 'child', 'children') : '', num(h.pets) ? plural(num(h.pets), 'pet') : ''].filter(Boolean).join(', ');
@@ -1037,6 +1063,7 @@
           ${f('Gender', lab('gender', p.gender))}${f('Age', age !== null ? String(age) : '')}${f('Sensitivity', lab('sensitivity', p.sensitivity))}
           ${f('Height', fmtHeight(p.height_cm))}${f('Weight', fmtWeight(p.weight_kg))}${f('App shows', p.units === 'metric' ? '°C · m²' : p.units === 'us' ? '°F · sq ft' : '')}
           ${f('Registered', fmtIsoDate(p.created_at))}${f('Reminders', reminders)}${f('Last check-in', last ? ago(last.t) : 'None yet')}
+          ${f('PIN and devices', pinWords(code))}
         </dl>
         ${actions}
       </div>
@@ -1231,6 +1258,8 @@
     if (act === 'xlsx') { downloadXlsx(); return; }
     if (act === 'approve') { approve(b.getAttribute('data-code'), b); return; }
     if (act === 'remove') { remove(b.getAttribute('data-code'), b); return; }
+    if (act === 'pinreset') { resetPin(b.getAttribute('data-code'), b); return; }
+    if (act === 'devout') { signOutDevices(b.getAttribute('data-code'), b); return; }
     if (act === 'signout') { signOut(); return; }
     if (act === 'pw') { changePassword(b); return; }
   });

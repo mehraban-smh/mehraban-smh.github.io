@@ -24,5 +24,5 @@ self.HC_CONFIG = {
   studyName: "Home Comfort NY",
   studyStart: "2026-10-20",     // first day of the study (New York time)
   studyEnd: "2026-11-20",       // last day: reminders stop after this day ends in New York (push/send.js)
-  appVersion: "1.1.1"
+  appVersion: "1.2.0"
 };

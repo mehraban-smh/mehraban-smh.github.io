@@ -62,36 +62,166 @@ create policy "researchers can remove participants"
   on public.participants for delete to authenticated
   using (true);
 
--- Called by the app with the public key. With an email only: returns the existing participant's code
--- (the "I have registered before" path). With a name as well: creates the participant with the profile
--- and assigns the next code. Returns only the code, the name, whether the row is new, whether it has been
--- approved and the units the participant chose (so the Home Screen app on an iPhone, which keeps its own
--- storage apart from Safari, shows the same units after "I have registered before"), never the profile.
--- Values out of any sensible range are refused with a message the app can show, rather than a database error.
--- Postgres cannot change a function's return type in place, so any earlier version is dropped first.
-drop function if exists public.register_participant(text, text, text, integer, numeric, numeric, text, text, jsonb);
-create or replace function public.register_participant(
-  p_email text, p_name text default null, p_gender text default null, p_birth_year integer default null,
-  p_height_cm numeric default null, p_weight_kg numeric default null, p_sensitivity text default null,
-  p_units text default null, p_home jsonb default null)
-returns table(code text, name text, is_new boolean, approved boolean, units text)
+-- ===================================================================================================
+-- One participant on any number of devices: a 4-digit PIN and a key per device
+--
+-- Participants choose a 4-digit PIN when they join. Joining, or signing in on another phone or tablet
+-- with their email and PIN, gives that device a random key. The device keeps the key and sends it with
+-- every check-in (submit_checkin) and when it loads the participant's own history and home profile
+-- (my_checkins, my_profile), so every device shows the same person's check-ins, newest first.
+-- Only a hash of each key and a salted hash of the PIN are stored, in two tables that nobody reads
+-- directly: the public key and signed-in researchers reach them only through the functions below.
+-- Five wrong PINs in a row lock signing in for that participant for 15 minutes. A researcher can clear a
+-- forgotten PIN on the dashboard (reset_participant_pin); the next sign-in with that email then sets a
+-- new one. A participant who joined before PINs existed sets one the same way the first time.
+-- ===================================================================================================
+create table if not exists public.participant_pins (
+  code         text primary key references public.participants(code) on delete cascade,
+  salt         text not null,
+  pin_hash     text not null,                   -- sha-256 of salt:PIN
+  failures     integer not null default 0,      -- wrong PINs in a row
+  locked_until timestamptz,
+  updated_at   timestamptz not null default now()
+);
+alter table public.participant_pins enable row level security;      -- no policies: the functions only
+
+create table if not exists public.participant_devices (
+  key_hash   text primary key,                  -- sha-256 of the device key (the key itself stays on the device)
+  code       text not null references public.participants(code) on delete cascade,
+  created_at timestamptz not null default now(),
+  last_seen  timestamptz
+);
+create index if not exists participant_devices_code on public.participant_devices (code);
+alter table public.participant_devices enable row level security;   -- no policies: the functions only
+
+revoke all on public.participant_pins, public.participant_devices from anon, authenticated;
+grant select, insert, update, delete on public.participant_pins, public.participant_devices to service_role;
+
+create or replace function public.hc_hash(p text)
+returns text
+language sql immutable set search_path = public as $$
+  select encode(sha256(convert_to(coalesce(p, ''), 'UTF8')), 'hex');
+$$;
+revoke all on function public.hc_hash(text) from public, anon, authenticated;
+
+-- A new device key for a participant (at most 10 devices each: the least recently used go).
+create or replace function public.hc_new_key(p_code text)
+returns text
+language plpgsql security definer set search_path = public as $$
+declare k text := replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');
+begin
+  insert into public.participant_devices (key_hash, code, last_seen) values (public.hc_hash(k), p_code, now());
+  delete from public.participant_devices d
+   where d.code = p_code
+     and d.key_hash in (select x.key_hash from public.participant_devices x where x.code = p_code
+                        order by coalesce(x.last_seen, x.created_at) desc offset 10);
+  return k;
+end $$;
+revoke all on function public.hc_new_key(text) from public, anon, authenticated;
+
+-- The participant a device key belongs to (and the key is marked as used), or null.
+create or replace function public.hc_code_of(p_key text)
+returns text
+language plpgsql security definer set search_path = public as $$
+declare v text;
+begin
+  if p_key is null or length(p_key) < 32 or length(p_key) > 128 then return null; end if;
+  update public.participant_devices d set last_seen = now() where d.key_hash = public.hc_hash(p_key) returning d.code into v;
+  return v;
+end $$;
+revoke all on function public.hc_code_of(text) from public, anon, authenticated;
+
+-- Email and PIN in, the outcome as a row (never an error, so a wrong PIN stays counted):
+--   ok          signed in: the code, name, approval, units, home profile and a new device key
+--               (pin_set: this PIN has just become the participant's PIN, as they had none)
+--   wrong       wrong PIN; tries_left before the lock
+--   locked      too many wrong PINs; wait_min minutes to wait
+--   pin_needed  no PIN given (an older app, or a form sent without one)
+-- An email that is not registered is an error (P0002), as before.
+create or replace function public.hc_sign_in(p_email text, p_pin text)
+returns table(status text, tries_left integer, wait_min integer, code text, name text, is_new boolean,
+              approved boolean, units text, home jsonb, device_key text, pin_set boolean)
 language plpgsql security definer set search_path = public as $$
 #variable_conflict use_column
 declare
-  v_email text := lower(trim(p_email));
-  v_code text; v_name text; v_approved boolean; v_units text; n bigint;
+  v_email text := lower(trim(coalesce(p_email, '')));
+  p record; pin record; v_salt text; v_key text;
+begin
+  select x.code, x.name, x.approved, x.units, x.home into p from public.participants x where x.email = v_email;
+  if not found then raise exception 'No participant is registered with that email' using errcode = 'P0002'; end if;
+  if p_pin is null or p_pin !~ '^[0-9]{4}$' then
+    return query select 'pin_needed'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::text, null::jsonb, null::text, false;
+    return;
+  end if;
+  select x.salt, x.pin_hash, x.failures, x.locked_until into pin from public.participant_pins x where x.code = p.code for update;
+  if not found then                                          -- no PIN yet: this one becomes theirs
+    v_salt := replace(gen_random_uuid()::text, '-', '');
+    insert into public.participant_pins (code, salt, pin_hash) values (p.code, v_salt, public.hc_hash(v_salt || ':' || p_pin));
+    v_key := public.hc_new_key(p.code);
+    return query select 'ok'::text, null::integer, null::integer, p.code::text, p.name::text, false, coalesce(p.approved, false), p.units::text, p.home::jsonb, v_key, true;
+    return;
+  end if;
+  if pin.locked_until is not null and pin.locked_until > now() then
+    return query select 'locked'::text, 0, greatest(1, ceil(extract(epoch from pin.locked_until - now()) / 60))::integer, null::text, null::text, false, null::boolean, null::text, null::jsonb, null::text, false;
+    return;
+  end if;
+  if public.hc_hash(pin.salt || ':' || p_pin) <> pin.pin_hash then
+    if pin.failures + 1 >= 5 then
+      update public.participant_pins x set failures = 0, locked_until = now() + interval '15 minutes', updated_at = now() where x.code = p.code;
+      return query select 'locked'::text, 0, 15, null::text, null::text, false, null::boolean, null::text, null::jsonb, null::text, false;
+    else
+      update public.participant_pins x set failures = pin.failures + 1, updated_at = now() where x.code = p.code;
+      return query select 'wrong'::text, 5 - (pin.failures + 1), null::integer, null::text, null::text, false, null::boolean, null::text, null::jsonb, null::text, false;
+    end if;
+    return;
+  end if;
+  update public.participant_pins x set failures = 0, locked_until = null, updated_at = now() where x.code = p.code;
+  v_key := public.hc_new_key(p.code);
+  return query select 'ok'::text, null::integer, null::integer, p.code::text, p.name::text, false, coalesce(p.approved, false), p.units::text, p.home::jsonb, v_key, false;
+end $$;
+revoke all on function public.hc_sign_in(text, text) from public, anon, authenticated;
+
+-- "I have registered before": email and PIN (see hc_sign_in for the outcome).
+create or replace function public.participant_sign_in(p_email text, p_pin text)
+returns table(status text, tries_left integer, wait_min integer, code text, name text, is_new boolean,
+              approved boolean, units text, home jsonb, device_key text, pin_set boolean)
+language sql security definer set search_path = public as $$
+  select * from public.hc_sign_in(p_email, p_pin);
+$$;
+revoke all on function public.participant_sign_in(text, text) from public;
+grant execute on function public.participant_sign_in(text, text) to anon, authenticated;
+
+-- Joining. A new email creates the participant with the profile, the PIN and the next code (NY001,
+-- NY002, ...), and the device gets its key. An email already registered is a sign-in with that PIN
+-- (same outcome row as hc_sign_in), so one email is always one participant. Values out of any sensible
+-- range are refused with a message the app can show, rather than a database error.
+-- Postgres cannot change a function's arguments or return type in place, so earlier versions are dropped.
+drop function if exists public.register_participant(text, text, text, integer, numeric, numeric, text, text, jsonb);
+drop function if exists public.register_participant(text, text, text, integer, numeric, numeric, text, text, jsonb, text);
+create or replace function public.register_participant(
+  p_email text, p_name text default null, p_gender text default null, p_birth_year integer default null,
+  p_height_cm numeric default null, p_weight_kg numeric default null, p_sensitivity text default null,
+  p_units text default null, p_home jsonb default null, p_pin text default null)
+returns table(status text, tries_left integer, wait_min integer, code text, name text, is_new boolean,
+              approved boolean, units text, home jsonb, device_key text, pin_set boolean)
+language plpgsql security definer set search_path = public as $$
+#variable_conflict use_column
+declare
+  v_email text := lower(trim(coalesce(p_email, '')));
+  v_code text; v_units text; v_salt text; v_key text; n bigint;
 begin
   if v_email !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' or length(v_email) > 254 then
     raise exception 'That does not look like an email address' using errcode = '22023';
   end if;
-  select p.code, p.name, p.approved, p.units into v_code, v_name, v_approved, v_units from public.participants p where p.email = v_email;
-  if v_code is not null then
-    return query select v_code, v_name, false, coalesce(v_approved, false), v_units; return;
+  if exists (select 1 from public.participants x where x.email = v_email) then
+    return query select * from public.hc_sign_in(v_email, p_pin);
+    return;
   end if;
   if p_name is null or length(trim(p_name)) = 0 then
     raise exception 'No participant is registered with that email' using errcode = 'P0002';
   end if;
   if length(trim(p_name)) > 100 then raise exception 'Please shorten the name' using errcode = '22023'; end if;
+  if p_pin is null or p_pin !~ '^[0-9]{4}$' then raise exception 'Please choose a 4-digit PIN' using errcode = '22023'; end if;
   if p_birth_year is not null and (p_birth_year < 1900 or p_birth_year > extract(year from now())::int - 10) then
     raise exception 'Please check the year of birth' using errcode = '22023';
   end if;
@@ -110,10 +240,86 @@ begin
   insert into public.participants (code, email, name, gender, birth_year, height_cm, weight_kg, sensitivity, units, home)
     values (v_code, v_email, trim(p_name), left(p_gender, 30), p_birth_year, p_height_cm, p_weight_kg, left(p_sensitivity, 30),
             v_units, coalesce(p_home, '{}'::jsonb));
-  return query select v_code, trim(p_name), true, false, v_units;
+  v_salt := replace(gen_random_uuid()::text, '-', '');
+  insert into public.participant_pins (code, salt, pin_hash) values (v_code, v_salt, public.hc_hash(v_salt || ':' || p_pin));
+  v_key := public.hc_new_key(v_code);
+  return query select 'ok'::text, null::integer, null::integer, v_code, trim(p_name), true, false, v_units, coalesce(p_home, '{}'::jsonb), v_key, true;
 end $$;
-revoke all on function public.register_participant(text, text, text, integer, numeric, numeric, text, text, jsonb) from public;
-grant execute on function public.register_participant(text, text, text, integer, numeric, numeric, text, text, jsonb) to anon, authenticated;
+revoke all on function public.register_participant(text, text, text, integer, numeric, numeric, text, text, jsonb, text) from public;
+grant execute on function public.register_participant(text, text, text, integer, numeric, numeric, text, text, jsonb, text) to anon, authenticated;
+
+-- The participant's own profile for a signed-in device (the home profile appears on every device).
+-- A key that is not (or no longer) valid is refused (28000), so the app asks to sign in again.
+create or replace function public.my_profile(p_key text)
+returns table(code text, name text, approved boolean, units text, home jsonb)
+language plpgsql security definer set search_path = public as $$
+#variable_conflict use_column
+declare v_code text := public.hc_code_of(p_key);
+begin
+  if v_code is null then raise exception 'This device is not signed in' using errcode = '28000'; end if;
+  return query select x.code, x.name, x.approved, x.units, x.home from public.participants x where x.code = v_code;
+end $$;
+revoke all on function public.my_profile(text) from public;
+grant execute on function public.my_profile(text) to anon, authenticated;
+
+-- The participant's own check-ins, newest first, for a signed-in device: whichever phone or tablet they
+-- were made on. The same columns the app keeps, nothing about anyone else.
+create or replace function public.my_checkins(p_key text)
+returns table(client_id text, ts timestamptz, local_time text, tz_offset_min integer, prompt text, at_home text,
+              tsv smallint, clo numeric, garments text[], met numeric, activity text, room text, air text, sun text,
+              actions text[], notes text[], same_as_last boolean, seconds integer)
+language plpgsql security definer set search_path = public as $$
+#variable_conflict use_column
+declare v_code text := public.hc_code_of(p_key);
+begin
+  if v_code is null then raise exception 'This device is not signed in' using errcode = '28000'; end if;
+  return query select v.client_id, v.ts, v.local_time, v.tz_offset_min, v.prompt, v.at_home, v.tsv, v.clo, v.garments, v.met,
+                      v.activity, v.room, v.air, v.sun, v.actions, v.notes, v.same_as_last, v.seconds
+                 from public.comfort_votes v where v.participant = v_code order by v.ts desc limit 5000;
+end $$;
+revoke all on function public.my_checkins(text) from public;
+grant execute on function public.my_checkins(text) to anon, authenticated;
+
+-- Signing out on a device: its key stops working.
+create or replace function public.forget_device(p_key text)
+returns boolean
+language sql security definer set search_path = public as $$
+  with d as (delete from public.participant_devices x where x.key_hash = public.hc_hash(p_key) returning 1)
+  select exists (select 1 from d);
+$$;
+revoke all on function public.forget_device(text) from public;
+grant execute on function public.forget_device(text) to anon, authenticated;
+
+-- Dashboard (signed-in researchers only): clear a forgotten PIN (the next sign-in sets a new one), sign
+-- a participant out on all devices (a lost phone), and which participants have a PIN and how many devices.
+create or replace function public.reset_participant_pin(p_code text)
+returns boolean
+language sql security definer set search_path = public as $$
+  with d as (delete from public.participant_pins x where x.code = upper(trim(p_code)) returning 1)
+  select exists (select 1 from d);
+$$;
+revoke all on function public.reset_participant_pin(text) from public, anon;
+grant execute on function public.reset_participant_pin(text) to authenticated;
+
+create or replace function public.sign_out_devices(p_code text)
+returns integer
+language sql security definer set search_path = public as $$
+  with d as (delete from public.participant_devices x where x.code = upper(trim(p_code)) returning 1)
+  select count(*)::integer from d;
+$$;
+revoke all on function public.sign_out_devices(text) from public, anon;
+grant execute on function public.sign_out_devices(text) to authenticated;
+
+create or replace function public.participant_sign_in_info()
+returns table(code text, pin_set boolean, locked boolean, devices integer, last_seen timestamptz)
+language sql security definer stable set search_path = public as $$
+  select p.code, (pp.code is not null), coalesce(pp.locked_until > now(), false),
+         (select count(*)::integer from public.participant_devices d where d.code = p.code),
+         (select max(d.last_seen) from public.participant_devices d where d.code = p.code)
+    from public.participants p left join public.participant_pins pp on pp.code = p.code;
+$$;
+revoke all on function public.participant_sign_in_info() from public, anon;
+grant execute on function public.participant_sign_in_info() to authenticated;
 
 -- Called by the app (public key) while it waits to be let in. Returns only the approval flag for a
 -- code, and no rows at all for a code that is not registered. Nothing else: codes are guessable.
@@ -167,11 +373,38 @@ create table if not exists public.comfort_votes (
 create index if not exists comfort_votes_participant_ts on public.comfort_votes (participant, ts);
 alter table public.comfort_votes enable row level security;
 
--- Participants use the public key: they may add check-ins for a valid, approved code and nothing else.
+-- Participants never write this table directly: their app calls submit_checkin() below with the device's
+-- key, so only a signed-in device of an approved participant can add check-ins, and only as that
+-- participant. (Until version 1.2 the public key could insert rows for any approved code.)
 drop policy if exists "participants can add check-ins" on public.comfort_votes;
-create policy "participants can add check-ins"
-  on public.comfort_votes for insert to anon
-  with check (participant ~ '^NY[0-9]{3,6}$' and public.is_approved(participant));
+
+-- One check-in from a signed-in device. Returns ok (also when the same client_id was already saved: a
+-- retry from the offline queue), not_signed_in (the key is unknown: sign in again), not_approved, or
+-- invalid (a row that cannot be a check-in: too big, impossible values, a time far off).
+create or replace function public.submit_checkin(p_key text, p_row jsonb)
+returns text
+language plpgsql security definer set search_path = public as $$
+declare v_code text := public.hc_code_of(p_key); r public.comfort_votes;
+begin
+  if v_code is null then return 'not_signed_in'; end if;
+  if not public.is_approved(v_code) then return 'not_approved'; end if;
+  if p_row is null or jsonb_typeof(p_row) <> 'object' or length(p_row::text) > 4000 then return 'invalid'; end if;
+  r := jsonb_populate_record(null::public.comfort_votes, p_row);
+  if r.client_id is null or length(r.client_id) > 64 or r.ts is null
+     or r.ts < timestamptz '2026-01-01' or r.ts > now() + interval '1 day' then return 'invalid'; end if;
+  insert into public.comfort_votes (client_id, participant, ts, local_time, tz_offset_min, prompt, at_home, tsv, clo, garments,
+                                    met, activity, room, air, sun, actions, notes, same_as_last, seconds, app_version)
+  values (r.client_id, v_code, r.ts, left(r.local_time, 20), r.tz_offset_min, left(r.prompt, 20), left(r.at_home, 20), r.tsv, r.clo,
+          r.garments[1:30], r.met, left(r.activity, 40), left(r.room, 40), left(r.air, 20), left(r.sun, 20), r.actions[1:30], r.notes[1:30],
+          coalesce(r.same_as_last, false), r.seconds, left(r.app_version, 20))
+  on conflict (client_id) do nothing;
+  return 'ok';
+exception when check_violation or numeric_value_out_of_range or invalid_text_representation or invalid_parameter_value
+               or datetime_field_overflow or invalid_datetime_format then
+  return 'invalid';
+end $$;
+revoke all on function public.submit_checkin(text, jsonb) from public;
+grant execute on function public.submit_checkin(text, jsonb) to anon, authenticated;
 
 -- Researchers sign in on the dashboard: they may read everything.
 drop policy if exists "researchers can read everything" on public.comfort_votes;
@@ -424,11 +657,11 @@ create policy "researchers can remove registered phones"
 -- ===================================================================================================
 -- Spelled out, so the script works whether or not the project was created with "Automatically expose
 -- new tables": the row-level security policies above still decide which rows each role may touch.
--- The public key (anon) may only add check-ins; it reaches participants and phones only through the
--- functions. Signed-in researchers (authenticated) read everything and may approve and remove. The
+-- The public key (anon) has no table rights at all: it reaches participants, check-ins and phones only
+-- through the functions. Signed-in researchers (authenticated) read everything and may approve and remove. The
 -- reminder scripts use a secret key (service_role).
 grant usage on schema public to anon, authenticated, service_role;
-grant insert on public.comfort_votes to anon;
+revoke all on public.participants, public.comfort_votes, public.push_subscriptions from anon;
 grant select on public.participants, public.comfort_votes, public.push_subscriptions to authenticated;
 grant update, delete on public.participants to authenticated;
 grant delete on public.push_subscriptions to authenticated;
@@ -452,5 +685,6 @@ drop policy if exists "researchers can read readings" on public.sensor_readings;
 create policy "researchers can read readings"
   on public.sensor_readings for select to authenticated
   using (true);
+revoke all on public.sensor_readings from anon;
 grant select on public.sensor_readings to authenticated;
 grant select, insert, update, delete on public.sensor_readings to service_role;

@@ -402,3 +402,9 @@ body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))
   .goal-top{gap:12px}
   .freq-row{grid-template-columns:28px 112px minmax(0,1fr) 36px;gap:8px}
 }
+
+/* the 4-digit PIN (joining, signing in) */
+.pin-card{display:flex;flex-direction:column;gap:14px;padding:16px;border:2px solid var(--violet-200)}
+.pin-top{display:flex;align-items:flex-start;gap:12px}
+.pin-top .icon-tile{background:var(--violet);color:#fff}
+.pin-in{text-align:center;font-size:22px;letter-spacing:.45em;font-variant-numeric:tabular-nums}

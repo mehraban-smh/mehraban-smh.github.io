@@ -370,7 +370,7 @@ function notifHelp(st){
     html: PUSH.ios ? `<ol class="steps"><li>Open your iPhone&rsquo;s <b>Settings</b>, then <b>Notifications</b>.</li><li>Find <b>Home Comfort</b> and turn on <b>Allow Notifications</b>.</li><li>Come back here.</li></ol>`
       : `<ol class="steps"><li>Touch and hold the <b>Home Comfort</b> icon, then tap <b>App info</b> (or &#9432;).</li><li>Tap <b>Notifications</b> and turn them on.</li><li>Come back here.</li></ol><p class="field-hint">Using it in Chrome instead? Tap the icon left of the address, then <b>Permissions</b> &rsaquo; <b>Notifications</b> &rsaquo; <b>Allow</b>.</p>` };
   if(st === 'install') return { icon:'download', title:'Add the app to your Home Screen',
-    html: `<p>On iPhone, notifications only work in the Home Screen app.</p><ol class="steps"><li>Tap the <b>Share</b> button ${SHARE_IC} in Safari.</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open the app from your Home Screen, choose <b>I have registered before</b> and enter your email.</li></ol>` };
+    html: `<p>On iPhone, notifications only work in the Home Screen app.</p><ol class="steps"><li>Tap the <b>Share</b> button ${SHARE_IC} in Safari.</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open the app from your Home Screen, choose <b>I have registered before</b> and enter your email and PIN.</li></ol>` };
   if(st === 'unsupported') return { icon:'bell-off', title:'Notifications don&rsquo;t work in this browser',
     html: `<p>On Android, open the app in Chrome. On iPhone, open it in Safari and add it to your Home Screen.</p>` };
   return { icon:'bell', title: PUSH.lost() ? 'Notifications have stopped' : 'Turn on notifications',
@@ -587,7 +587,7 @@ function homeGlance(h, u, editable){
 function homeProfile(){ try{ const h = JSON.parse(LS.get(HOME_KEY) || 'null'); return h && typeof h === 'object' ? h : null; }catch(e){ return null; } }
 /* The iPhone Home Screen app, signed in with an email rather than used to join: most likely the participant
  * joined in Safari, whose storage the Home Screen app does not share (history, home profile). */
-const homeScreenSignIn = () => PUSH.ios && PUSH.standalone && !homeProfile();
+const homeScreenSignIn = () => false;                       // since 1.2 history and home profile come from the database on every device
 /* iPhone, in Safari rather than the Home Screen app, nobody signed in, and reminders possible: ask for the
  * Home Screen app before the sign-up or sign-in starts (once per tab: "Continue in Safari anyway"). */
 const installFirst = () => !PARTICIPANT && PUSH.status() === 'install' && SS.get(INSTALL_SKIP_KEY) !== '1';
@@ -606,7 +606,7 @@ const SCREENS = {
       ${welcomeNote ? `<div class="note note-info" role="status">${ic('info')}<div>${esc(welcomeNote)}</div></div>` : ''}
       <div class="option-list">
         <button class="option-row" data-act="go" data-to="join"><span class="icon-tile">${ic('sparkle')}</span><span class="option-text"><span class="option-title">I&rsquo;m new here</span><span class="option-sub">${draft ? 'Carry on where you left off' : 'Join the study'}</span></span>${ic('chevron-right')}</button>
-        <button class="option-row" data-act="go" data-to="signin"><span class="icon-tile">${ic('mail')}</span><span class="option-text"><span class="option-title">I have registered before</span><span class="option-sub">Continue with my email</span></span>${ic('chevron-right')}</button>
+        <button class="option-row" data-act="go" data-to="signin"><span class="icon-tile">${ic('mail')}</span><span class="option-text"><span class="option-title">I have registered before</span><span class="option-sub">Sign in with my email and PIN</span></span>${ic('chevron-right')}</button>
       </div>
       ${HC.live ? '' : `<div class="note note-warn">${ic('alert')}<div><b>Local mode.</b> The study database is not connected yet, so everything stays in this browser.</div></div>`}
       <p class="caption center">Questions about the study? Email ${TEAM}. <a href="../">About the study</a></p>
@@ -624,16 +624,21 @@ const SCREENS = {
       <section class="card stack stack-3" aria-labelledby="instH"><h2 class="card-title" id="instH">Three quick steps</h2>
         <ol class="steps"><li>Tap the <b>Share</b> button ${SHARE_IC} in Safari&rsquo;s toolbar.</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open <b>Home Comfort</b> from your Home Screen and join there.</li></ol>
         <p class="field-hint">Opened this inside another app? Open it in Safari first.</p></section>
-      <div class="note note-info">${ic('info')}<div>Joined before? In the Home Screen app, choose <b>I have registered before</b> and enter your email.</div></div>
+      <div class="note note-info">${ic('info')}<div>Joined before? In the Home Screen app, choose <b>I have registered before</b> and enter your email and PIN.</div></div>
       <button class="btn btn-quiet" data-act="install-skip">Continue in Safari anyway</button>
     </div>`,
-  signin: () => qhead('Welcome back', 'Continue with your email', 'The email you joined with. No password needed.') +
-    (PUSH.ios && PUSH.standalone ? `<div class="note note-info">${ic('info')}<div>Joined in Safari? Enter the same email. This Home Screen app keeps its own copy, so check-ins you made in Safari stay listed in Safari. The ones already sent are with the study team.</div></div>` : '') +
-    `<form class="stack stack-5 form" id="signForm" novalidate>
-      <div class="field" id="f-s_email"><label class="label" for="s_email">Email</label><input class="input" id="s_email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" aria-describedby="err-s_email"><p class="field-error" id="err-s_email" hidden></p></div>
-      <button class="btn btn-primary btn-block btn-lg" type="button" data-act="signin">Continue ${ic('arrow-right')}</button>
-      <button class="btn btn-quiet" type="button" data-act="go" data-to="join">I haven&rsquo;t joined yet</button>
-    </form>`,
+  signin: () => {
+    const rekey = needsKey();
+    return qhead(rekey ? 'One more step' : 'Welcome back', rekey ? 'Sign in with your PIN' : 'Sign in',
+        rekey ? 'Your check-ins now follow you on every phone and tablet you use. Enter your email and your 4-digit PIN. No PIN yet? Choose one now.' : 'With the email you joined with and your 4-digit PIN. All your check-ins come with you.') +
+      `<form class="stack stack-5 form" id="signForm" novalidate>
+        <div class="field" id="f-s_email"><label class="label" for="s_email">Email</label><input class="input" id="s_email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" aria-describedby="err-s_email"><p class="field-error" id="err-s_email" hidden></p></div>
+        <div class="field" id="f-s_pin"><label class="label" for="s_pin">${rekey ? 'Your PIN, or choose one' : 'PIN'}</label><input class="input pin-in" id="s_pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="current-password" aria-describedby="err-s_pin"><p class="field-error" id="err-s_pin" hidden></p></div>
+        <button class="btn btn-primary btn-block btn-lg" type="button" data-act="signin">Continue ${ic('arrow-right')}</button>
+        <p class="caption center">Forgot your PIN? Email ${TEAM} and the study team will reset it.</p>
+        ${rekey ? `<button class="btn btn-quiet" type="button" data-act="forget">Not you? Start again</button>` : `<button class="btn btn-quiet" type="button" data-act="go" data-to="join">I haven&rsquo;t joined yet</button>`}
+      </form>`;
+  },
   pending: () => `<div class="pending stack stack-6 center">
       <section class="card-hero stack stack-4 center"><span class="icon-tile it-white it-lg pending-ic">${ic('clock')}</span>
         <h1 class="screen-title" tabindex="-1">Thanks${firstName() ? ', ' + esc(firstName()) : ''}!</h1>
@@ -747,7 +752,7 @@ function topbar(){
       (prog ? `<div class="wrap"><div class="meter" role="progressbar" aria-label="Check-in progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i class="meter-fill" style="--value:${pct}%"></i></div></div>` : '');
   }
   if(s==='join') return `<div class="wrap topbar">${backBtn}<div class="topbar-title">Join the study<span class="topbar-sub">Step ${REG.step+1} of ${REG_STEPS.length}</span></div><button class="btn btn-quiet" id="later" data-act="reg-later">Later</button></div>`;
-  if(s==='signin') return `<div class="wrap topbar">${backBtn}<div class="topbar-title">Sign in</div><span class="topbar-spacer"></span></div>`;
+  if(s==='signin') return `<div class="wrap topbar">${needsKey() ? '<span class="topbar-spacer"></span>' : backBtn}<div class="topbar-title">Sign in</div><span class="topbar-spacer"></span></div>`;
   return '';
 }
 function updateChrome(){
@@ -772,6 +777,7 @@ function focusKey(el){
   return null;
 }
 function render(){
+  if(needsKey() && (TABS.includes(S.screen) || S.screen === 'pending')){ S.screen = 'signin'; S.hist = []; }
   const el = $('#screen'), key = screenKey();
   el.innerHTML = SCREENS[S.screen]();
   updateChrome();
@@ -903,23 +909,27 @@ const refused = status => status === 401 || status === 403;
  * queue at the end, so a check-in queued meanwhile is never lost. */
 let flushing = null, flushAgain = false;
 async function flushPending(){
-  if(!HC.live) return;
+  if(!HC.live || !PARTICIPANT) return;
   if(flushing){ flushAgain = true; return flushing; }
   flushing = (async () => {
     do {
       flushAgain = false;
       const q = HC.pending(); if(!q.length) break;
       const done = new Set(); let mine = false;
+      let lost = false;
       for(const rec of q){
         if(isHeld(rec)) continue;
+        if(rec.participant !== PARTICIPANT){ done.add(rec.client_id); continue; }   // someone else's from before a sign-out: only their devices could send it
         try{
           const r = await HC.insert(stripHold(rec));
           if(r.ok){ done.add(rec.client_id); continue; }
-          if(refused(r.status)){ done.add(rec.client_id); if(rec.participant === PARTICIPANT) mine = true; }
+          if(r.verdict === 'not_signed_in'){ lost = true; break; }                  // kept, and sent once this device signs in again
+          if(r.verdict === 'not_approved' || r.verdict === 'invalid' || refused(r.status)){ done.add(rec.client_id); if(r.verdict !== 'invalid') mine = true; }
         }catch(e){}
       }
       if(done.size) LS.set(PENDING_KEY, JSON.stringify(HC.pending().filter(r => !done.has(r.client_id))));
       refreshSync();
+      if(lost){ keyLost(); break; }
       if(mine) await afterRefusal();
     } while(flushAgain);
   })();
@@ -935,12 +945,54 @@ function setIdentity(code, name){
   HC.setParticipant(code); LS.set('hcny_name', NAME);
 }
 /* Forgets who is using this phone: the code is gone from the database (removed on the dashboard), the
- * person on the waiting screen said it is not them, or they signed out. The check-ins stay on the phone
- * (each carries its code, so the next person does not see them). */
+ * person on the waiting screen said it is not them, or they signed out. Their check-ins leave the phone
+ * too (they are in the database and come back when they sign in), except any still waiting to be sent. */
 function forgetIdentity(note){
+  const code = PARTICIPANT, waiting = new Set(HC.pending().map(r => r.client_id));
+  if(code && store.votes.some(v => v.p === code && !waiting.has(v.id))){ store.votes = store.votes.filter(v => v.p !== code || waiting.has(v.id)); save(); }
+  HC.setKey(null);
   ['hcny_participant','hcny_name',APPROVED_KEY,'hcny_push','hcny_push_lost','hcny_sched',HOME_KEY].forEach(k => LS.del(k));
   PARTICIPANT = ''; NAME = ''; welcomeNote = note || '';
   go('welcome');
+}
+/* One person on any number of devices: joining, or signing in with email and PIN, gives this device a key
+ * (HC.key). With it the device sends check-ins and loads the person's check-ins from all their devices. */
+const needsKey = () => HC.live && !!PARTICIPANT && !HC.key() && !VIA_URL;
+function signedIn(r){
+  setIdentity(r.code, r.name);
+  HC.setKey(r.device_key); LS.set(UNITS_KEY, 'us');
+  if(r.home && typeof r.home === 'object' && Object.keys(r.home).length) LS.set(HOME_KEY, JSON.stringify(r.home));
+}
+/* The key no longer works (signed out on all devices by the team, or the person was removed and
+ * registered again): sign in again; anything waiting stays queued until then. */
+function keyLost(){ HC.setKey(null); if(TABS.includes(S.screen) || S.screen === 'pending') go('signin'); }
+/* The person's check-ins from all their devices (my_checkins), merged into this phone's list by id: one
+ * made here is already in it, one made elsewhere is added, so the newest is always on top whichever device
+ * it came from. The home profile and name are refreshed too (my_profile). At most every few minutes
+ * unless forced. */
+let lastPull = 0;
+const numOrU = x => x === null || x === undefined ? undefined : Number(x);
+function fromServer(r){
+  return { id:r.client_id, p:PARTICIPANT, ts:new Date(r.ts).toISOString(), type:r.prompt || 'self', home:r.at_home || 'long',
+    tsv: r.tsv === null || r.tsv === undefined ? undefined : Number(r.tsv), garments:r.garments || [], clo:numOrU(r.clo), act:r.activity || undefined,
+    met:numOrU(r.met), room:r.room || undefined, air:r.air || undefined, sun:r.sun || undefined, actions:r.actions || [], notes:r.notes || [],
+    same:!!r.same_as_last, secs:r.seconds || undefined, synced:true };
+}
+async function pullHistory(force){
+  if(!HC.live || !PARTICIPANT || !HC.key() || VIA_URL) return;
+  if(!force && Date.now() - lastPull < 3*60000) return;
+  lastPull = Date.now();
+  try{
+    const [rows, prof] = await Promise.all([HC.myCheckins(), HC.myProfile()]);
+    let changed = false;
+    if(prof){
+      if(prof.home && typeof prof.home === 'object' && Object.keys(prof.home).length && LS.get(HOME_KEY) !== JSON.stringify(prof.home)){ LS.set(HOME_KEY, JSON.stringify(prof.home)); changed = true; }
+      if(prof.name && prof.name !== NAME){ NAME = prof.name; LS.set('hcny_name', NAME); changed = true; }
+    }
+    const have = new Set(store.votes.map(v => v.id));
+    rows.forEach(r => { if(r.client_id && !have.has(r.client_id)){ store.votes.push(fromServer(r)); changed = true; } });
+    if(changed){ save(); if(['today','comfort','myhome','settings'].includes(S.screen) && !S.lock) rerender(); }
+  }catch(e){ if(e.notSignedIn) keyLost(); }
 }
 /* After registering or signing in: only an approved participant gets to Today. */
 function afterIdentity(approved){
@@ -955,19 +1007,24 @@ function fieldError(id, msg){
   if(msg){ const t = input && input.matches && input.matches('input,select') ? input : f; if(t){ if(!t.matches('input,select,button')) t.setAttribute('tabindex', '-1'); t.focus(); t.scrollIntoView({ block:'center', behavior: reduceMotion() ? 'auto' : 'smooth' }); } }
 }
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const pinOutcome = r => r.status === 'wrong' ? `That PIN isn&rsquo;t right. ${r.tries_left} ${r.tries_left === 1 ? 'try' : 'tries'} left before a 15-minute pause.`
+  : r.status === 'locked' ? `Too many tries. Please wait ${r.wait_min} minute${r.wait_min === 1 ? '' : 's'}, then try again.` : 'Please enter your 4-digit PIN.';
 async function signin(){
-  const email = $('#s_email').value.trim();
-  fieldError('s_email', '');
+  const email = $('#s_email').value.trim(), pin = ($('#s_pin').value || '').trim();
+  fieldError('s_email', ''); fieldError('s_pin', '');
   if(!EMAIL_RE.test(email)) return fieldError('s_email', 'Please enter the email you joined with, like name@example.com.');
-  const b = $('[data-act="signin"]'); b.disabled = true; b.classList.add('is-busy');
+  if(!/^\d{4}$/.test(pin)) return fieldError('s_pin', 'Please enter your 4-digit PIN.');
+  const b = $('[data-act="signin"]'), idle = () => { b.disabled = false; b.classList.remove('is-busy'); };
+  b.disabled = true; b.classList.add('is-busy');
   try{
     if(!HC.live) throw new Error('The study database is not connected yet, so signing in is not possible. Choose I&rsquo;m new here instead.');
-    const r = await HC.register({ email });
-    setIdentity(r.code, r.name);
-    const split = !votes().length && homeScreenSignIn();
+    const r = await HC.signIn(email, pin);
+    if(r.status !== 'ok'){ idle(); return fieldError('s_pin', pinOutcome(r)); }
+    signedIn(r);
     afterIdentity(r.approved);
-    if(split && r.approved !== false) showToast({ title:'Welcome back' + (firstName() ? ', ' + esc(firstName()) : ''), sub:'Check-ins you made in Safari stay listed in Safari', kind:'info', ms:7000 });
-  }catch(e){ b.disabled = false; b.classList.remove('is-busy'); fieldError('s_email', friendly(e.message, 'Could not sign in. Check the connection and try again.')); }
+    quiet(flushPending()); quiet(pullHistory(true));
+    showToast({ title:'Welcome back' + (firstName() ? ', ' + esc(firstName()) : ''), sub: r.pin_set ? 'Your PIN is saved. Use it with your email on your other devices.' : 'Your check-ins from your other devices are on their way.', kind:'info', ms:6000 });
+  }catch(e){ idle(); fieldError('s_email', friendly(e.message, 'Could not sign in. Check the connection and try again.')); }
 }
 function pendMsg(t){ const m = $('#pendMsg'); if(!m) return; m.hidden = false; m.innerHTML = ic('info') + '<div>' + t + '</div>'; }
 /* Asks the database about this code. HC.approval() resolves to { approved } (no name: the name saved at
@@ -1206,8 +1263,8 @@ function remindersSection(){
       <p class="field-hint">Reminders only arrive inside these hours, never within half an hour of a check-in, and not while you&rsquo;ve said you&rsquo;re out.</p></div>`;
   const msg = `<div class="note" id="remMsg" role="status" hidden></div>`;
   const title = `<div class="card-head"><div><h2 class="card-title" id="remH">Reminders</h2><p class="card-sub">${st==='on' ? 'Notifications are on for this phone' : 'A nudge once an hour while you&rsquo;re home'}</p></div>${st==='on' ? `<span class="badge badge-good badge-dot">On</span>` : ''}</div>`;
-  if(st === 'install') return title + `<ol class="steps"><li>Tap the <b>Share</b> button ${SHARE_IC} in Safari.</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open the app from your Home Screen, choose <b>I have registered before</b> and enter your email.</li><li>Turn on notifications there.</li></ol>
-    <p class="field-hint">The Home Screen app keeps its own copy, so the check-ins listed here in Safari stay here. The ones already sent are with the study team.</p>`;
+  if(st === 'install') return title + `<ol class="steps"><li>Tap the <b>Share</b> button ${SHARE_IC} in Safari.</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open the app from your Home Screen, choose <b>I have registered before</b> and enter your email and PIN.</li><li>Turn on notifications there.</li></ol>
+    <p class="field-hint">Your check-ins come with you.</p>`;
   if(st === 'unsupported' || st === 'blocked') return title + `<div class="note${st === 'blocked' ? ' note-warn' : ''}">${ic('bell-off')}<div><b>${notifHelp(st).title}.</b></div></div><div class="notif-body">${notifHelp(st).html}</div>`;
   if(st === 'unconfigured') return title + `<div class="note note-info">${ic('info')}<div>Reminders start once the study database is connected. Your home hours are saved on this phone now.</div></div>` + form + msg + `<button class="btn btn-primary btn-block" data-act="save-hours">Save hours</button>`;
   // Off: notifications first, with one tap (default hours); the hours come once they are on.
@@ -1240,10 +1297,10 @@ const REG_STEPS = [
   {id:'review', ic:'sparkle',      t:'At a glance',         min:0.3}
 ];
 const stepOf = id => Math.max(0, REG_STEPS.findIndex(s => s.id === id));
-const regFresh = () => ({ v:2, step:0, units:'us', name:'', email:'', gender:'', birth_year:'', ft:'', inch:'', cm:'', lb:'', kg:'', sens:null, home:{}, edit:false });
+const regFresh = () => ({ v:2, step:0, units:'us', name:'', email:'', gender:'', birth_year:'', ft:'', inch:'', cm:'', lb:'', kg:'', sens:null, home:{}, edit:false, pin:'', pin2:'' });
 function loadReg(){ try{ const r = JSON.parse(LS.get(REG_KEY) || 'null'); if(r && r.v === 2 && r.home) return Object.assign(regFresh(), r, { units:'us', step: Math.max(0, Math.min(REG_STEPS.length-1, r.step|0)) }); }catch(e){} return regFresh(); }
 let REG = loadReg();
-function saveReg(){ LS.set(REG_KEY, JSON.stringify(REG)); }
+function saveReg(){ LS.set(REG_KEY, JSON.stringify(Object.assign({}, REG, { pin:'', pin2:'' }))); }   // the PIN is never kept in the draft
 const isApt = () => REG.home.home_type === 'apartment';
 const numOf = s => { const n = parseFloat(String(s ?? '').replace(',', '.')); return isFinite(n) ? n : null; };
 /* switching units converts what has been typed so far (height and weight); the home is always metric */
@@ -1294,15 +1351,52 @@ function regProblem(step){
     if(String(r.lb).trim() === '') return ['r_lb', 'Please enter your weight in pounds.'];
     if(lb === null || lb < 50 || lb > 770) return ['r_lb', 'Please check your weight in pounds.'];
   }
-  if(id === 'where' && r.home.zip && !/^\d{5}$/.test(String(r.home.zip).trim())) return ['r_zip', 'A ZIP code has 5 digits. Or leave it empty.'];
-  if(id === 'type' && !HOME_TYPES.some(o => o.id === r.home.home_type)) return ['home_type', 'Please pick the closest match.'];
+  const H = r.home, num = k => typeof H[k] === 'number';
+  if(id === 'you' && !r.sens) return ['sens', 'Please choose the one that sounds most like you.'];
+  if(id === 'where'){
+    if(!/^\d{5}$/.test(String(H.zip || '').trim())) return ['r_zip', 'Please enter your 5-digit ZIP code.'];
+    if(!H.tenure) return ['tenure', 'Please choose one.'];
+  }
+  if(id === 'type' && !HOME_TYPES.some(o => o.id === H.home_type)) return ['home_type', 'Please pick the closest match.'];
+  if(id === 'size'){
+    if(H.floor_area_m2 === undefined) return ['area', 'Please slide to your floor area, or tap &ldquo;Not sure&rdquo;.'];
+    if(!H.year_built) return ['year', 'Please choose when it was built, or &ldquo;Not sure&rdquo;.'];
+    if(!H.floors) return ['floors', 'Please choose how many floors.'];
+    if(isApt() && !num('unit_floor')) return ['unit_floor', 'Please tap &minus; or + to set your floor.'];
+  }
+  if(id === 'rooms'){
+    if(!num('bedrooms')) return ['bedrooms', 'Please tap + to set the number of bedrooms.'];
+    if(!num('adults') || !num('children') || !num('pets')) return ['people', 'Please set adults, children and pets. Tap &minus; for none.'];
+    if(!num('bedroom_share')) return ['bedroom_share', 'Please choose one.'];
+    if(!H.bedroom_thermostat) return ['bedroom_thermostat', 'Please choose one.'];
+  }
+  if(id === 'heat'){
+    if(!(Array.isArray(H.heating) && H.heating.length)) return ['heating', 'Please choose how your home is heated, or &ldquo;No heating&rdquo;.'];
+    if(!H.thermostat) return ['thermostat', 'Please choose one.'];
+    if(H.setpoint_winter_c === undefined) return ['setpoints', 'Please set your usual setting, or tap &ldquo;Not sure&rdquo;.'];
+  }
+  if(id === 'windows'){
+    if(!H.windows) return ['windows', 'Please choose one, or &ldquo;Not sure&rdquo;.'];
+    if(!H.windows_open) return ['windows_open', 'Please choose one.'];
+    if(!H.bedroom_facing) return ['bedroom_facing', 'Please tap a direction, or &ldquo;Not sure&rdquo;.'];
+    if(!H.bedroom_side) return ['bedroom_side', 'Please tap a direction, or &ldquo;Not sure&rdquo;.'];
+  }
+  if(id === 'review'){
+    if(!/^\d{4}$/.test(r.pin || '')) return ['r_pin', 'Please choose a 4-digit PIN.'];
+    if(/^(\d)\1{3}$/.test(r.pin) || ['1234','4321','0123','9876','1212'].includes(r.pin)) return ['r_pin', 'That PIN is easy to guess. Please choose another.'];
+    if(r.pin2 !== r.pin) return ['r_pin2', 'The two PINs are not the same.'];
+  }
   return null;
 }
 function regGo(step){ REG.step = step; saveReg(); render(); }
 function regNext(){
   const p = regProblem(REG.step);
   if(p) return fieldError(p[0], p[1]);
-  if(REG.step === REG_STEPS.length - 1) return regJoin();
+  if(REG.step === REG_STEPS.length - 1){
+    const gap = REG_STEPS.findIndex((s, i) => i < REG.step && regProblem(i));
+    if(gap >= 0){ const q = regProblem(gap); REG.edit = true; regGo(gap); return fieldError(q[0], q[1]); }
+    return regJoin();
+  }
   if(REG.edit){ REG.edit = false; return regGo(REG_STEPS.length - 1); }
   regGo(REG.step + 1);
 }
@@ -1317,16 +1411,18 @@ async function regJoin(){
   b.disabled = true; b.classList.add('is-busy');
   try{
     if(!HC.live){ setIdentity(LOCAL_CODE, f.name); finishJoin(f, true); afterIdentity(true); showToast({ title:'Welcome to the study!', sub:'Local mode: everything stays on this phone' }); return; }
-    const r = await HC.register(f);
-    setIdentity(r.code, r.name || f.name);
+    const r = await HC.register(Object.assign({}, f, { pin: REG.pin }));
+    if(r.status !== 'ok'){ b.disabled = false; b.classList.remove('is-busy');
+      return fieldError('join', r.status === 'locked' ? 'This email is already registered. ' + pinOutcome(r) : 'This email is already registered, with a different PIN. Use the PIN you chose before, or go back and sign in.'); }
+    signedIn(r);
     finishJoin(f, r.is_new !== false);
     afterIdentity(r.approved);
-    if(r.is_new === false) showToast({ title:'Welcome back', sub:'That email was already registered, so we signed you in', kind:'info' });
+    if(r.is_new === false){ showToast({ title:'Welcome back', sub:'That email was already registered, so we signed you in', kind:'info' }); quiet(pullHistory(true)); }
   }catch(e){ b.disabled = false; b.classList.remove('is-busy'); fieldError('join', friendly(e.message, 'Could not join. Check the connection and try again.')); }
 }
 function finishJoin(f, isNew){
   LS.set(UNITS_KEY, 'us');
-  if(isNew) LS.set(HOME_KEY, JSON.stringify(f.home)); else LS.del(HOME_KEY);
+  if(isNew) LS.set(HOME_KEY, JSON.stringify(f.home));
   LS.del(REG_KEY); REG = regFresh();
 }
 function minutesLeft(){
@@ -1459,15 +1555,15 @@ const REGS = {
         ${inp('r_year', 'birth_year', 'Year of birth', `inputmode="numeric" maxlength="4" placeholder="e.g. 1985" autocomplete="bday-year" required`)}
       </div>
       <div class="grid grid-2 g-tight">${height}${weight}</div>
-      ${fieldBlock('sens', 'Which sounds most like you?', '', `<div class="ptile-grid cols-3" role="radiogroup" aria-labelledby="lab-sens">${SENSITIVITY.map(o => regTile('sens', o, r.sens===o.id, ic(o.ic,'ic-lg'), 'ptile-sm')).join('')}</div>`, true)}
+      ${fieldBlock('sens', 'Which sounds most like you?', '', `<div class="ptile-grid cols-3" role="radiogroup" aria-labelledby="lab-sens">${SENSITIVITY.map(o => regTile('sens', o, r.sens===o.id, ic(o.ic,'ic-lg'), 'ptile-sm')).join('')}</div>`)}
       <p class="caption">Used only to understand comfort differences between people. Your check-ins are stored under a participant code, not your name. The study team sees your name and email next to that code, to run the study and contact you.</p>
     </div>`;
   },
   where: () => {
     const h = REG.home;
     return `<div class="stack stack-6">
-      <div class="field" id="f-r_zip"><label class="label" for="r_zip">ZIP code <span class="opt">(optional)</span></label><input class="input zip-in" id="r_zip" data-reg="home.zip" value="${esc(h.zip||'')}" inputmode="numeric" autocomplete="postal-code" maxlength="5" placeholder="13210" aria-describedby="hint-zip err-r_zip"><p class="field-hint" id="hint-zip">${ic('cloud','ic-xs')} Why we ask: to match your check-ins to the local weather.</p><p class="field-error" id="err-r_zip" hidden></p></div>
-      ${fieldBlock('tenure', 'Do you own or rent your home?', '', `<div class="ptile-grid" role="radiogroup" aria-labelledby="lab-tenure">${TENURE.map(o => regTile('home.tenure', o, h.tenure===o.id, HCI.art('tenure:'+o.id), 'ptile-sm')).join('')}</div>`, true)}</div>`;
+      <div class="field" id="f-r_zip"><label class="label" for="r_zip">ZIP code</label><input class="input zip-in" id="r_zip" data-reg="home.zip" value="${esc(h.zip||'')}" inputmode="numeric" autocomplete="postal-code" maxlength="5" placeholder="13210" aria-describedby="hint-zip err-r_zip"><p class="field-hint" id="hint-zip">${ic('cloud','ic-xs')} Why we ask: to match your check-ins to the local weather.</p><p class="field-error" id="err-r_zip" hidden></p></div>
+      ${fieldBlock('tenure', 'Do you own or rent your home?', '', `<div class="ptile-grid" role="radiogroup" aria-labelledby="lab-tenure">${TENURE.map(o => regTile('home.tenure', o, h.tenure===o.id, HCI.art('tenure:'+o.id), 'ptile-sm')).join('')}</div>`)}</div>`;
   },
   type: () => `<div class="field" id="f-home_type"><div class="ptile-grid home-types" role="radiogroup" aria-label="Home type">${HOME_TYPES.map(o => regTile('home.home_type', o, REG.home.home_type===o.id, HCI.art('home_type:'+o.id))).join('')}</div>${groupErr('home_type')}</div>`,
   size: () => {
@@ -1488,7 +1584,7 @@ const REGS = {
     const row = (k, art, lab, hint) => `<div class="stepper-row"><span class="sr-art">${HCI.art(art)}</span><span class="sr-text"><span class="sr-lab">${lab}</span>${hint ? `<span class="field-hint">${hint}</span>` : ''}</span>${stepper('home.'+k, h[k], STEP_LIMITS[k][0], STEP_LIMITS[k][1], lab, '', k === 'bedrooms')}</div>`;
     return `<div class="stack stack-6">
       ${fieldBlock('bedrooms', 'How many bedrooms does your home have?', '', `<div class="card card-flat rows-card">${row('bedrooms', 'bedrooms', 'Bedrooms', '')}</div>`)}
-      ${fieldBlock('people', 'Who lives here?', 'Including you.', `<div class="card card-flat rows-card">${people()}${row('adults', 'people:adult', 'Adults', '')}${row('children', 'people:child', 'Children', 'Under 18')}${row('pets', 'people:pet', 'Pets', 'Cats, dogs and other furry friends')}</div>`)}
+      ${fieldBlock('people', 'Who lives here?', 'Including you.', `<div class="card card-flat rows-card">${people()}${row('adults', 'people:adult', 'Adults', '')}${row('children', 'people:child', 'Children', 'Under 18. Tap &minus; for none')}${row('pets', 'people:pet', 'Pets', 'Tap &minus; for none')}</div>`)}
       ${fieldBlock('bedroom_share', 'Do you share your bedroom with anyone?', 'Count everyone else who sleeps in the same room.', `<div class="ptile-grid cols-4 share-grid" role="radiogroup" aria-labelledby="lab-bedroom_share">${BED_SHARE.map(o => regTile('home.bedroom_share', o, h.bedroom_share===o.id, shareArt(o.id), 'ptile-sm')).join('')}</div>`)}
       ${fieldBlock('bedroom_thermostat', 'Does your bedroom have its own thermostat?', 'Or is there one thermostat for the whole home?', `<div class="ptile-grid" role="radiogroup" aria-labelledby="lab-bedroom_thermostat">${BED_THERMOSTAT.map(o => regTile('home.bedroom_thermostat', o, h.bedroom_thermostat===o.id, HCI.art(o.art), 'ptile-sm')).join('')}</div>`)}
     </div>`;
@@ -1499,7 +1595,7 @@ const REGS = {
     const cnt = n => n ? `${n} chosen` : 'Select all that apply';
     return `<div class="stack stack-6">
       <div class="field reg-q" id="f-heating" role="group" aria-labelledby="lab-heating"><div class="reg-group-head"><span class="icon-tile it-peach">${ic('flame')}</span><h2 class="reg-q-title" id="lab-heating">How is your home heated?</h2><span class="caption">${cnt(hs.length)}</span></div>
-        <div class="ptile-grid cols-3 is-multi">${HEATING.map(o => regMulti('home.heating', o, hs.includes(o.id), HCI.art('heating:'+o.id))).join('')}</div></div>
+        <div class="ptile-grid cols-3 is-multi">${HEATING.map(o => regMulti('home.heating', o, hs.includes(o.id), HCI.art('heating:'+o.id))).join('')}</div>${groupErr('heating')}</div>
       ${fieldBlock('thermostat', 'What kind of thermostat do you have?', '', `<div class="ptile-grid cols-3" role="radiogroup" aria-labelledby="lab-thermostat">${THERMOSTAT.map(o => regTile('home.thermostat', o, h.thermostat===o.id, HCI.art('thermostat:'+o.id), 'ptile-sm')).join('')}</div>`)}
       ${fieldBlock('setpoints', 'Usual thermostat setting', 'When someone is home. Skip it if it doesn&rsquo;t apply.', dialHtml('setpoint_winter_c', 'Heating setting'))}
     </div>`;
@@ -1524,19 +1620,24 @@ const REGS = {
       <section class="card glance-card"><div class="card-head"><h2 class="card-title">About you</h2><button class="btn btn-quiet btn-sm" data-act="reg-edit" data-step="you" aria-label="Edit about you">${ic('edit')}Edit</button></div>
         <div class="glance">${you.map(([i, k, v]) => glanceItem(ic(i), k, v, k === 'Name' || k === 'Email')).join('')}</div></section>
       ${homeGlance(REG.home, 'us', true)}
+      <section class="card pin-card" aria-labelledby="pinH"><div class="pin-top"><span class="icon-tile it-lg">${ic('key')}</span><div><h2 class="card-title" id="pinH">Choose a 4-digit PIN</h2><p class="card-sub">With your email, it lets you sign in on another phone or tablet and see all your check-ins there. Please don&rsquo;t use your bank card PIN.</p></div></div>
+        <div class="grid grid-2 g-tight">
+          <div class="field" id="f-r_pin"><label class="label" for="r_pin">PIN</label><input class="input pin-in" id="r_pin" data-reg="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" value="${esc(REG.pin || '')}" aria-describedby="err-r_pin"><p class="field-error" id="err-r_pin" hidden></p></div>
+          <div class="field" id="f-r_pin2"><label class="label" for="r_pin2">Type it again</label><input class="input pin-in" id="r_pin2" data-reg="pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" value="${esc(REG.pin2 || '')}" aria-describedby="err-r_pin2"><p class="field-error" id="err-r_pin2" hidden></p></div>
+        </div></section>
       <div class="note">${ic('shield')}<div>Joining means you agree to take part as described on the <a href="../">study page</a>.</div></div>
     </div>`;
   }
 };
 const REG_TITLES = {
-  you: ['Tell us about you', 'These help us compare how different people feel. Only the last question is optional.'],
+  you: ['Tell us about you', 'Every question needs an answer. They help us compare how different people feel.'],
   where: ['Where is your home?', ''],
   type: ['What type of home do you live in?', 'Pick the closest match.'],
   size: ['How big and how old is it?', ''],
   rooms: ['Rooms and people', ''],
   heat: ['How do you heat your home?', ''],
   windows: ['Windows and directions', 'The directions matter a lot for the study, so take a moment to get them right.'],
-  review: ['Your home, at a glance', 'Check everything, then join. Tap Edit to change a section.']
+  review: ['Your home, at a glance', 'Check everything, choose your PIN, then join. Tap Edit to change a section.']
 };
 function regScreen(){
   const st = REG_STEPS[REG.step], [title, sub] = REG_TITLES[st.id], last = REG.step === REG_STEPS.length - 1;
@@ -1584,7 +1685,7 @@ function showDetail(id, opener){
     <div class="sheet-body"><div class="detail"><span class="fig" aria-hidden="true">${avatar(v.garments||[])}</span><ul class="answers" role="list">${detailRows(v)}</ul></div><div class="cluster detail-meta">${meta}</div></div>`, null, opener);
 }
 function confirmSignOut(opener){
-  openSheet(`<div class="sheet-grab" aria-hidden="true"></div><div class="sheet-head"><div><h2 class="sheet-title" id="sheetTitle">Sign out on this phone?</h2><p class="sheet-sub">Reminders stop on this phone. Your check-ins so far stay saved. To come back, choose &ldquo;I have registered before&rdquo; and enter your email.</p></div></div>
+  openSheet(`<div class="sheet-grab" aria-hidden="true"></div><div class="sheet-head"><div><h2 class="sheet-title" id="sheetTitle">Sign out on this phone?</h2><p class="sheet-sub">Reminders stop on this phone. Your check-ins so far stay saved. To come back, choose &ldquo;I have registered before&rdquo; and enter your email and PIN.</p></div></div>
     <div class="sheet-foot"><button class="btn btn-ghost" data-act="sheet-close">Cancel</button><button class="btn btn-danger" data-act="signout-yes">Sign out</button></div>`, '[data-act="sheet-close"]', opener);
 }
 
@@ -1672,7 +1773,7 @@ document.addEventListener('click', async e => {
     case 'recheck': recheck(false); break;
     case 'forget': forgetIdentity(''); break;
     case 'signout': confirmSignOut(b); break;
-    case 'signout-yes': { b.disabled = true; b.classList.add('is-busy'); if(PUSH.status() === 'on') await PUSH.disable(); closeSheet(); forgetIdentity('You’re signed out on this phone.'); break; }
+    case 'signout-yes': { b.disabled = true; b.classList.add('is-busy'); await flushPending().catch(() => {}); if(PUSH.status() === 'on') await PUSH.disable(); await HC.forgetDevice(); closeSheet(); forgetIdentity('You’re signed out on this phone.'); break; }
     case 'save-hours': {
       const h = readHours(), why = hoursProblem(h);
       if(why){ remMsg(why, 'warn'); break; }
@@ -1751,7 +1852,7 @@ document.addEventListener('keydown', e => {
     return;
   }
   if(e.key !== 'Enter') return;
-  if(t.id === 's_email'){ e.preventDefault(); signin(); return; }
+  if(t.id === 's_email' || t.id === 's_pin'){ e.preventDefault(); signin(); return; }
   if(t.tagName === 'INPUT' && t.closest('#screen') && S.screen === 'join' && t.type !== 'range'){ e.preventDefault(); regNext(); }
 });
 document.addEventListener('submit', e => e.preventDefault());   // the forms never submit natively
@@ -1783,7 +1884,7 @@ setInterval(() => {
 document.addEventListener('visibilitychange', () => {
   if(document.hidden){ endHolds(); return; }                // locked or switched away: a held check-in goes out now
   if(S.screen==='pending') recheck(true);
-  else { if(S.screen==='away' && !S.lock) rerender(); quiet(syncReminders()); quiet(flushPending()); }   // the pause end times are current again; anything waiting goes out
+  else { if(S.screen==='away' && !S.lock) rerender(); quiet(syncReminders()); quiet(flushPending()); quiet(pullHistory()); }   // the pause end times are current again; anything waiting goes out; check-ins from other devices come in
   $$('[data-ago]').forEach(el => { el.textContent = agoWord(el.dataset.ago); });
 });
 
@@ -1845,6 +1946,6 @@ if(!PARTICIPANT){
   if(FROM_PUSH){ history.replaceState(null, '', location.pathname); S.screen = 'today'; startSession('scheduled'); }
   else { const tab = location.hash.slice(1); S.screen = TABS.includes(tab) ? tab : 'today'; render(); }
   if(needsApprovalCheck()) checkApproval();
-  quiet(syncReminders());
+  quiet(syncReminders()); quiet(pullHistory(true));
 }
 if(DEBUG) renderTable();
