@@ -36,14 +36,17 @@
   const NUM_COLS = new Set(['tsv', 'clo', 'met', 'seconds']);
   const PCOLS = ['code', 'name', 'email', 'gender', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity', 'units', 'approved', 'created_at'];
   const PNUM = new Set(['birth_year', 'height_cm', 'weight_kg']);
-  const HOME_KEYS = ['zip', 'home_type', 'tenure', 'year_built', 'floors', 'unit_floor', 'floor_area_m2', 'bedrooms', 'rooms', 'adults', 'children', 'pets', 'heating', 'cooling', 'thermostat', 'setpoint_winter_c', 'setpoint_summer_c', 'windows', 'windows_open', 'facing', 'draftiness'];
-  const HOME_NUM = new Set(['floors', 'unit_floor', 'floor_area_m2', 'bedrooms', 'rooms', 'adults', 'children', 'pets', 'setpoint_winter_c', 'setpoint_summer_c', 'draftiness']);
+  // cooling, setpoint_summer_c and draftiness are no longer asked (heating season); kept for earlier profiles
+  const HOME_KEYS = ['zip', 'home_type', 'tenure', 'year_built', 'floors', 'unit_floor', 'floor_area_m2', 'bedrooms', 'rooms', 'adults', 'children', 'pets', 'bedroom_share', 'bedroom_thermostat', 'heating', 'cooling', 'thermostat', 'setpoint_winter_c', 'setpoint_summer_c', 'windows', 'windows_open', 'facing', 'facing_deg', 'bedroom_facing', 'bedroom_facing_deg', 'draftiness'];
+  const HOME_NUM = new Set(['floors', 'unit_floor', 'floor_area_m2', 'bedrooms', 'rooms', 'adults', 'children', 'pets', 'bedroom_share', 'setpoint_winter_c', 'setpoint_summer_c', 'facing_deg', 'bedroom_facing_deg', 'draftiness']);
 
   /* ---------------------------------------------------------------- words for stored values */
   const L = {
-    home_type: { detached: 'Detached house', townhouse: 'Townhouse / row house', duplex: 'Duplex / 2-family', apartment: 'Apartment / condo', mobile: 'Mobile home', dorm: 'Dorm / student housing', other: 'Something else' },
-    home_short: { detached: 'Detached', townhouse: 'Townhouse', duplex: 'Duplex', apartment: 'Apartment', mobile: 'Mobile home', dorm: 'Dorm', other: 'Other home' },
-    tenure: { own: 'Owned', rent: 'Rented', other: 'Other' },
+    home_type: { detached: 'Detached', semi_attached: 'Semi-attached', attached: 'Attached (row / townhouse)', apartment: 'Apartment / condo', townhouse: 'Townhouse / row house', duplex: 'Duplex / 2-family', mobile: 'Mobile home', dorm: 'Dorm / student housing', other: 'Something else' },
+    home_short: { detached: 'Detached', semi_attached: 'Semi-attached', attached: 'Attached', apartment: 'Apartment', townhouse: 'Townhouse', duplex: 'Duplex', mobile: 'Mobile home', dorm: 'Dorm', other: 'Other home' },
+    tenure: { own: 'Owned', rent: 'Rented', subsidized: 'Subsidized housing', other: 'Other' },
+    bedroom_share: { 0: 'Sleeps alone', 1: 'Shares with 1 person', 2: 'Shares with 2 people', 3: 'Shares with 3 or more' },
+    bedroom_thermostat: { own: 'Bedroom has its own', shared: 'One for the whole home', none: 'No thermostat', unsure: 'Not sure' },
     year_built: { pre1940: 'Before 1940', '1940_1969': '1940–1969', '1970_1989': '1970–1989', '1990_2009': '1990–2009', '2010_plus': '2010 or later', unsure: 'Not sure' },
     heating: { furnace: 'Forced-air furnace', heat_pump: 'Heat pump', mini_split: 'Ductless mini-split', boiler: 'Boiler & radiators', baseboard: 'Electric baseboard', stove: 'Wood / pellet stove', other: 'Other heating', none: 'No heating' },
     heat_short: { furnace: 'Furnace', heat_pump: 'Heat pump', mini_split: 'Mini-split', boiler: 'Boiler', baseboard: 'Baseboard', stove: 'Stove', other: 'Other heat', none: 'No heating' },
@@ -54,14 +57,14 @@
     facing: { N: 'North', NE: 'Northeast', E: 'East', SE: 'Southeast', S: 'South', SW: 'Southwest', W: 'West', NW: 'Northwest', unsure: 'Not sure' },
     draftiness: { 1: 'Never drafty', 2: 'Rarely drafty', 3: 'Sometimes drafty', 4: 'Often drafty', 5: 'Very drafty' },
     gender: { woman: 'Woman', man: 'Man', non_binary: 'Non-binary', self_describe: 'Another identity', prefer_not: 'Prefer not to say' },
-    sensitivity: { cold: 'Feels the cold easily', average: 'About average', warm: 'Feels the warmth easily' },
+    sensitivity: { cold: 'Feels the cold easily', average: 'About average', warm: 'Feels the heat easily' },
     prompt: { scheduled: 'From a reminder', self: 'Self-started' },
     at_home: { long: 'Home over an hour', recent: 'Just got in' },
     activity: { sleep: 'Sleeping', lying: 'Lying down', sit: 'Sitting relaxed', desk: 'Desk work', stand: 'Standing', house: 'Cooking or housework', walk: 'Walking around', exercise: 'Exercising' },
     room: { living: 'Living room', bedroom: 'Bedroom', kitchen: 'Kitchen', office: 'Home office', bathroom: 'Bathroom', basement: 'Basement', other: 'Elsewhere' },
     air: { still: 'Still air', slight: 'Slight breeze', drafty: 'Drafty', draughty: 'Drafty' },
     sun: { yes: 'Sun on me', no: 'No direct sun', dark: 'It’s dark' },
-    actions: { win_open: 'Opened a window', win_close: 'Closed a window', heat_up: 'Turned the heat up', heat_down: 'Turned the heat down or off', ac_up: 'Turned the AC on or up', ac_down: 'Turned the AC down or off', fan: 'Fan on', layer_on: 'Put on a layer', layer_off: 'Took off a layer', blanket: 'Got a blanket', curtains: 'Closed blinds or curtains', moved: 'Moved room' },
+    actions: { win_open: 'Opened a window', win_close: 'Closed a window', heat_up: 'Turned the heat up', heat_down: 'Turned the heat down or off', door_open: 'Opened a door', door_close: 'Closed a door', ac_up: 'Turned the AC on or up', ac_down: 'Turned the AC down or off', fan: 'Fan on', layer_on: 'Put on a layer', layer_off: 'Took off a layer', blanket: 'Got a blanket', curtains: 'Closed blinds or curtains', moved: 'Changed rooms' },
     notes: { hot_drink: 'Hot drink', cold_drink: 'Cold drink', ate: 'Just ate', hungry: 'Hungry', tired: 'Tired', unwell: 'Feeling unwell' },
     garments: { tshirt: 'T-shirt', long: 'Long sleeves', sweater: 'Sweater', hoodie: 'Hoodie or fleece', shorts: 'Shorts', pants: 'Pants or jeans', sweatpants: 'Sweatpants', skirt: 'Skirt or dress', socks: 'Socks', slippers: 'Slippers', blanket: 'Blanket', comforter: 'Comforter' }
   };   // the ids are the ones checkin/questions.js stores; keep the two in step
@@ -432,7 +435,7 @@
     const keep = oldSide ? { side: oldSide.scrollTop, list: oldList ? oldList.scrollTop : 0 } : null;
     const user = st.local
       ? `<span class="avatar" aria-hidden="true">${icon('home', 'ic-sm')}</span><span class="side-foot-text"><b>Local mode</b><small>This browser only</small></span><button class="btn btn-icon" data-act="signout" data-fk="signout" aria-label="Back to the sign-in page">${icon('signout')}</button>`
-      : `<span class="avatar" aria-hidden="true">${esc(initials(session.email))}</span><span class="side-foot-text"><b>Research team</b><small>${esc(session.email || '')}</small></span><button class="btn btn-icon" data-act="signout" data-fk="signout" aria-label="Sign out">${icon('signout')}</button>`;
+      : `<span class="avatar" aria-hidden="true">${esc(initials(session.email))}</span><span class="side-foot-text"><b>Research team</b><small>${esc(session.email || '')}</small></span><button class="btn btn-icon" data-act="pw" data-fk="pw" aria-label="Change your password" title="Change password">${icon('key')}</button><button class="btn btn-icon" data-act="signout" data-fk="signout" aria-label="Sign out">${icon('signout')}</button>`;
     app.innerHTML = `<div class="dash">
       <aside class="side" aria-label="Participants">
         <div class="logo"><span class="logo-mark">${icon('home')}</span><span><span class="logo-name">Home Comfort NY</span><span class="logo-sub">Research dashboard</span></span></div>
@@ -515,7 +518,7 @@
       <div class="side-card-h">Enrollment <span>${enrolled} of ${ENROLLMENT_TARGET}</span></div>
       <div class="sqgrid" style="--cols:20" role="img" aria-label="${enrolled} enrolled${wait ? ', ' + wait + ' waiting for approval' : ''}, target ${ENROLLMENT_TARGET}">${cells.join('')}</div>
       <div class="sq-legend" aria-hidden="true"><span><i class="is-on"></i>Enrolled</span>${wait ? `<span><i class="is-wait"></i>Waiting ${wait}</span>` : ''}<span>${pct(enrolled, ENROLLMENT_TARGET)} of target</span></div>
-      <small class="caption">Study length: two months.</small>
+      <small class="caption">Study period: ${esc(studyPeriod())}</small>
     </div>`;
   }
 
@@ -919,7 +922,7 @@
   function homesCard(ctx) {
     const list = homesInView(ctx);
     const nH = list.length;
-    const sub = st.range === 'all' ? `${plural(nH, 'enrolled home')} · heating and cooling allow several answers` : `${plural(nH, 'home')} that checked in during ${esc(rangeWords())} · heating and cooling allow several answers`;
+    const sub = st.range === 'all' ? `${plural(nH, 'enrolled home')} · heating allows several answers` : `${plural(nH, 'home')} that checked in during ${esc(rangeWords())} · heating allows several answers`;
     if (!nH) return card('homes', 'Home profiles', sub, `<p class="tnote">${st.local ? 'Home profiles are kept in the study database, so local mode has none to show.' : 'No home profiles in this view yet.'}</p>`, { span: true });
     const tally = (key, multi) => { const m = new Map(); list.forEach(p => { const h = homeOf(p); (multi ? [...new Set(listOf(h[key]))] : (h[key] ? [h[key]] : [])).forEach(v => m.set(v, (m.get(v) || 0) + 1)); }); return [...m.entries()].sort((a, b) => b[1] - a[1]); };
     const col = (title, key, group, multi) => {
@@ -934,13 +937,13 @@
     const med = (ic, big, small) => `<div class="med"><span class="icon-tile">${icon(ic)}</span><span><b>${big}</b><small>${small}</small></span></div>`;
     addChart('setp', w => setpointSvg(w, list));
     const tRows = [];
-    [['Home type', 'home_type', 'home_type', false], ['Heating', 'heating', 'heating', true], ['Cooling', 'cooling', 'cooling', true], ['Thermostat', 'thermostat', 'thermostat', false], ['Year built', 'year_built', 'year_built', false], ['Tenure', 'tenure', 'tenure', false]]
+    [['Home type', 'home_type', 'home_type', false], ['Heating', 'heating', 'heating', true], ['Cooling', 'cooling', 'cooling', true], ['Thermostat', 'thermostat', 'thermostat', false], ['Bedroom thermostat', 'bedroom_thermostat', 'bedroom_thermostat', false], ['Bedroom shared', 'bedroom_share', 'bedroom_share', false], ['Main windows face', 'facing', 'facing', false], ['Bedroom window faces', 'bedroom_facing', 'facing', false], ['Year built', 'year_built', 'year_built', false], ['Tenure', 'tenure', 'tenure', false]]
       .forEach(([g, key, group, multi]) => tally(key, multi).forEach(([v, n]) => tRows.push([esc(g), esc(lab(group, v)), fmtN(n), pct(n, nH)])));
     const spRows = list.filter(p => num(homeOf(p).setpoint_winter_c) !== null || num(homeOf(p).setpoint_summer_c) !== null)
       .map(p => [esc(p.code), esc(fmtTemp(homeOf(p).setpoint_winter_c) || '–'), esc(fmtTemp(homeOf(p).setpoint_summer_c) || '–')]);
     const table = `<table class="data-table"><thead><tr><th scope="col">Question</th><th scope="col">Answer</th><th scope="col" class="n">Homes</th><th scope="col" class="n">Share</th></tr></thead><tbody>${tRows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td class="n">${r[2]}</td><td class="n">${r[3]}</td></tr>`).join('')}</tbody></table>` +
       (spRows.length ? `<table class="data-table" style="margin-top:12px"><thead><tr><th scope="col">Home</th><th scope="col" class="n">Winter setting</th><th scope="col" class="n">Summer setting</th></tr></thead><tbody>${spRows.map(r => `<tr><td>${r[0]}</td><td class="n">${r[1]}</td><td class="n">${r[2]}</td></tr>`).join('')}</tbody></table>` : '');
-    const body = `<div class="hp-cols">${col('Home type', 'home_type', 'home_type', false)}${col('Heating', 'heating', 'heating', true)}${col('Cooling', 'cooling', 'cooling', true)}</div>
+    const body = `<div class="hp-cols">${col('Home type', 'home_type', 'home_type', false)}${col('Heating', 'heating', 'heating', true)}${col('Bedroom thermostat', 'bedroom_thermostat', 'bedroom_thermostat', false)}</div>
       <div class="hp-setp stack stack-3"><h3 class="hp-h">Thermostat settings<span>one dot per home</span></h3>${chartBox('setp', 'Usual thermostat settings, one dot per home, winter and summer. Open the table for the numbers.')}</div>
       <div class="medians">
         ${med('ruler', areas.length ? fmtArea(median(areas)) : '–', 'median floor area' + (areas.length < nH ? ' · ' + areas.length + ' answered' : ''))}
@@ -951,9 +954,9 @@
     return card('homes', 'Home profiles', sub, body, { span: true, table });
   }
   function setpointSvg(w, list) {
-    const rowsDef = [['Winter', 'setpoint_winter_c'], ['Summer', 'setpoint_summer_c']];
+    const rowsDef = [['Winter', 'setpoint_winter_c'], ['Summer', 'setpoint_summer_c']].filter(([, key], i) => i === 0 || list.some(p => num(homeOf(p)[key]) !== null));
     const vals = rowsDef.map(([, key]) => list.map(p => ({ code: p.code, c: num(homeOf(p)[key]) })).filter(x => x.c !== null));
-    if (!vals[0].length && !vals[1].length) return '<p class="tnote">No thermostat settings recorded for these homes.</p>';
+    if (!vals.some(v => v.length)) return '<p class="tnote">No thermostat settings recorded for these homes.</p>';
     const us = isUS(), bin = us ? 1 : .5;
     let lo = us ? 60 : 16, hi = us ? 80 : 27;
     vals.forEach(v => v.forEach(x => { const t = tempVal(x.c); lo = Math.min(lo, Math.floor(t)); hi = Math.max(hi, Math.ceil(t)); }));
@@ -962,7 +965,7 @@
     const tallest = Math.max(1, ...stacks.map(m => Math.max(0, ...[...m.values()].map(a => a.length))));
     const r = tallest > 8 ? 4 : 5, dy = tallest > 8 ? 9 : 11;
     const heights = stacks.map(m => Math.max(1, ...[...m.values()].map(a => a.length)) * dy + 26);
-    const H = heights[0] + heights[1] + 26;
+    const H = heights.reduce((a, b) => a + b, 0) + 26;
     let s = svgOpen(w, H), y0 = 0;
     const tickStep = us ? 2 : 1, labStep = us ? 4 : 2;
     rowsDef.forEach(([name], ri) => {
@@ -1020,7 +1023,9 @@
       g(cool.length ? artOf('cooling', cool[0]) : HCI.art('none'), 'Cooling', cool.map(v => lab('cooling', v)).join(', ')),
       g(artOf('thermostat', h.thermostat), 'Thermostat', [lab('thermostat', h.thermostat), setp].filter(Boolean).join(' · ')),
       g(artOf('windows', h.windows), 'Windows', [lab('windows', h.windows), h.windows_open ? lab('windows_open', h.windows_open).toLowerCase() : ''].filter(Boolean).join(' · ')),
-      g(HCI.art('facing'), 'Living room faces', lab('facing', h.facing)),
+      g(HCI.art('people:adult'), 'Bedroom', [h.bedroom_share != null ? lab('bedroom_share', String(num(h.bedroom_share))) : '', h.bedroom_thermostat ? 'thermostat: ' + lab('bedroom_thermostat', h.bedroom_thermostat).toLowerCase() : ''].filter(Boolean).join(' · ')),
+      g(HCI.art('facing'), 'Main windows face', [lab('facing', h.facing), num(h.facing_deg) !== null ? num(h.facing_deg) + '° measured' : ''].filter(Boolean).join(' · ')),
+      g(HCI.art('facing'), 'Bedroom window faces', [lab('facing', h.bedroom_facing), num(h.bedroom_facing_deg) !== null ? num(h.bedroom_facing_deg) + '° measured' : ''].filter(Boolean).join(' · ')),
       g(known('draftiness', String(num(h.draftiness))) ? HCI.art('draftiness:' + num(h.draftiness)) : HCI.art('unsure'), 'In winter', h.draftiness != null ? lab('draftiness', String(num(h.draftiness))) : ''),
       g(HCI.art('zip'), 'ZIP code', h.zip ? String(h.zip) : '')
     ].filter(Boolean).join('');
@@ -1226,7 +1231,52 @@
     if (act === 'approve') { approve(b.getAttribute('data-code'), b); return; }
     if (act === 'remove') { remove(b.getAttribute('data-code'), b); return; }
     if (act === 'signout') { signOut(); return; }
+    if (act === 'pw') { changePassword(b); return; }
   });
+
+  /* "Change password": a researcher whose login was created with a temporary password sets their own.
+   * Supabase allows it for the signed-in user (PUT /auth/v1/user); the new password never leaves this request. */
+  function changePassword(opener) {
+    const dlg = document.createElement('dialog');
+    dlg.className = 'pw-dlg card card-raised';
+    dlg.setAttribute('aria-labelledby', 'pwH');
+    dlg.innerHTML = `<form method="dialog" class="stack stack-4" id="pwForm" novalidate>
+        <div><h2 class="card-title" id="pwH">Change your password</h2><p class="card-sub">For ${esc(session.email || 'this login')}. At least 10 characters; a long phrase is best.</p></div>
+        <div class="field"><label class="label" for="pw1">New password</label><input class="input" id="pw1" type="password" autocomplete="new-password" minlength="10" required></div>
+        <div class="field"><label class="label" for="pw2">Type it again</label><input class="input" id="pw2" type="password" autocomplete="new-password" minlength="10" required></div>
+        <p class="field-error" id="pwErr" role="alert" hidden></p>
+        <div class="cluster pw-btns"><button class="btn btn-ghost" type="button" value="cancel" id="pwCancel">Cancel</button><button class="btn btn-primary" type="submit" id="pwSave">${icon('key')}Save password</button></div>
+      </form>`;
+    document.body.appendChild(dlg);
+    const err = t => { const e = dlg.querySelector('#pwErr'); e.hidden = !t; e.innerHTML = t ? icon('alert') + '<span>' + esc(t) + '</span>' : ''; };
+    const done = () => { dlg.close(); };
+    dlg.addEventListener('close', () => { dlg.remove(); if (opener && document.contains(opener)) opener.focus(); });
+    dlg.querySelector('#pwCancel').addEventListener('click', done);
+    dlg.querySelector('#pwForm').addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const a = dlg.querySelector('#pw1').value, b = dlg.querySelector('#pw2').value;
+      if (a.length < 10) return err('Please use at least 10 characters.');
+      if (a !== b) return err('The two passwords are not the same.');
+      const save = dlg.querySelector('#pwSave'); save.disabled = true; save.classList.add('is-busy'); err('');
+      try {
+        const base = String(cfg.supabaseUrl || '').replace(/\/$/, '');
+        const r = await fetch(base + '/auth/v1/user', { method: 'PUT', headers: { apikey: cfg.supabaseAnonKey, Authorization: 'Bearer ' + session.token, 'Content-Type': 'application/json' }, body: JSON.stringify({ password: a }) });
+        if (r.status === 401 || r.status === 403) throw new Error('Your session has expired. Sign out, sign in again and try once more.');
+        if (!r.ok) { const j = await r.json().catch(() => null); throw new Error((j && (j.msg || j.message || j.error_description)) || 'The password could not be changed (' + r.status + ').'); }
+        done(); toast('Password changed', 'Use the new one next time you sign in.');
+      } catch (e) { save.disabled = false; save.classList.remove('is-busy'); err(e.message); }
+    });
+    if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
+    dlg.querySelector('#pw1').focus();
+  }
+  /* "Oct 20 – Nov 20, 2026" from studyStart and studyEnd in config.js */
+  function studyPeriod() {
+    const d = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+    const a = d(cfg.studyStart), z = d(cfg.studyEnd);
+    if (!a || !z) return 'not set in config.js';
+    const f = x => x.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return f(a) + ' – ' + f(z) + ', ' + z.getFullYear();
+  }
   app.addEventListener('input', e => {
     if (e.target.id === 'psearch') {
       st.q = e.target.value; renderSide();

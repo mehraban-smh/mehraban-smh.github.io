@@ -289,3 +289,8 @@
   .kpis .stat-value{font-size:27px}
   .kpi-spark{display:none}
 }
+
+/* "Change password" dialog (side footer, key button) */
+.pw-dlg{width:min(420px,calc(100vw - 32px));max-width:none;margin:auto;padding:22px;border:0}
+.pw-dlg::backdrop{background:rgba(30,27,58,.42)}
+.pw-btns{justify-content:flex-end}

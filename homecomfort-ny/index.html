@@ -11,13 +11,21 @@
 <meta property="og:title" content="Home Comfort NY | SUNY ESF">
 <meta property="og:description" content="How warm or cool do you really feel at home? A SUNY ESF research study you take part in from your phone.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" type="image/png" sizes="192x192" href="checkin/icon-192.png?v=1">
+<link rel="apple-touch-icon" href="checkin/apple-touch-icon.png?v=1">
+<meta property="og:image" content="https://mehraban.uk/homecomfort-ny/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Home Comfort NY: a SUNY ESF home comfort study">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Plus+Jakarta+Sans:wght@400..800&display=swap">
 <link rel="stylesheet" href="brand.css">
 <script src="icons.js"></script>
 <!--
   Home Comfort NY: the participant information page (https://mehraban.uk/homecomfort-ny/).
-  Study details (two months, one or two loaned room sensors, the two contacts) are written into the text.
+  Study details (one month, 20 October to 20 November 2026; one or two loaned room sensors; Alireza Khodayarkhani
+  as the participants' main contact) are written into the text.
   Keep the data section general and plain: the owner asked for wording people can trust at a glance.
   Icons and pictures come from icons.js: <i data-ic="name"></i> and <i data-art="group:value"></i> are swapped for
   the SVG by the script at the end of the page. Page-only classes start with "ip-" so they never meet brand.css.
@@ -59,6 +67,13 @@
   radial-gradient(320px 250px at 6% 0%,rgba(205,189,255,.7),transparent 70%)}
 .ip-hero-copy{min-width:0}
 .ip-kicker .ic{color:var(--violet)}
+.ip-kickers{display:flex;flex-wrap:wrap;gap:8px}
+.ip-lab{max-width:100%;white-space:normal;border-radius:16px;text-align:left;line-height:1.3;text-decoration:none;color:var(--ink)}
+.ip-lab span{min-width:0}
+.ip-lab .ic{flex:none}
+.ip-lab b{font-weight:800}
+.ip-lab:hover{background:#fff;color:var(--violet-800)}
+.ip-lab .ic{width:15px;height:15px;color:var(--violet)}
 .ip-hero h1{margin:18px 0 14px}
 .ip-hero .lede{max-width:31em;color:var(--ink-2)}
 .ip-ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
@@ -229,6 +244,13 @@ ul.ip-team{display:grid;gap:12px;margin:0;padding:0;list-style:none}
 .ip-contacts .ip-team-item{align-items:center}
 .ip-contacts .ip-team-v{font-weight:800}
 .ip-contacts .ip-team-v small{font-size:15px;font-weight:600}
+.ip-main-contact{display:flex;align-items:center;gap:16px;max-width:760px;padding:20px;border:2px solid var(--violet-200)}
+.ip-main-contact .icon-tile{--it-size:56px;border-radius:18px;background:var(--violet);color:#fff}
+.ip-main-contact .icon-tile .ic{width:28px;height:28px}
+.ip-mc-name{margin:2px 0 0;font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
+.ip-mc-mail{font-size:16px;font-weight:700}
+.ip-mc-note{margin:4px 0 0;font-size:14px;color:var(--ink-2)}
+.ip-also{margin:22px 0 10px}
 
 /* closing band */
 .ip-final{position:relative;isolation:isolate;overflow:hidden;display:flex;flex-direction:column;gap:20px;margin-top:72px;padding:28px 22px}
@@ -275,7 +297,8 @@ ul.ip-team{display:grid;gap:12px;margin:0;padding:0;list-style:none}
     <!-- ============================================================== hero -->
     <section class="ip-hero" aria-labelledby="hero-title">
       <div class="ip-hero-copy">
-        <span class="pill pill-glass pill-lg ip-kicker"><i data-ic="map-pin"></i>SUNY ESF · Syracuse, New York</span>
+        <div class="ip-kickers"><span class="pill pill-glass pill-lg ip-kicker"><i data-ic="map-pin"></i>SUNY ESF · Syracuse, New York</span>
+        <a class="pill pill-glass pill-lg ip-lab" href="https://sarbel.org/" target="_blank" rel="noopener"><i data-ic="leaf"></i><span><b>SARBEL</b> · Sustainable and Resilient Built Environment Lab</span><i data-ic="external"></i></a></div>
         <h1 id="hero-title" class="display-xl">Home <br>Comfort <span class="text-gradient">NY</span></h1>
         <p class="lede">How warm or cool do you really feel at home? Tell us with a quick tap, a few times a day, and help New York homes learn to heat and cool around people instead of a number on the thermostat.</p>
         <div class="ip-ctas">
@@ -286,7 +309,7 @@ ul.ip-team{display:grid;gap:12px;margin:0;padding:0;list-style:none}
         <p class="ip-note"><i data-ic="phone"></i><span>On an iPhone? Add the check-in app to your Home Screen first, then join or sign in from there. <a href="#faq-reminders">Here&rsquo;s how</a></span></p>
         <ul class="ip-facts" role="list">
           <li class="ip-fact"><span class="icon-tile"><i data-ic="clock"></i></span><span><b>About 10 seconds</b><small>per check-in</small></span></li>
-          <li class="ip-fact"><span class="icon-tile it-sky"><i data-ic="calendar"></i></span><span><b>2 months</b><small>from start to finish</small></span></li>
+          <li class="ip-fact"><span class="icon-tile it-sky"><i data-ic="calendar"></i></span><span><b>1 month</b><small>Oct 20 &ndash; Nov 20</small></span></li>
           <li class="ip-fact"><span class="icon-tile it-peach"><i data-ic="phone"></i></span><span><b>Your phone</b><small>nothing to download</small></span></li>
         </ul>
       </div>
@@ -466,17 +489,15 @@ ul.ip-team{display:grid;gap:12px;margin:0;padding:0;list-style:none}
           <div class="section-head">
             <span class="eyebrow">Who can take part</span>
             <h2 class="section-title" id="who-title">Most New Yorkers with a phone</h2>
-            <p class="section-sub">You don't need a new home, a smart thermostat or any technical know-how. Owners and renters are both welcome.</p>
+            <p class="section-sub">You don't need a new home, a smart thermostat or any technical know-how. Owners, renters and people in subsidized housing are all welcome.</p>
           </div>
           <div class="card card-raised">
             <span class="card-title">Any kind of home counts</span>
             <ul class="ip-homes" role="list">
-              <li class="ip-home"><i data-art="home_type:detached"></i>House</li>
-              <li class="ip-home"><i data-art="home_type:townhouse"></i>Townhouse</li>
+              <li class="ip-home"><i data-art="home_type:detached"></i>Detached</li>
+              <li class="ip-home"><i data-art="home_type:semi_attached"></i>Semi-attached</li>
+              <li class="ip-home"><i data-art="home_type:attached"></i>Attached</li>
               <li class="ip-home"><i data-art="home_type:apartment"></i>Apartment</li>
-              <li class="ip-home"><i data-art="home_type:duplex"></i>Duplex</li>
-              <li class="ip-home"><i data-art="home_type:mobile"></i>Mobile home</li>
-              <li class="ip-home"><i data-art="home_type:dorm"></i>Dorm</li>
             </ul>
           </div>
         </div>
@@ -549,7 +570,7 @@ ul.ip-team{display:grid;gap:12px;margin:0;padding:0;list-style:none}
             <summary>How much time does it take?<span class="ip-chev"><i data-ic="chevron-down"></i></span></summary>
             <div class="ip-faq-a">
               <p>Joining takes about five minutes, once: a few quick questions about you and your home. After that, most check-ins take about ten seconds, a few times a day while you are at home.</p>
-              <p>The study runs for two months.</p>
+              <p>The study runs for one month, from October 20 to November 20, 2026.</p>
             </div>
           </details>
           <details id="faq-after">
@@ -575,7 +596,8 @@ ul.ip-team{display:grid;gap:12px;margin:0;padding:0;list-style:none}
           <details id="faq-reminders">
             <summary>How do reminders reach my phone?<span class="ip-chev"><i data-ic="chevron-down"></i></span></summary>
             <div class="ip-faq-a">
-              <p>Reminders are notifications from the Home Comfort NY check-in app. It runs in your phone&rsquo;s browser, so there is nothing to download from an app store. Reminders only come during the home hours you choose, at most about once an hour.</p>
+              <p>Reminders are notifications from the Home Comfort NY check-in app. It runs in your phone&rsquo;s browser, so there is nothing to download from an app store. Reminders only come during the hours you choose, at most about once an hour: every day from 7 AM to 10 PM unless you change them.</p>
+              <p><b>Notifications are needed for the study.</b> The app asks you to turn them on before your first check-in; without them nobody is reminded and the study misses your answers.</p>
               <p>To get them, add the check-in app to your home screen once. This information page is not the app, so open <a href="checkin/">the check-in app</a> first and add that page:</p>
               <div class="ip-os">
                 <div>
@@ -616,7 +638,7 @@ ul.ip-team{display:grid;gap:12px;margin:0;padding:0;list-style:none}
           <details id="faq-withdraw">
             <summary>How do I withdraw?<span class="ip-chev"><i data-ic="chevron-down"></i></span></summary>
             <div class="ip-faq-a">
-              <p>Email <a href="mailto:info@mehraban.uk">info@mehraban.uk</a> or <a href="mailto:smirzabeigi@esf.edu">smirzabeigi@esf.edu</a>, and we will arrange with you how to return the sensors. If you only need a break, pause or turn off reminders in the app instead.</p>
+              <p>Email Alireza Khodayarkhani at <a href="mailto:akhodaya@syr.edu">akhodaya@syr.edu</a>, and we will arrange with you how to return the sensors. If you only need a break, pause or turn off reminders in the app instead.</p>
             </div>
           </details>
         </div>
@@ -628,11 +650,16 @@ ul.ip-team{display:grid;gap:12px;margin:0;padding:0;list-style:none}
       <div class="section-head">
         <span class="eyebrow">Contact</span>
         <h2 class="section-title" id="contact-title">Get in touch</h2>
-        <p class="section-sub">Questions about the study, or want to stop taking part? Email either of us.</p>
+        <p class="section-sub">Questions about taking part, the app, reminders or the sensors? Start with Alireza.</p>
       </div>
+      <div class="ip-main-contact card card-raised">
+        <span class="icon-tile it-lg"><i data-ic="mail"></i></span>
+        <div><span class="ip-team-k">Your main contact</span><p class="ip-mc-name">Alireza Khodayarkhani</p><a class="ip-mc-mail" href="mailto:akhodaya@syr.edu">akhodaya@syr.edu</a><p class="ip-mc-note">For anything about taking part, or to stop taking part.</p></div>
+      </div>
+      <p class="ip-team-k ip-also">Also on the research team</p>
       <ul class="ip-team ip-contacts" role="list">
-        <li class="ip-team-item"><span class="icon-tile it-sky"><i data-ic="mail"></i></span><div><p class="ip-team-v">Mohammad H. Mehraban<small><a href="mailto:info@mehraban.uk">info@mehraban.uk</a></small></p></div></li>
-        <li class="ip-team-item"><span class="icon-tile it-sky"><i data-ic="mail"></i></span><div><p class="ip-team-v">Shayan Mirzabeigi<small><a href="mailto:smirzabeigi@esf.edu">smirzabeigi@esf.edu</a></small></p></div></li>
+        <li class="ip-team-item"><span class="icon-tile it-sky"><i data-ic="user"></i></span><div><p class="ip-team-v">Shayan Mirzabeigi<small><a href="mailto:smirzabeigi@esf.edu">smirzabeigi@esf.edu</a></small></p></div></li>
+        <li class="ip-team-item"><span class="icon-tile it-sky"><i data-ic="user"></i></span><div><p class="ip-team-v">Mohammad H. Mehraban<small><a href="mailto:info@mehraban.uk">info@mehraban.uk</a></small></p></div></li>
       </ul>
     </section>
 
@@ -653,10 +680,7 @@ ul.ip-team{display:grid;gap:12px;margin:0;padding:0;list-style:none}
 <footer class="ip-foot wrap-wide">
   <div class="ip-foot-in">
   <div class="ip-foot-row">
-    <span>Contact: <a href="mailto:info@mehraban.uk">info@mehraban.uk</a> · <a href="mailto:smirzabeigi@esf.edu">smirzabeigi@esf.edu</a></span>
-    <span class="ip-foot-links">
-      <a class="ip-team-link" href="dashboard/"><i data-ic="users"></i>Research team</a>
-    </span>
+    <span>Questions? Email Alireza Khodayarkhani at <a href="mailto:akhodaya@syr.edu">akhodaya@syr.edu</a></span>
   </div>
   <p class="caption">Home Comfort NY · This page is shared by link only.</p>
   </div>

@@ -22,5 +22,7 @@ self.HC_CONFIG = {
   dailyGoal: 3,             // check-ins a day the app's goal ring counts towards (the weekly goal is 7 times this)
   timeZone: "America/New_York",   // the sender reads home hours in this zone for phones that have not reported their own
   studyName: "Home Comfort NY",
-  appVersion: "1.0.0"
+  studyStart: "2026-10-20",     // first day of the study (New York time)
+  studyEnd: "2026-11-20",       // last day: reminders stop after this day ends in New York (push/send.js)
+  appVersion: "1.1.0"
 };

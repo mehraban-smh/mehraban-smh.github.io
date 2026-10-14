@@ -21,7 +21,7 @@ const MANUAL_PAUSE_H = 12;                                  // "I'll tell you wh
 const HOLD_MS = 6000;                                       // a new check-in waits this long (Undo) before it is sent
 const LOCAL_CODE = 'NY000';                                 // the participant code in local mode
 const NOT_FOUND_MSG = 'This registration was not found. Please join again or contact the study team.';
-const TEAM = '<a href="mailto:info@mehraban.uk">info@mehraban.uk</a> or <a href="mailto:smirzabeigi@esf.edu">smirzabeigi@esf.edu</a>';
+const TEAM = 'Alireza Khodayarkhani at <a href="mailto:akhodaya@syr.edu">akhodaya@syr.edu</a>';   // the participants' main contact
 /* Safari's Share glyph (a box with an arrow), drawn like the HCI icons, for the "Add to Home Screen" steps */
 const SHARE_IC = '<span class="share-ic" aria-hidden="true"><svg class="ic ic-sm" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M12 14V3.5M8.5 7 12 3.5 15.5 7"/><path d="M9 10H7a1.5 1.5 0 0 0-1.5 1.5V19A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5v-7.5A1.5 1.5 0 0 0 17 10h-2"/></svg></span>';
 const pad = n => String(n).padStart(2,'0');
@@ -69,7 +69,7 @@ function greeting(){
   return g + (firstName() ? ', ' + esc(firstName()) : '');
 }
 const initials = () => (NAME || '').trim().split(/\s+/).filter(Boolean).slice(0,2).map(w => w[0].toUpperCase()).join('') || '';
-const units = () => LS.get(UNITS_KEY) === 'metric' ? 'metric' : 'us';
+const units = () => 'us';                                   // participants always see US units; the dashboard can switch
 
 /* ---------- check-ins kept on this phone ---------- */
 let store = {votes:[], paused:null, pausedWhy:''};
@@ -343,14 +343,13 @@ function refreshSync(){ $$('[data-sync]').forEach(el => { el.innerHTML = syncLin
 /* The reminder state on Today: paused, the next reminder, or what is needed to get reminders. */
 function statusCard(){
   const st = PUSH.status(), now = Date.now(), on = st === 'on';
-  const wk = [0,6].includes(new Date().getDay()) ? 'weekend' : 'weekday';
   let icon = 'bell', title, sub, badge = '';
   if(store.paused && new Date(store.paused) > now){
     icon = 'pause'; badge = '<span class="badge badge-warn badge-dot">Paused</span>';
     if(store.pausedWhy==='manual'){ title = 'Paused until you&rsquo;re back'; sub = 'Back home? Tap Check in now.' + (on ? ` Otherwise reminders resume ${whenWord(nextReminder())}.` : ''); }
     else { title = `Paused until ${untilWord(new Date(store.paused))}`; sub = `No reminders on this phone while you&rsquo;re out.${on ? ` Next one ${whenWord(nextReminder())}.` : ''}`; }
   }
-  else if(on){ title = `Reminders on &middot; next ${whenWord(nextReminder())}`; sub = `Hourly &middot; ${wk}s ${hoursWord(hours(), wk)}`; }
+  else if(on){ title = `Reminders on &middot; next ${whenWord(nextReminder())}`; sub = `${daysWord(hours())}<span class="status-link">${ic('clock','ic-xs')}Change hours</span>`; }
   else if(st==='unconfigured'){ icon = 'clock'; title = `Next check-in window ${whenWord(nextReminder())}`; sub = 'Reminders start once the study database is connected'; }
   else if(st==='off'){ title = PUSH.lost() ? 'Reminders have stopped' : 'Turn on reminders'; sub = PUSH.lost() ? 'Tap to turn them on again' : 'A nudge once an hour while you&rsquo;re home'; }
   else if(st==='install'){ icon = 'download'; title = 'Add the app to your Home Screen'; sub = 'Reminders need it on your Home Screen'; }
@@ -358,6 +357,39 @@ function statusCard(){
   else { icon = 'bell-off'; title = 'Reminders aren&rsquo;t available here'; sub = 'Use Chrome on Android or Safari on iPhone'; }
   return `<button class="card card-link status-card" data-act="go-reminders"><span class="icon-tile it-lg">${ic(icon)}</span><span class="li-text">${badge}<span class="li-title">${title}</span><span class="li-sub">${sub}</span></span>${ic('chevron-right','ic-sm chev')}</button>`;
 }
+/* "Every day 7 AM–10 PM", or the two day types when they differ */
+function daysWord(h){
+  const wd = hoursWord(h, 'weekday'), we = hoursWord(h, 'weekend');
+  return wd === we ? `Every day ${wd}` : `Weekdays ${wd} &middot; Weekends ${we}`;
+}
+/* Notifications are part of the study: without them nobody is reminded to check in. Until they are on,
+ * Today leads with this card, and "Check in now" asks for them first (notifSheet). */
+const needsNotif = () => ['off','blocked','install'].includes(PUSH.status());
+function notifHelp(st){
+  if(st === 'blocked') return { icon:'bell-off', title:'Notifications are blocked',
+    html: PUSH.ios ? `<ol class="steps"><li>Open your iPhone&rsquo;s <b>Settings</b>, then <b>Notifications</b>.</li><li>Find <b>Home Comfort</b> and turn on <b>Allow Notifications</b>.</li><li>Come back here.</li></ol>`
+      : `<ol class="steps"><li>Touch and hold the <b>Home Comfort</b> icon, then tap <b>App info</b> (or &#9432;).</li><li>Tap <b>Notifications</b> and turn them on.</li><li>Come back here.</li></ol><p class="field-hint">Using it in Chrome instead? Tap the icon left of the address, then <b>Permissions</b> &rsaquo; <b>Notifications</b> &rsaquo; <b>Allow</b>.</p>` };
+  if(st === 'install') return { icon:'download', title:'Add the app to your Home Screen',
+    html: `<p>On iPhone, notifications only work in the Home Screen app.</p><ol class="steps"><li>Tap the <b>Share</b> button ${SHARE_IC} in Safari.</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open the app from your Home Screen, choose <b>I have registered before</b> and enter your email.</li></ol>` };
+  if(st === 'unsupported') return { icon:'bell-off', title:'Notifications don&rsquo;t work in this browser',
+    html: `<p>On Android, open the app in Chrome. On iPhone, open it in Safari and add it to your Home Screen.</p>` };
+  return { icon:'bell', title: PUSH.lost() ? 'Notifications have stopped' : 'Turn on notifications',
+    html: `<p>The app reminds you to check in, about once an hour while you&rsquo;re home. The study can&rsquo;t work without them.</p><p class="field-hint">${ic('clock','ic-xs')} ${daysWord(hours())}. You can change the hours once they&rsquo;re on.</p>` };
+}
+function notifCard(){
+  const st = PUSH.status(), n = notifHelp(st);
+  return `<section class="card notif-card${st === 'off' ? '' : ' is-warn'}" aria-labelledby="notifH"><div class="notif-top"><span class="icon-tile it-lg notif-ic">${ic(n.icon)}</span><div><span class="eyebrow">Needed for the study</span><h2 class="card-title" id="notifH">${n.title}</h2></div></div>
+    <div class="notif-body">${n.html}</div><div class="note" id="notifMsg" role="status" hidden></div>
+    ${st === 'off' ? `<button class="btn btn-primary btn-block btn-lg" data-act="notif-on">${ic('bell')} Turn on notifications</button>` : ''}</section>`;
+}
+function notifSheet(opener){
+  const st = PUSH.status(), n = notifHelp(st);
+  openSheet(`<div class="sheet-grab" aria-hidden="true"></div><div class="sheet-head"><div><span class="eyebrow">Before you check in</span><h2 class="sheet-title" id="sheetTitle">${n.title}</h2></div></div>
+    <div class="sheet-body notif-body">${n.html}<div class="note" id="notifMsg" role="status" hidden></div></div>
+    <div class="sheet-foot">${st === 'off' ? `<button class="btn btn-ghost" data-act="sheet-close">Not now</button><button class="btn btn-primary" data-act="notif-on" data-then="start">${ic('bell')} Turn on</button>`
+      : `<button class="btn btn-ghost" data-act="start-anyway">Check in anyway</button><button class="btn btn-primary" data-act="sheet-close">OK</button>`}</div>`, st === 'off' ? '[data-act="notif-on"]' : '[data-act="sheet-close"]', opener);
+}
+function notifMsg(t, kind){ const m = $('#notifMsg') || $('#remMsg'); if(!m) return; m.hidden = false; m.className = 'note' + (kind==='ok' ? ' note-good' : ' note-warn'); m.innerHTML = ic(kind==='ok' ? 'check-circle' : 'alert') + '<div>' + t + '</div>'; }
 /* ---- Today: the goal ring, the streak, the 7-day dot chart ---- */
 function goalCard(list){
   const t = todayCount(list), w = weekCount(list), st = streakInfo(list);
@@ -491,23 +523,26 @@ function detailRows(l){
     Array.isArray(l.notes) && li(ic(byId(NOTES, l.notes[0])?.ic || 'info'), l.notes.length ? namesOf(NOTES, l.notes) : 'Nothing to note')
   ].filter(Boolean).join('');
 }
-/* The answers of the check-in being made (S.a), one line per question in FLOW_ALL order, each with an Edit
- * button, for the quick check. A question without an answer says so. */
-function answerRows(a){
-  const row = (q, icon, html) => `<li class="ans"><span class="ans-ic">${icon}</span><span class="ans-text">${html}</span><button class="btn btn-quiet btn-sm ans-edit" data-act="edit" data-q="${q}" aria-label="Edit ${QNAME[q]}">Edit</button></li>`;
+/* The answers of the check-in being made (S.a) as picture tiles in FLOW_ALL order, for the quick check and
+ * the review: the feeling in its own colour, the outfit on the figure, an icon for every other answer and a
+ * chip per change or note. canEdit(q) says which tiles get an Edit button. */
+function answerTiles(a, canEdit){
   const open = '<span class="open">Not answered yet</span>';
-  const act = byId(ACTS,a.act), room = byId(ROOMS,a.room), air = byId(AIR,a.air), sun = byId(SUN,a.sun), s = sense(a.tsv);
-  const acts = a.actions || [], notes = a.notes || [];
-  return [
-    row('tsv', s && typeof a.tsv==='number' ? `<span class="orb orb-sm ${s.cls}">${ic(s.icon)}</span>` : ic('thermometer'), typeof a.tsv==='number' ? `<b>${s.word}</b> <span class="num">(${s.sign})</span>` : open),
-    row('clo', ic('tshirt'), a.clo && a.clo.length ? `${garmentNames(a.clo)} &middot; <span class="num">${cloOf(a.clo).toFixed(2)}</span> clo` : open),
-    row('act', ic(act ? act.ic : 'walk'), act ? act.n : open),
-    row('room', ic(room ? room.ic : 'door'), room ? room.n : open),
-    row('air', ic(air ? air.ic : 'still'), air ? (air.id==='still' ? 'Still air' : air.n) : open),
-    row('sun', ic(sun ? sun.ic : 'sun'), sun ? sun.n : open),
-    row('actions', ic(byId(ACTIONS, acts[0])?.ic || 'check-circle'), acts.length ? changedText(acts) : 'Nothing changed'),
-    row('notes', ic(byId(NOTES, notes[0])?.ic || 'info'), notes.length ? namesOf(NOTES, notes) : 'Nothing to note')
-  ].join('');
+  const tile = (q, art, k, v, cls) => `<li class="atile${cls ? ' ' + cls : ''}">${art}<span class="atile-t"><span class="atile-k">${k}</span><span class="atile-v">${v}</span></span>${canEdit(q) ? `<button class="btn btn-icon atile-edit" data-act="edit" data-q="${q}" aria-label="Edit ${QNAME[q]}">${ic('edit')}</button>` : ''}</li>`;
+  const tic = name => `<span class="atile-ic">${ic(name)}</span>`;
+  const chips = (list, ids, none) => !Array.isArray(ids) ? open : !ids.length ? none : `<span class="achips">${ids.map(id => byId(list, id)).filter(Boolean).map(o => `<span class="achip">${ic(o.ic)}${o.n}</span>`).join('')}</span>`;
+  const s = typeof a.tsv === 'number' ? sense(a.tsv) : null, act = byId(ACTS,a.act), room = byId(ROOMS,a.room), air = byId(AIR,a.air), sun = byId(SUN,a.sun);
+  const clo = a.clo && a.clo.length;
+  return `<ul class="atiles" role="list">` +
+    tile('tsv', s ? `<span class="orb ${s.cls}">${ic(s.icon)}</span>` : tic('thermometer'), 'Feeling', s ? `${s.word} <span class="num subtle">${s.sign}</span>` : open, 'is-wide is-feel' + (s ? ' ' + s.cls : '')) +
+    tile('clo', `<span class="fig atile-fig" aria-hidden="true">${avatar(a.clo||[])}</span>`, 'Wearing', clo ? `${garmentNames(a.clo)}<small><b class="num">${cloOf(a.clo).toFixed(2)}</b> clo</small>` : open, 'is-wide is-clo') +
+    tile('act', tic(act ? act.ic : 'walk'), 'Doing', act ? act.n : open) +
+    tile('room', tic(room ? room.ic : 'door'), 'Room', room ? room.n : open) +
+    tile('air', tic(air ? air.ic : 'still'), 'Air', air ? (air.id==='still' ? 'Still air' : air.n) : open) +
+    tile('sun', tic(sun ? sun.ic : 'sun'), 'Sun', sun ? sun.n : open) +
+    tile('actions', tic('refresh'), 'Last 30 minutes', chips(ACTIONS, a.actions, 'Nothing changed'), 'is-wide') +
+    tile('notes', tic('info'), 'Worth noting', chips(NOTES, a.notes, 'Nothing to note'), 'is-wide') +
+    `</ul>`;
 }
 /* ---- the home profile in the participant's units ---- */
 const label = (list, id) => (byId(list, id) || {}).n;
@@ -522,20 +557,25 @@ const cToF = c => Math.round(c * 9/5 + 32);
 function tempWord(c, u){ if(c === null) return 'Not sure'; if(typeof c !== 'number') return null; return u === 'us' ? cToF(c) + NB + '°F' : (Math.round(c*2)/2) + NB + '°C'; }
 const floorWord = n => n === 0 ? 'Basement' : n === 1 ? 'Ground floor (1)' : 'Floor ' + n;
 const countWord = (n, max) => typeof n === 'number' ? (max && n >= max ? max + '+' : String(n)) : null;
-/* Sections of "Your home, at a glance": [title, wizard step, items [art, key, value or null]] */
+/* Sections of "Your home, at a glance": [title, wizard step id, items [art, key, value or null]]. A
+ * profile from the earlier wizard may hold an older home type; it is still named. */
+const OLD_HOME_TYPES = { townhouse:'Townhouse', duplex:'Duplex', mobile:'Mobile home', dorm:'Dorm', other:'Something else' };
+const facingWord = (v, deg) => v === 'unsure' ? 'Not sure' : label(FACING, v) ? label(FACING, v) + (typeof deg === 'number' ? ` (${deg}°)` : '') : null;
 function homeSections(h, u){
   const apt = h.home_type === 'apartment' || h.home_type === 'dorm';
   const list = (opts, ids) => Array.isArray(ids) && ids.length ? ids.map(id => label(opts, id)).filter(Boolean).join(', ') : null;
+  const share = typeof h.bedroom_share === 'number' ? (h.bedroom_share === 0 ? 'No, just me' : h.bedroom_share >= 3 ? '3 or more others' : h.bedroom_share === 1 ? '1 other person' : '2 others') : null;
   return [
-    ['Location', 2, [['zip', 'ZIP code', h.zip || null], [h.tenure ? 'tenure:' + h.tenure : 'tenure:own', 'Own or rent', label(TENURE, h.tenure)]]],
-    ['Home type', 3, [[h.home_type ? 'home_type:' + h.home_type : 'home_type:detached', 'Home', label(HOME_TYPES, h.home_type)]]],
-    ['Size and age', 4, [['floor_area', 'Floor area', areaWord(h.floor_area_m2, u)], [h.year_built ? 'year_built:' + h.year_built : 'year_built', 'Year built', label(YEAR_BUILT, h.year_built)],
+    ['Location', 'where', [['zip', 'ZIP code', h.zip || null], [h.tenure ? 'tenure:' + h.tenure : 'tenure:own', 'Own or rent', label(TENURE, h.tenure)]]],
+    ['Home type', 'type', [[h.home_type ? 'home_type:' + h.home_type : 'home_type:detached', 'Home', label(HOME_TYPES, h.home_type) || OLD_HOME_TYPES[h.home_type] || null]]],
+    ['Size and age', 'size', [['floor_area', 'Floor area', areaWord(h.floor_area_m2, u)], [h.year_built ? 'year_built:' + h.year_built : 'year_built', 'Year built', label(YEAR_BUILT, h.year_built)],
       ['floors:' + (h.floors || 2), 'Floors', h.floors ? (h.floors >= 4 ? '4 or more' : String(h.floors)) : null]].concat(apt ? [['unit_floor', 'Your floor', typeof h.unit_floor === 'number' ? floorWord(h.unit_floor) : null]] : [])],
-    ['Rooms and people', 5, [['bedrooms', 'Bedrooms', countWord(h.bedrooms, 6)], ['rooms', 'Rooms', countWord(h.rooms)], ['people:adult', 'Adults', countWord(h.adults)], ['people:child', 'Children', countWord(h.children)], ['people:pet', 'Pets', countWord(h.pets)]]],
-    ['Heating and cooling', 6, [[h.heating && h.heating[0] ? 'heating:' + h.heating[0] : 'heating:furnace', 'Heating', list(HEATING, h.heating)], [h.cooling && h.cooling[0] ? 'cooling:' + h.cooling[0] : 'cooling:central_ac', 'Cooling', list(COOLING, h.cooling)],
-      [h.thermostat ? 'thermostat:' + h.thermostat : 'thermostat:manual', 'Thermostat', label(THERMOSTAT, h.thermostat)], ['setpoint', 'Winter setting', tempWord(h.setpoint_winter_c, u)], ['setpoint', 'Summer setting', tempWord(h.setpoint_summer_c, u)]]],
-    ['Windows and drafts', 7, [[h.windows ? 'windows:' + h.windows : 'windows:double', 'Windows', label(WINDOWS, h.windows)], [h.windows_open ? 'windows_open:' + h.windows_open : 'windows_open:yes', 'Can be opened', label(WINDOWS_OPEN, h.windows_open)],
-      ['facing', 'Living room faces', h.facing === 'unsure' ? 'Not sure' : label(FACING, h.facing)], [h.draftiness ? 'draftiness:' + h.draftiness : 'draftiness:3', 'Drafts in winter', label(DRAFTS, h.draftiness)]]]
+    ['Rooms and people', 'rooms', [['bedrooms', 'Bedrooms', countWord(h.bedrooms, 6)], ['rooms', 'Rooms', countWord(h.rooms)], ['people:adult', 'Adults', countWord(h.adults)], ['people:child', 'Children', countWord(h.children)], ['people:pet', 'Pets', countWord(h.pets)],
+      ['people:adult', 'Bedroom shared with', share], [h.bedroom_thermostat ? (byId(BED_THERMOSTAT, h.bedroom_thermostat) || {}).art || 'unsure' : 'bedrooms', 'Bedroom thermostat', label(BED_THERMOSTAT, h.bedroom_thermostat)]]],
+    ['Heating', 'heat', [[h.heating && h.heating[0] ? 'heating:' + h.heating[0] : 'heating:furnace', 'Heating', list(HEATING, h.heating)],
+      [h.thermostat ? 'thermostat:' + h.thermostat : 'thermostat:manual', 'Thermostat', label(THERMOSTAT, h.thermostat)], ['setpoint', 'Usual setting', tempWord(h.setpoint_winter_c, u)]]],
+    ['Windows', 'windows', [[h.windows ? 'windows:' + h.windows : 'windows:double', 'Windows', label(WINDOWS, h.windows)], [h.windows_open ? 'windows_open:' + h.windows_open : 'windows_open:yes', 'Can be opened', label(WINDOWS_OPEN, h.windows_open)],
+      ['facing', 'Main windows face', facingWord(h.facing, h.facing_deg)], ['facing', 'Bedroom window faces', facingWord(h.bedroom_facing, h.bedroom_facing_deg)]]]
   ];
 }
 const glanceItem = (art, k, v, wide) => `<div class="glance-item${v==null?' is-empty':''}${wide?' is-wide':''}">${art}<span class="glance-text"><span class="glance-k">${k}</span><span class="glance-v">${v==null ? 'Not answered' : esc(v)}</span></span></div>`;
@@ -568,7 +608,7 @@ const SCREENS = {
         <button class="option-row" data-act="go" data-to="signin"><span class="icon-tile">${ic('mail')}</span><span class="option-text"><span class="option-title">I have registered before</span><span class="option-sub">Continue with my email</span></span>${ic('chevron-right')}</button>
       </div>
       ${HC.live ? '' : `<div class="note note-warn">${ic('alert')}<div><b>Local mode.</b> The study database is not connected yet, so everything stays in this browser.</div></div>`}
-      <p class="caption center">Questions about the study? Contact the study team at ${TEAM}. <a href="../">About the study</a></p>
+      <p class="caption center">Questions about the study? Email ${TEAM}. <a href="../">About the study</a></p>
     </div>`;
   },
   /* iPhone, in Safari, before anyone signs up or signs in (see installFirst): the Home Screen app keeps its
@@ -578,7 +618,7 @@ const SCREENS = {
       <section class="card-hero stack stack-3">
         <span class="eyebrow">Before you start</span>
         <h1 class="screen-title" tabindex="-1">Add Home Comfort to your Home Screen first</h1>
-        <p class="screen-sub">On iPhone, reminders only work in the Home Screen app, and it keeps its own copy of your answers, separate from Safari. Join there, so your home profile, units and check-ins stay together.</p>
+        <p class="screen-sub">On iPhone, reminders only work in the Home Screen app, and it keeps its own copy of your answers, separate from Safari. Join there, so your home profile and check-ins stay together.</p>
       </section>
       <section class="card stack stack-3" aria-labelledby="instH"><h2 class="card-title" id="instH">Three quick steps</h2>
         <ol class="steps"><li>Tap the <b>Share</b> button ${SHARE_IC} in Safari&rsquo;s toolbar.</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open <b>Home Comfort</b> from your Home Screen and join there.</li></ol>
@@ -604,11 +644,12 @@ const SCREENS = {
     const list = votes(), l = list[0];
     const s = l && sense(l.tsv);
     const ctaSub = l ? `Last one <span data-ago="${esc(l.ts)}">${agoWord(l.ts)}</span>${s ? ' &middot; ' + s.word : ''}` : 'Takes under a minute';
-    const n7 = lastDays(list, 7).length;
+    const n7 = lastDays(list, 7).length, notif = !['on','unconfigured'].includes(PUSH.status());
     return `<header class="today-head"><div class="screen-head"><span class="eyebrow">${DAYS[new Date().getDay()]}, ${MONTHS_LONG[new Date().getMonth()]} ${new Date().getDate()}</span><h1 class="screen-title" tabindex="-1">${greeting()}</h1></div>${initials() ? `<span class="avatar" aria-hidden="true">${esc(initials())}</span>` : ''}</header>
+      ${notif ? notifCard() : ''}
       ${goalCard(list)}
       <button class="cta-card" data-act="start"><span class="cta-text"><span class="cta-title">Check in now</span><span class="cta-sub">${ctaSub}</span></span><span class="cta-arrow">${ic('arrow-right')}</span></button>
-      ${statusCard()}
+      ${notif ? '' : statusCard()}
       <section class="card chart-card week-card"><div class="card-head"><div><h2 class="card-title">Your last 7 days</h2><p class="card-sub">${weekSummary(list)}</p></div><span class="caption nowrap">${n7} check-in${n7===1?'':'s'}</span></div>
         ${weekDots(list)}<div class="chart-legend">${legend()}</div></section>
       <p class="caption center foot-line">${NAME ? esc(NAME) + ' &middot; ' : ''}<span class="num">${esc(PARTICIPANT)}</span> &middot; <span data-sync>${syncLine()}</span></p>`;
@@ -622,17 +663,13 @@ const SCREENS = {
   },
   myhome: () => {
     const h = homeProfile(), u = units();
-    const change = `<div class="note">${ic('info')}<div>${h ? 'To change these' : 'To change your home profile'}, contact the study team at ${TEAM}.</div></div>`;
+    const change = `<div class="note">${ic('info')}<div>${h ? 'To change these' : 'To change your home profile'}, email ${TEAM}.</div></div>`;
     if(!h) return head('Your home', 'My home') + `<div class="card empty">${HCI.art('home_type:detached')}<b>Your home profile is with the study team</b><p>You signed in here with your email, so the home profile you gave when you joined isn&rsquo;t shown in this app. The study team has it.${PUSH.ios && PUSH.standalone ? ' On iPhone, Safari and the Home Screen app keep separate copies.' : ''}</p></div>` + change;
-    return head('Your home', 'My home', `As you described it when you joined, in ${u === 'us' ? 'US' : 'metric'} units.`) + homeGlance(h, u, false) + change;
+    return head('Your home', 'My home', 'As you described it when you joined.') + homeGlance(h, u, false) + change;
   },
   settings: () => {
-    const u = units();
     return head('Your app', 'Settings') +
-      `<section class="card stack stack-3" aria-labelledby="unitsH"><h2 class="card-title" id="unitsH">Units</h2>
-        <div class="seg seg-block seg-on-white" role="radiogroup" aria-labelledby="unitsH"><button class="seg-btn" role="radio" aria-checked="${u==='us'}" data-act="units" data-v="us">US (°F, sq ft)</button><button class="seg-btn" role="radio" aria-checked="${u==='metric'}" data-act="units" data-v="metric">Metric (°C, m²)</button></div>
-        <p class="field-hint">Changes how this phone shows measurements. What you told us is stored the same way either way.</p></section>
-      <section class="card stack stack-4" id="reminders" aria-labelledby="remH" tabindex="-1">${remindersSection()}</section>
+      `<section class="card stack stack-4" id="reminders" aria-labelledby="remH" tabindex="-1">${remindersSection()}</section>
       <section class="card stack stack-4" aria-labelledby="acctH"><h2 class="card-title" id="acctH">Your account</h2>
         <div class="list"><div class="list-item"><span class="icon-tile">${ic('user')}</span><span class="li-text"><span class="li-sub">Name</span><span class="li-title">${esc(NAME) || '&mdash;'}</span></span></div>
           <div class="list-item"><span class="icon-tile">${ic('key')}</span><span class="li-text"><span class="li-sub">Participant code</span><span class="li-title num">${esc(PARTICIPANT)}</span></span></div>
@@ -641,7 +678,7 @@ const SCREENS = {
         <button class="btn btn-ghost btn-block" data-act="signout">${ic('signout')} Not you? Sign out</button></section>
       <section class="card stack stack-3 about"><h2 class="card-title">About</h2>
         <p class="body-sm muted">${esc(HC.cfg.studyName || 'Home Comfort NY')} &middot; SUNY ESF &middot; version ${esc(HC.cfg.appVersion || '')}</p>
-        <p class="body-sm muted">Questions? Contact the study team at ${TEAM}. <a href="../">About the study</a></p></section>`;
+        <p class="body-sm muted">Questions? Email ${TEAM}. <a href="../">About the study</a></p></section>`;
   },
   /* "Yes, for over an hour" and "Yes, I just got in" both lead to the check-in (at_home long or recent) */
   athome: () => qhead('Before we start', 'Are you at home right now?', 'Then a few quick questions about how you feel.') +
@@ -670,25 +707,14 @@ const SCREENS = {
     const missing = FLOW_ALL.filter(q => !answered(S.a, q)).length, edited = quickEdited();
     const main = missing ? `<button class="btn btn-primary btn-block btn-lg" data-act="fill">Answer ${missing === 1 ? 'the one question' : 'the ' + missing + ' questions'} still open ${ic('arrow-right')}</button>`
       : `<button class="btn btn-primary btn-block btn-lg" data-act="same">${ic('check')} ${edited ? 'Save with my changes' : 'Yes, still the same'}</button>`;
-    return qhead('Quick check', 'Still the same as last time?', `Logged ${dayKey(d)===dayKey(new Date()) ? 'at ' + clock(d) : 'on ' + DAYS[d.getDay()] + ' at ' + clock(d)}, ${agoWord(l.ts)}. Tap Edit to change any one.`) +
-      `<section class="card card-raised quick"><div class="quick-top"><span class="eyebrow">${edited ? 'With your changes' : 'Last check-in'}</span><span class="fig fig-sm" aria-hidden="true">${avatar(S.a.clo||[])}</span></div><ul class="answers" role="list">${answerRows(S.a)}</ul></section>
+    return qhead('Quick check', 'Still the same as last time?', `Your last check-in, ${dayKey(d)===dayKey(new Date()) ? 'at ' + clock(d) : 'on ' + DAYS[d.getDay()] + ' at ' + clock(d)} (${agoWord(l.ts)}). Tap ${ic('edit','ic-xs')} to change just one.`) +
+      `<section class="quick stack stack-3"><div class="quick-top"><span class="pill${edited ? ' pill-violet' : ''}">${ic(edited ? 'edit' : 'clock')}${edited ? 'With your changes' : 'Last check-in'}</span></div>${answerTiles(S.a, () => true)}</section>
       <div class="footbar">${main}<button class="btn btn-secondary btn-block" data-act="changed">Something has changed</button></div>`;
   },
   q: () => Q[S.flow[S.i]](),
   review: () => {
-    const a = S.a, li = (k, v, q) => v===undefined||v===null||v===false||v==='' ? '' : `<div class="list-item"><span class="li-text"><span class="li-sub">${k}</span><span class="li-title">${v}</span></span>${q&&S.flow.includes(q)?`<span class="li-end"><button class="btn btn-quiet btn-sm" data-act="edit" data-q="${q}" aria-label="Edit ${QNAME[q]}">Edit</button></span>`:''}</div>`;
-    const s = sense(a.tsv);
-    return qhead('Almost done', 'Here&rsquo;s what we&rsquo;ll save') +
-      `<div class="list review">
-        ${li('Feeling', typeof a.tsv==='number' && s && `<span class="sense-inline ${s.cls}"><span class="orb orb-sm">${ic(s.icon)}</span>${s.word} <span class="num">(${s.sign})</span></span>`, 'tsv')}
-        ${li('Wearing', a.clo && a.clo.length && `${garmentNames(a.clo)} &middot; <span class="num">${cloOf(a.clo).toFixed(2)}</span> clo`, 'clo')}
-        ${li('Activity', byId(ACTS,a.act)?.n, 'act')}
-        ${li('Room', byId(ROOMS,a.room)?.n, 'room')}
-        ${li('Air', byId(AIR,a.air)?.n, 'air')}
-        ${li('Sun', byId(SUN,a.sun)?.n, 'sun')}
-        ${li('Changed', a.actions && (a.actions.length ? namesOf(ACTIONS, a.actions) : 'Nothing changed'), 'actions')}
-        ${li('Notes', a.notes && (a.notes.length ? namesOf(NOTES, a.notes) : 'Nothing to note'), 'notes')}
-      </div>
+    return qhead('Almost done', 'Here&rsquo;s what we&rsquo;ll save', `Tap ${ic('edit','ic-xs')} to change an answer.`) +
+      `<section class="review">${answerTiles(S.a, q => S.flow.includes(q))}</section>
       <div class="footbar"><button class="btn btn-primary btn-block btn-lg" data-act="submit">${ic('check-circle')} Save check-in</button></div>`;
   },
   /* celebrates showing up, never the answer */
@@ -784,7 +810,8 @@ function pick(q, raw){
 function toggle(q, v){
   const arr = Array.isArray(S.a[q]) ? [...S.a[q]] : [];
   const i = arr.indexOf(v);
-  if(i>=0) arr.splice(i,1); else arr.push(v);
+  if(i>=0) arr.splice(i,1);
+  else { arr.push(v); const j = q==='actions' && PAIRED[v] ? arr.indexOf(PAIRED[v]) : -1; if(j>=0) arr.splice(j,1); }   // opened clears closed, up clears down
   S.a[q] = arr; rerender();
 }
 /* "Yes, for over an hour" and "Yes, I just got in" both lead to the check-in; the answer is stored with it
@@ -936,7 +963,6 @@ async function signin(){
     if(!HC.live) throw new Error('The study database is not connected yet, so signing in is not possible. Choose I&rsquo;m new here instead.');
     const r = await HC.register({ email });
     setIdentity(r.code, r.name);
-    if(r.units === 'us' || r.units === 'metric') LS.set(UNITS_KEY, r.units);   // the units chosen when joining, when the database returns them
     const split = !votes().length && homeScreenSignIn();
     afterIdentity(r.approved);
     if(split && r.approved !== false) showToast({ title:'Welcome back' + (firstName() ? ', ' + esc(firstName()) : ''), sub:'Check-ins you made in Safari stay listed in Safari', kind:'info', ms:7000 });
@@ -996,7 +1022,7 @@ async function afterRefusal(){
 const HOURS_KEY = 'hcny_hours';
 /* Home hours: a weekday and a weekend window, plus an optional second window for each (null when unused).
  * The same eight fields go to push_subscriptions, where the sender reads them. */
-const DEFAULT_HOURS = { weekday_start:'17:00', weekday_end:'22:30', weekend_start:'09:00', weekend_end:'22:30', weekday2_start:null, weekday2_end:null, weekend2_start:null, weekend2_end:null };
+const DEFAULT_HOURS = { weekday_start:'07:00', weekday_end:'22:00', weekend_start:'07:00', weekend_end:'22:00', weekday2_start:null, weekday2_end:null, weekend2_start:null, weekend2_end:null };
 const hhmm = s => { const m = hm(s); return m ? pad(m[0])+':'+pad(m[1]) : null; };
 /* The saved hours, always usable: "HH:MM", a missing main bound takes the default, a main window that ends
  * at or before its start runs until 23:59, and a second window counts only with both ends set and ending
@@ -1165,16 +1191,16 @@ function remindersSection(){
       ? `<p class="hrow-label" aria-hidden="true">and</p><div class="hrow">${tin(ids[2], h[p+'2_start'], name+', second period, from')}<span class="to">to</span>${tin(ids[3], h[p+'2_end'], name+', second period, until')}</div><button class="btn btn-quiet btn-sm addw" data-act="rm-win" data-w="${p}" aria-label="Remove the second ${name.toLowerCase()} period">${ic('x')}Remove this period</button>`
       : `<button class="btn btn-quiet btn-sm addw" data-act="add-win" data-w="${p}">${ic('plus')}Add another period</button>`) +
     `<div class="hours-strip" id="strip-${p}" aria-hidden="true">${strip(h, p)}</div><div class="hours-axis" aria-hidden="true"><span>12 AM</span><span>6 AM</span><span>Noon</span><span>6 PM</span><span>12 AM</span></div></fieldset>`;
-  const form = `<div class="stack stack-5 hours-form"><p class="label">When are you usually at home?</p>${grp('weekday', 'Weekdays', ['h_ws','h_we','h_ws2','h_we2'])}${grp('weekend', 'Weekends', ['h_es','h_ee','h_es2','h_ee2'])}
+  const form = `<div class="stack stack-5 hours-form"><p class="label">When should reminders come?</p>${grp('weekday', 'Weekdays', ['h_ws','h_we','h_ws2','h_we2'])}${grp('weekend', 'Weekends', ['h_es','h_ee','h_es2','h_ee2'])}
       <p class="field-hint">Reminders only arrive inside these hours, never within half an hour of a check-in, and not while you&rsquo;ve said you&rsquo;re out.</p></div>`;
   const msg = `<div class="note" id="remMsg" role="status" hidden></div>`;
-  const title = `<div class="card-head"><div><h2 class="card-title" id="remH">Reminders</h2><p class="card-sub">${st==='on' ? 'On for this phone' : 'A nudge once an hour while you&rsquo;re home'}</p></div>${st==='on' ? `<span class="badge badge-good badge-dot">On</span>` : ''}</div>`;
-  if(st === 'install') return title + `<ol class="steps"><li>Tap the <b>Share</b> button ${SHARE_IC} in Safari.</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open the app from your Home Screen, choose <b>I have registered before</b> and enter your email.</li><li>Turn on reminders there.</li></ol>
+  const title = `<div class="card-head"><div><h2 class="card-title" id="remH">Reminders</h2><p class="card-sub">${st==='on' ? 'Notifications are on for this phone' : 'A nudge once an hour while you&rsquo;re home'}</p></div>${st==='on' ? `<span class="badge badge-good badge-dot">On</span>` : ''}</div>`;
+  if(st === 'install') return title + `<ol class="steps"><li>Tap the <b>Share</b> button ${SHARE_IC} in Safari.</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open the app from your Home Screen, choose <b>I have registered before</b> and enter your email.</li><li>Turn on notifications there.</li></ol>
     <p class="field-hint">The Home Screen app keeps its own copy, so the check-ins listed here in Safari stay here. The ones already sent are with the study team.</p>`;
-  if(st === 'unsupported') return title + `<div class="note">${ic('info')}<div>This browser can&rsquo;t show reminders. On Android use Chrome. On iPhone use Safari and add the app to your Home Screen.</div></div>`;
-  if(st === 'blocked') return title + `<div class="note note-warn">${ic('bell-off')}<div>Notifications are blocked for this app. Allow them in your phone&rsquo;s settings, then come back here.</div></div>`;
+  if(st === 'unsupported' || st === 'blocked') return title + `<div class="note${st === 'blocked' ? ' note-warn' : ''}">${ic('bell-off')}<div><b>${notifHelp(st).title}.</b></div></div><div class="notif-body">${notifHelp(st).html}</div>`;
   if(st === 'unconfigured') return title + `<div class="note note-info">${ic('info')}<div>Reminders start once the study database is connected. Your home hours are saved on this phone now.</div></div>` + form + msg + `<button class="btn btn-primary btn-block" data-act="save-hours">Save hours</button>`;
-  if(st === 'off') return title + (PUSH.lost() ? `<div class="note note-warn">${ic('alert')}<div>Reminders have stopped on this phone. Turn them on again below.</div></div>` : '') + form + msg + `<button class="btn btn-primary btn-block" data-act="push-on">${ic('bell')} Turn on reminders</button>`;
+  // Off: notifications first, with one tap (default hours); the hours come once they are on.
+  if(st === 'off') return title + `<div class="note ${PUSH.lost() ? 'note-warn' : 'note-info'}">${ic(PUSH.lost() ? 'alert' : 'info')}<div>${PUSH.lost() ? 'Notifications have stopped on this phone. Turn them on again.' : 'The study needs notifications: they remind you to check in. Turn them on, then choose your hours here.'}</div></div>` + msg + `<button class="btn btn-primary btn-block btn-lg" data-act="notif-on">${ic('bell')} Turn on notifications</button><p class="field-hint center">${daysWord(hours())} to start with.</p>`;
   return title + form + msg + `<button class="btn btn-primary btn-block" data-act="save-hours">Save hours</button><button class="btn btn-ghost btn-block" data-act="push-off">${ic('bell-off')} Turn off reminders</button>`;
 }
 /* The eight hour fields as the form shows them: the main windows fall back to the defaults, a second
@@ -1190,22 +1216,24 @@ function readHours(){
 function remMsg(t, kind){ const m = $('#remMsg'); if(!m) return; m.hidden = false; m.className = 'note' + (kind==='ok' ? ' note-good' : kind==='warn' ? ' note-warn' : ''); m.innerHTML = ic(kind==='ok' ? 'check-circle' : 'alert') + '<div>' + t + '</div>'; }
 
 /* ---------- sign-up: a picture-based wizard, its draft kept in REG_KEY ---------- */
+/* Participants always answer in US units (feet and inches, pounds, square feet, °F); everything is stored
+ * metric. A draft from the earlier nine-step wizard (v:1) is not carried over. */
 const REG_STEPS = [
-  {id:'units',  ic:'ruler',        t:'Units',               min:0.2},
   {id:'you',    ic:'user',         t:'About you',           min:1.2},
   {id:'where',  ic:'map-pin',      t:'Location',            min:0.4},
   {id:'type',   ic:'home',         t:'Home type',           min:0.3},
   {id:'size',   ic:'layers',       t:'Size and age',        min:0.7},
-  {id:'rooms',  ic:'users',        t:'Rooms and people',    min:0.5},
-  {id:'heat',   ic:'thermometer',  t:'Heating and cooling', min:1.0},
-  {id:'windows',ic:'window',       t:'Windows and drafts',  min:0.7},
+  {id:'rooms',  ic:'users',        t:'Rooms and people',    min:0.8},
+  {id:'heat',   ic:'thermometer',  t:'Heating',             min:0.7},
+  {id:'windows',ic:'window',       t:'Windows',             min:1.2},
   {id:'review', ic:'sparkle',      t:'At a glance',         min:0.3}
 ];
-const regFresh = () => ({ v:1, step:0, units: LS.get(UNITS_KEY) === 'metric' ? 'metric' : 'us', name:'', email:'', gender:'', birth_year:'', ft:'', inch:'', cm:'', lb:'', kg:'', sens:null, home:{}, edit:false });
-function loadReg(){ try{ const r = JSON.parse(LS.get(REG_KEY) || 'null'); if(r && r.v === 1 && r.home) return Object.assign(regFresh(), r, { step: Math.max(0, Math.min(REG_STEPS.length-1, r.step|0)) }); }catch(e){} return regFresh(); }
+const stepOf = id => Math.max(0, REG_STEPS.findIndex(s => s.id === id));
+const regFresh = () => ({ v:2, step:0, units:'us', name:'', email:'', gender:'', birth_year:'', ft:'', inch:'', cm:'', lb:'', kg:'', sens:null, home:{}, edit:false });
+function loadReg(){ try{ const r = JSON.parse(LS.get(REG_KEY) || 'null'); if(r && r.v === 2 && r.home) return Object.assign(regFresh(), r, { units:'us', step: Math.max(0, Math.min(REG_STEPS.length-1, r.step|0)) }); }catch(e){} return regFresh(); }
 let REG = loadReg();
 function saveReg(){ LS.set(REG_KEY, JSON.stringify(REG)); }
-const isApt = () => REG.home.home_type === 'apartment' || REG.home.home_type === 'dorm';
+const isApt = () => REG.home.home_type === 'apartment';
 const numOf = s => { const n = parseFloat(String(s ?? '').replace(',', '.')); return isFinite(n) ? n : null; };
 /* switching units converts what has been typed so far (height and weight); the home is always metric */
 function convertUnits(to){
@@ -1230,33 +1258,33 @@ function regFields(){
     if(lb !== null) weight_kg = Math.round(lb * 0.45359237 * 10) / 10;
   } else { height_cm = numOf(r.cm); weight_kg = numOf(r.kg); }
   const by = numOf(r.birth_year), h = r.home, home = {};
-  ['zip','home_type','tenure','year_built','floors','unit_floor','floor_area_m2','bedrooms','rooms','adults','children','pets','heating','cooling','thermostat','setpoint_winter_c','setpoint_summer_c','windows','windows_open','facing','draftiness']
+  ['zip','home_type','tenure','year_built','floors','unit_floor','floor_area_m2','bedrooms','rooms','adults','children','pets','bedroom_share','bedroom_thermostat','heating','thermostat','setpoint_winter_c','windows','windows_open','facing','facing_deg','bedroom_facing','bedroom_facing_deg']
     .forEach(k => { if(h[k] !== undefined && h[k] !== '') home[k] = Array.isArray(h[k]) ? [...h[k]] : h[k]; });
   if(!isApt()) delete home.unit_floor;
-  ['heating','cooling'].forEach(k => { if(Array.isArray(home[k]) && !home[k].length) delete home[k]; });
+  if(Array.isArray(home.heating) && !home.heating.length) delete home.heating;
   if(home.zip) home.zip = String(home.zip).trim();
   return { email: r.email.trim(), name: r.name.trim().replace(/\s+/g, ' '), gender: r.gender || null, birth_year: by !== null ? Math.round(by) : null,
     height_cm, weight_kg, sensitivity: r.sens || null, units: r.units, home };
 }
 /* friendly checks before leaving a step: [field id, message] or null */
 function regProblem(step){
-  const r = REG, y = new Date().getFullYear();
-  if(step === 1){
+  const r = REG, y = new Date().getFullYear(), id = REG_STEPS[step].id;
+  if(id === 'you'){
     if(r.name.trim().length < 2) return ['r_name', 'Please enter your name.'];
     if(!EMAIL_RE.test(r.email.trim())) return ['r_email', 'Please enter an email address, like name@example.com.'];
+    if(!r.gender) return ['r_gender', 'Please choose one. &ldquo;Prefer not to say&rdquo; is fine.'];
     const by = numOf(r.birth_year);
-    if(r.birth_year !== '' && (by === null || by < 1900 || by > y - 10 || by % 1)) return ['r_year', `Please enter the year as four digits, between 1900 and ${y - 10}.`];
-    if(r.units === 'us'){
-      const ft = numOf(r.ft), inch = numOf(r.inch);
-      if((r.ft !== '' || r.inch !== '') && (ft === null || ft < 3 || ft > 8 || (r.inch !== '' && (inch === null || inch < 0 || inch >= 12)))) return ['r_ft', 'Please check your height: feet from 3 to 8, inches from 0 to 11.'];
-      const lb = numOf(r.lb); if(r.lb !== '' && (lb === null || lb < 50 || lb > 770)) return ['r_lb', 'Please check your weight in pounds.'];
-    } else {
-      const cm = numOf(r.cm); if(r.cm !== '' && (cm === null || cm < 90 || cm > 250)) return ['r_cm', 'Please check your height in centimeters (90 to 250).'];
-      const kg = numOf(r.kg); if(r.kg !== '' && (kg === null || kg < 25 || kg > 350)) return ['r_kg', 'Please check your weight in kilograms.'];
-    }
+    if(String(r.birth_year).trim() === '') return ['r_year', 'Please enter the year you were born.'];
+    if(by === null || by < 1900 || by > y - 10 || by % 1) return ['r_year', `Please enter the year as four digits, between 1900 and ${y - 10}.`];
+    const ft = numOf(r.ft), inch = numOf(r.inch);
+    if(String(r.ft).trim() === '') return ['r_ft', 'Please enter your height in feet and inches.'];
+    if(ft === null || ft < 3 || ft > 8 || (String(r.inch).trim() !== '' && (inch === null || inch < 0 || inch >= 12))) return ['r_ft', 'Please check your height: feet from 3 to 8, inches from 0 to 11.'];
+    const lb = numOf(r.lb);
+    if(String(r.lb).trim() === '') return ['r_lb', 'Please enter your weight in pounds.'];
+    if(lb === null || lb < 50 || lb > 770) return ['r_lb', 'Please check your weight in pounds.'];
   }
-  if(step === 2 && r.home.zip && !/^\d{5}$/.test(String(r.home.zip).trim())) return ['r_zip', 'A ZIP code has 5 digits. Or leave it empty.'];
-  if(step === 3 && !r.home.home_type) return ['home_type', 'Please pick the closest match, or Something else.'];
+  if(id === 'where' && r.home.zip && !/^\d{5}$/.test(String(r.home.zip).trim())) return ['r_zip', 'A ZIP code has 5 digits. Or leave it empty.'];
+  if(id === 'type' && !HOME_TYPES.some(o => o.id === r.home.home_type)) return ['home_type', 'Please pick the closest match.'];
   return null;
 }
 function regGo(step){ REG.step = step; saveReg(); render(); }
@@ -1286,7 +1314,7 @@ async function regJoin(){
   }catch(e){ b.disabled = false; b.classList.remove('is-busy'); fieldError('join', friendly(e.message, 'Could not join. Check the connection and try again.')); }
 }
 function finishJoin(f, isNew){
-  LS.set(UNITS_KEY, f.units);
+  LS.set(UNITS_KEY, 'us');
   if(isNew) LS.set(HOME_KEY, JSON.stringify(f.home)); else LS.del(HOME_KEY);
   LS.del(REG_KEY); REG = regFresh();
 }
@@ -1371,40 +1399,98 @@ function dialFromPointer(el, e, start){
 const AREA = { us:{ min:500, max:4000, step:50, mid:1500 }, metric:{ min:50, max:370, step:5, mid:140 } };
 function areaShown(){ const u = REG.units, A = AREA[u], m2 = REG.home.floor_area_m2; if(typeof m2 !== 'number') return null; const v = u === 'us' ? m2 / SQFT : m2; return Math.max(A.min, Math.min(A.max, Math.round(v / A.step) * A.step)); }
 function areaText(v){ const u = REG.units, A = AREA[u]; if(v === null) return REG.home.floor_area_m2 === null ? 'Not sure' : 'Not set yet'; return (v >= A.max ? v.toLocaleString('en-US') + '+' : v.toLocaleString('en-US')) + `<small>${u === 'us' ? 'sq ft' : 'm²'}</small>`; }
-function compass(){
-  const v = REG.home.facing;
-  return `<div class="compass" role="radiogroup" aria-label="Which way the main living-room windows face">${HCI.art('facing', 'compass-art')}` +
+/* A compass of eight directions for one set of windows (k: facing or bedroom_facing), the phone-compass
+ * button, what was measured and "Not sure". */
+function compass(k, title){
+  const v = REG.home[k], deg = REG.home[k + '_deg'];
+  const ring = `<div class="compass" role="radiogroup" aria-label="${title}">${HCI.art('facing', 'compass-art')}` +
     FACING.map((f, i) => { const a = (i * 45 - 90) * Math.PI / 180, x = 50 + 39 * Math.cos(a), y = 50 + 39 * Math.sin(a);
-      return `<button class="compass-pt" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%" role="radio" aria-checked="${v===f.id}" aria-label="${f.n}" data-act="reg-pick" data-k="home.facing" data-v="${f.id}">${f.id}</button>`; }).join('') + `</div>`;
+      return `<button class="compass-pt" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%" role="radio" aria-checked="${v===f.id}" aria-label="${f.n}" data-act="reg-pick" data-k="home.${k}" data-v="${f.id}">${f.id}</button>`; }).join('') + `</div>`;
+  const measured = typeof deg === 'number' && v && v !== 'unsure' ? `<p class="cmp-measured">${ic('check-circle','ic-sm')}Measured with your phone: <b>${label(FACING, v)} &middot; ${deg}&deg;</b></p>` : '';
+  return ring + measured + `<div class="cmp-actions">${canCompass() ? `<button class="btn btn-secondary btn-sm" data-act="reg-measure" data-k="${k}">${ic('compass')}Use my phone&rsquo;s compass</button>` : ''}<button class="chip" aria-pressed="${v==='unsure'}" data-act="reg-pick" data-k="home.${k}" data-v="unsure"><span class="chip-ic">${ic('help')}</span><span class="chip-check">${ic('check')}</span>Not sure</button></div>`;
 }
+/* How to find a window's direction, once above the two compasses: in words, a small top-down picture and
+ * a check against the sun. */
+const directionHelp = () => `<section class="card card-flat dir-help" aria-labelledby="dirH"><div class="dir-help-top"><svg class="dir-pic" viewBox="0 0 150 104" aria-hidden="true" focusable="false"><rect x="6" y="22" width="138" height="76" rx="9" class="dp-room"/><rect x="47" y="16" width="56" height="12" rx="3" class="dp-win"/><path d="M75 62V6" class="dp-ray"/><path d="m67 14 8-9 8 9" class="dp-ray"/><rect x="65" y="60" width="20" height="32" rx="4.5" class="dp-phone"/><path d="M71.5 65h7" class="dp-cam"/><text x="86" y="48" class="dp-t">look out</text><text x="16" y="90" class="dp-r">room</text></svg>
+  <div><h3 class="reg-q-title" id="dirH">How to find the direction</h3><p class="field-hint">It&rsquo;s the way you face when you look <b>out</b> of the window.</p></div></div>
+  <ol class="steps"><li>Stand at the window with your back to the room, looking straight out.</li><li>Hold your phone flat, screen up, with its top edge pointing out of the window.</li><li>${canCompass() ? 'Tap <b>Use my phone&rsquo;s compass</b>, wait a moment for it to settle, then save it.' : 'Open your phone&rsquo;s Compass app (on Android, Google Maps: tap the blue dot to see where you face) and tap the same direction here.'}</li></ol>
+  <p class="field-hint">${ic('sun','ic-xs')} Check with the sun: morning sun usually means east, afternoon or evening sun west, and sun around midday south. North-facing windows rarely get direct sun.</p></section>`;
+/* ---- the phone's compass ----
+ * iPhone gives a heading from north (webkitCompassHeading, after asking permission straight from the tap);
+ * Android Chrome gives deviceorientationabsolute, whose alpha counts the other way. Readings are smoothed on
+ * the circle. The heading is the phone's own (most likely magnetic north, about 12° from true north in New
+ * York State); it is snapped to the nearest of eight directions and also kept in degrees. */
+const canCompass = () => 'DeviceOrientationEvent' in window && matchMedia('(pointer: coarse)').matches;
+const dir8 = h => FACING[Math.round((((h % 360) + 360) % 360) / 45) % 8];
+let CMP = null;
+function stopCompass(){ if(!CMP) return; window.removeEventListener(CMP.ev, CMP.fn); clearTimeout(CMP.timer); cancelAnimationFrame(CMP.raf); CMP = null; }
+function compassFail(why){
+  if(!CMP) return;
+  const hint = $('#cmpHint'); if(hint){ hint.className = 'note note-warn'; hint.innerHTML = ic('alert') + `<div>${why === 'denied' ? 'The app wasn&rsquo;t allowed to use the compass.' : 'This phone isn&rsquo;t sharing its compass with the app.'} Use your phone&rsquo;s Compass app instead, then tap the same direction on the circle.</div>`; }
+  const d = $('#cmpDir'); if(d) d.textContent = 'No compass reading';
+}
+function paintCompass(){
+  if(!CMP) return; CMP.raf = 0;
+  const h = CMP.h, f = dir8(h), rose = $('#cmpRose'), d = $('#cmpDir'), g = $('#cmpDeg'), use = $('[data-act="cmp-use"]');
+  if(rose) rose.style.transform = `rotate(${(-h).toFixed(1)}deg)`;
+  if(d) d.textContent = f.n; if(g) g.textContent = Math.round(h) + '°';
+  if(use) use.disabled = false;
+}
+function measureCompass(k, opener){
+  stopCompass();
+  const rose = `<svg class="cmp-rose" id="cmpRose" viewBox="0 0 200 200" aria-hidden="true" focusable="false"><circle cx="100" cy="100" r="92" class="cr-ring"/>` +
+    Array.from({length:72}, (_, i) => { const a = i * 5 * Math.PI / 180, r1 = i % 9 === 0 ? 74 : i % 3 === 0 ? 80 : 84; return `<path d="M${(100 + r1 * Math.sin(a)).toFixed(1)} ${(100 - r1 * Math.cos(a)).toFixed(1)}L${(100 + 88 * Math.sin(a)).toFixed(1)} ${(100 - 88 * Math.cos(a)).toFixed(1)}" class="cr-tick"/>`; }).join('') +
+    [['N',0],['E',90],['S',180],['W',270]].map(([t, deg]) => { const a = deg * Math.PI / 180; return `<text x="${(100 + 60 * Math.sin(a)).toFixed(1)}" y="${(100 - 60 * Math.cos(a) + 7).toFixed(1)}" text-anchor="middle" class="cr-l${t === 'N' ? ' is-n' : ''}">${t}</text>`; }).join('') + `</svg>`;
+  openSheet(`<div class="sheet-grab" aria-hidden="true"></div><div class="sheet-head"><div><span class="eyebrow">${k === 'bedroom_facing' ? 'Your bedroom window' : 'Your main windows'}</span><h2 class="sheet-title" id="sheetTitle">Point your phone out of the window</h2></div></div>
+    <div class="sheet-body"><div class="cmp-live"><div class="cmp-dial">${rose}<span class="cmp-arrow" aria-hidden="true"></span></div>
+      <p class="cmp-read" aria-live="polite"><b id="cmpDir">Finding north&hellip;</b><span id="cmpDeg"></span></p>
+      <div class="field-hint center" id="cmpHint">Stand with your back to the room. Hold the phone flat, screen up, top edge pointing out of the window.</div></div></div>
+    <div class="sheet-foot"><button class="btn btn-ghost" data-act="sheet-close">Cancel</button><button class="btn btn-primary" data-act="cmp-use" data-k="${k}" disabled>${ic('check')}Use this direction</button></div>`, '[data-act="sheet-close"]', opener);
+  const start = () => {
+    const ev = 'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
+    let sx = 0, sy = 0, n = 0;
+    const fn = e => {
+      let h = null;
+      if(typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) h = e.webkitCompassHeading;
+      else if((ev === 'deviceorientationabsolute' || e.absolute) && typeof e.alpha === 'number') h = 360 - e.alpha;
+      if(h === null || !CMP) return;
+      const turn = screen.orientation && typeof screen.orientation.angle === 'number' ? screen.orientation.angle : (Number(window.orientation) || 0);
+      const r = (h + turn) * Math.PI / 180;
+      sx = n ? sx * 0.8 + Math.sin(r) * 0.2 : Math.sin(r); sy = n ? sy * 0.8 + Math.cos(r) * 0.2 : Math.cos(r); n++;
+      CMP.h = (Math.atan2(sx, sy) * 180 / Math.PI + 360) % 360;
+      if(!CMP.raf) CMP.raf = requestAnimationFrame(paintCompass);
+    };
+    CMP = { k, ev, fn, h:null, raf:0, timer: setTimeout(() => { if(CMP && CMP.h === null) compassFail('none'); }, 4000) };
+    window.addEventListener(ev, fn);
+  };
+  // Only iPhone asks (Chrome has the same function but may refuse it where there is no prompt; there the
+  // readings simply come, or not, and the four-second check says so).
+  if(PUSH.ios && typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
+    CMP = { k, ev:'deviceorientation', fn(){}, h:null, raf:0, timer:0 };          // so a refusal can be shown
+    DeviceOrientationEvent.requestPermission().then(p => { if(!CMP) return; if(p === 'granted'){ CMP = null; start(); } else compassFail('denied'); }).catch(() => compassFail('denied'));
+  } else start();
+}
+const shareArt = n => `<span class="share-art n-${n + 1}">${Array.from({length: n + 1}, (_, i) => `<i class="${i ? '' : 'is-me'}">${HCI.art('people:adult')}</i>`).join('')}</span>`;
 function people(){
   const h = REG.home, fig = (art, n, cls) => Array.from({length: Math.min(n, 6)}, () => `<span class="pfig ${cls}">${HCI.art(art)}</span>`).join('') + (n > 6 ? `<span class="pfig-more">+${n-6}</span>` : '');
   return `<div class="household" aria-hidden="true">${fig('people:adult', h.adults||0, 'is-adult')}${fig('people:child', h.children||0, 'is-child')}${fig('people:pet', h.pets||0, 'is-pet')}</div>`;
 }
 const REGS = {
-  units: () => {
-    const u = REG.units;
-    const t = (id, big, n, hint) => `<button class="ptile ptile-row" role="radio" aria-checked="${u===id}" data-act="reg-units" data-v="${id}"><span class="ptile-art unit-art" aria-hidden="true">${big}</span><span class="ptile-text"><span class="ptile-label">${n}</span><span class="ptile-hint">${hint}</span></span>${HCI.tick()}</button>`;
-    return `<div class="ptile-grid cols-1" role="radiogroup" aria-label="Units">${t('us', '°F', 'US', '°F, sq ft, ft/in, lb')}${t('metric', '°C', 'Metric', '°C, m², cm, kg')}</div>
-      <div class="note">${ic('info')}<div>You can change this later in Settings. Either way, we store your answers the same way.</div></div>`;
-  },
   you: () => {
-    const r = REG, y = new Date().getFullYear(), us = r.units === 'us';
-    const inp = (id, key, lab, attrs, opt) => `<div class="field" id="f-${id}"><label class="label" for="${id}">${lab}${opt ? ' <span class="opt">(optional)</span>' : ''}</label><input class="input" id="${id}" data-reg="${key}" value="${esc(r[key])}" ${attrs} aria-describedby="err-${id}"><p class="field-error" id="err-${id}" hidden></p></div>`;
+    const r = REG;
+    const inp = (id, key, lab, attrs) => `<div class="field" id="f-${id}"><label class="label" for="${id}">${lab}</label><input class="input" id="${id}" data-reg="${key}" value="${esc(r[key])}" ${attrs} aria-describedby="err-${id}"><p class="field-error" id="err-${id}" hidden></p></div>`;
     const sfx = (id, key, lab, sufx, attrs) => `<div class="input-group"><input class="input" id="${id}" data-reg="${key}" value="${esc(r[key])}" ${attrs} aria-label="${lab}"><span class="input-suffix" aria-hidden="true">${sufx}</span></div>`;
-    const height = us ? `<div class="field" id="f-r_ft"><span class="label" id="lab-height">Height <span class="opt">(optional)</span></span><div class="grid grid-2 g-tight" role="group" aria-labelledby="lab-height">${sfx('r_ft', 'ft', 'Height, feet', 'ft', 'inputmode="numeric" maxlength="1" placeholder="5"')}${sfx('r_in', 'inch', 'Height, inches', 'in', 'inputmode="numeric" maxlength="2" placeholder="8"')}</div><p class="field-error" id="err-r_ft" hidden></p></div>`
-      : `<div class="field" id="f-r_cm"><label class="label" for="r_cm">Height <span class="opt">(optional)</span></label>${sfx('r_cm', 'cm', 'Height in centimeters', 'cm', 'inputmode="numeric" maxlength="3" placeholder="172"')}<p class="field-error" id="err-r_cm" hidden></p></div>`;
-    const weight = us ? `<div class="field" id="f-r_lb"><label class="label" for="r_lb">Weight <span class="opt">(optional)</span></label>${sfx('r_lb', 'lb', 'Weight in pounds', 'lb', 'inputmode="decimal" maxlength="5" placeholder="160"')}<p class="field-error" id="err-r_lb" hidden></p></div>`
-      : `<div class="field" id="f-r_kg"><label class="label" for="r_kg">Weight <span class="opt">(optional)</span></label>${sfx('r_kg', 'kg', 'Weight in kilograms', 'kg', 'inputmode="decimal" maxlength="5" placeholder="72"')}<p class="field-error" id="err-r_kg" hidden></p></div>`;
+    const height = `<div class="field" id="f-r_ft"><span class="label" id="lab-height">Height</span><div class="grid grid-2 g-tight" role="group" aria-labelledby="lab-height">${sfx('r_ft', 'ft', 'Height, feet', 'ft', 'inputmode="numeric" maxlength="1" placeholder="5" required')}${sfx('r_in', 'inch', 'Height, inches', 'in', 'inputmode="numeric" maxlength="2" placeholder="8"')}</div><p class="field-error" id="err-r_ft" hidden></p></div>`;
+    const weight = `<div class="field" id="f-r_lb"><label class="label" for="r_lb">Weight</label>${sfx('r_lb', 'lb', 'Weight in pounds', 'lb', 'inputmode="decimal" maxlength="5" placeholder="160" required')}<p class="field-error" id="err-r_lb" hidden></p></div>`;
     return `<div class="stack stack-5 form" id="regForm">
       ${inp('r_name', 'name', 'Full name', 'autocomplete="name" autocapitalize="words" required')}
       ${inp('r_email', 'email', 'Email', 'type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" required')}
       <div class="grid grid-2 g-tight">
-        <div class="field" id="f-r_gender"><label class="label" for="r_gender">Gender <span class="opt">(optional)</span></label><select class="select" id="r_gender" data-reg="gender"><option value="">Choose</option>${GENDERS.map(g => `<option value="${g.id}"${r.gender===g.id?' selected':''}>${g.n}</option>`).join('')}</select></div>
-        ${inp('r_year', 'birth_year', 'Year of birth', `inputmode="numeric" maxlength="4" placeholder="e.g. 1985" autocomplete="bday-year"`, true)}
+        <div class="field" id="f-r_gender"><label class="label" for="r_gender">Gender</label><select class="select" id="r_gender" data-reg="gender" required aria-describedby="err-r_gender"><option value="">Choose</option>${GENDERS.map(g => `<option value="${g.id}"${r.gender===g.id?' selected':''}>${g.n}</option>`).join('')}</select><p class="field-error" id="err-r_gender" hidden></p></div>
+        ${inp('r_year', 'birth_year', 'Year of birth', `inputmode="numeric" maxlength="4" placeholder="e.g. 1985" autocomplete="bday-year" required`)}
       </div>
       <div class="grid grid-2 g-tight">${height}${weight}</div>
-      ${fieldBlock('sens', 'In general, I&hellip;', '', `<div class="ptile-grid cols-3" role="radiogroup" aria-labelledby="lab-sens">${SENSITIVITY.map(o => regTile('sens', o, r.sens===o.id, ic(o.ic,'ic-lg'), 'ptile-sm')).join('')}</div>`, true)}
+      ${fieldBlock('sens', 'Which sounds most like you?', '', `<div class="ptile-grid cols-3" role="radiogroup" aria-labelledby="lab-sens">${SENSITIVITY.map(o => regTile('sens', o, r.sens===o.id, ic(o.ic,'ic-lg'), 'ptile-sm')).join('')}</div>`, true)}
       <p class="caption">Used only to understand comfort differences between people. Your check-ins are stored under a participant code, not your name. The study team sees your name and email next to that code, to run the study and contact you.</p>
     </div>`;
   },
@@ -1412,9 +1498,9 @@ const REGS = {
     const h = REG.home;
     return `<div class="stack stack-6">
       <div class="field" id="f-r_zip"><label class="label" for="r_zip">ZIP code <span class="opt">(optional)</span></label><input class="input zip-in" id="r_zip" data-reg="home.zip" value="${esc(h.zip||'')}" inputmode="numeric" autocomplete="postal-code" maxlength="5" placeholder="13210" aria-describedby="hint-zip err-r_zip"><p class="field-hint" id="hint-zip">${ic('cloud','ic-xs')} Why we ask: to match your check-ins to the local weather.</p><p class="field-error" id="err-r_zip" hidden></p></div>
-      ${fieldBlock('tenure', 'Do you own or rent your home?', '', `<div class="ptile-grid cols-3" role="radiogroup" aria-labelledby="lab-tenure">${TENURE.map(o => regTile('home.tenure', o, h.tenure===o.id, HCI.art('tenure:'+o.id), 'ptile-sm')).join('')}</div>`, true)}</div>`;
+      ${fieldBlock('tenure', 'Do you own or rent your home?', '', `<div class="ptile-grid" role="radiogroup" aria-labelledby="lab-tenure">${TENURE.map(o => regTile('home.tenure', o, h.tenure===o.id, HCI.art('tenure:'+o.id), 'ptile-sm')).join('')}</div>`, true)}</div>`;
   },
-  type: () => `<div class="field" id="f-home_type"><div class="ptile-grid home-types" role="radiogroup" aria-label="Home type">${HOME_TYPES.map(o => regTile('home.home_type', o, REG.home.home_type===o.id, HCI.art('home_type:'+o.id), o.id==='other' ? 'span-2 ptile-row' : '')).join('')}</div>${groupErr('home_type')}</div>`,
+  type: () => `<div class="field" id="f-home_type"><div class="ptile-grid home-types" role="radiogroup" aria-label="Home type">${HOME_TYPES.map(o => regTile('home.home_type', o, REG.home.home_type===o.id, HCI.art('home_type:'+o.id))).join('')}</div>${groupErr('home_type')}</div>`,
   size: () => {
     const h = REG.home, u = REG.units, A = AREA[u], v = areaShown();
     const apt = isApt();
@@ -1432,20 +1518,22 @@ const REGS = {
     const h = REG.home;
     const row = (k, art, lab, hint) => `<div class="stepper-row"><span class="sr-art">${HCI.art(art)}</span><span class="sr-text"><span class="sr-lab">${lab}</span>${hint ? `<span class="field-hint">${hint}</span>` : ''}</span>${stepper('home.'+k, h[k], STEP_LIMITS[k][0], STEP_LIMITS[k][1], lab, '', k === 'bedrooms')}</div>`;
     return `<div class="stack stack-6">
-      ${fieldBlock('rooms', 'Rooms', '', `<div class="card card-flat rows-card">${row('bedrooms', 'bedrooms', 'Bedrooms', '')}${row('rooms', 'rooms', 'Rooms in total', 'Not counting bathrooms or hallways')}</div>`)}
+      ${fieldBlock('bedrooms', 'How many bedrooms does your home have?', '', `<div class="card card-flat rows-card">${row('bedrooms', 'bedrooms', 'Bedrooms', '')}</div>`)}
+      ${fieldBlock('rooms', 'And how many rooms in total?', '', `<div class="card card-flat rows-card">${row('rooms', 'rooms', 'Rooms', 'Not counting bathrooms or hallways')}</div>`)}
       ${fieldBlock('people', 'Who lives here?', 'Including you.', `<div class="card card-flat rows-card">${people()}${row('adults', 'people:adult', 'Adults', '')}${row('children', 'people:child', 'Children', 'Under 18')}${row('pets', 'people:pet', 'Pets', 'Cats, dogs and other furry friends')}</div>`)}
+      ${fieldBlock('bedroom_share', 'Do you share your bedroom with anyone?', 'Count everyone else who sleeps in the same room.', `<div class="ptile-grid cols-4 share-grid" role="radiogroup" aria-labelledby="lab-bedroom_share">${BED_SHARE.map(o => regTile('home.bedroom_share', o, h.bedroom_share===o.id, shareArt(o.id), 'ptile-sm')).join('')}</div>`)}
+      ${fieldBlock('bedroom_thermostat', 'Does your bedroom have its own thermostat?', 'Or is there one thermostat for the whole home?', `<div class="ptile-grid" role="radiogroup" aria-labelledby="lab-bedroom_thermostat">${BED_THERMOSTAT.map(o => regTile('home.bedroom_thermostat', o, h.bedroom_thermostat===o.id, HCI.art(o.art), 'ptile-sm')).join('')}</div>`)}
     </div>`;
   },
+  /* the heating season only: no cooling questions while the study runs (October-November) */
   heat: () => {
-    const h = REG.home, hs = h.heating || [], cs = h.cooling || [];
+    const h = REG.home, hs = h.heating || [];
     const cnt = n => n ? `${n} chosen` : 'Select all that apply';
     return `<div class="stack stack-6">
-      <div class="field reg-q" id="f-heating" role="group" aria-labelledby="lab-heating"><div class="reg-group-head"><span class="icon-tile it-peach">${ic('flame')}</span><h2 class="reg-q-title" id="lab-heating">Heating</h2><span class="caption">${cnt(hs.length)}</span></div>
+      <div class="field reg-q" id="f-heating" role="group" aria-labelledby="lab-heating"><div class="reg-group-head"><span class="icon-tile it-peach">${ic('flame')}</span><h2 class="reg-q-title" id="lab-heating">How is your home heated?</h2><span class="caption">${cnt(hs.length)}</span></div>
         <div class="ptile-grid cols-3 is-multi">${HEATING.map(o => regMulti('home.heating', o, hs.includes(o.id), HCI.art('heating:'+o.id))).join('')}</div></div>
-      <div class="field reg-q" id="f-cooling" role="group" aria-labelledby="lab-cooling"><div class="reg-group-head"><span class="icon-tile it-sky">${ic('snow')}</span><h2 class="reg-q-title" id="lab-cooling">Cooling</h2><span class="caption">${cnt(cs.length)}</span></div>
-        <div class="ptile-grid cols-3 is-multi">${COOLING.map(o => regMulti('home.cooling', o, cs.includes(o.id), HCI.art('cooling:'+o.id))).join('')}</div></div>
-      ${fieldBlock('thermostat', 'What kind of thermostat?', '', `<div class="ptile-grid cols-3" role="radiogroup" aria-labelledby="lab-thermostat">${THERMOSTAT.map(o => regTile('home.thermostat', o, h.thermostat===o.id, HCI.art('thermostat:'+o.id), 'ptile-sm')).join('')}</div>`)}
-      ${fieldBlock('setpoints', 'Usual thermostat settings', 'When someone is home. Skip either one if it doesn&rsquo;t apply.', `<div class="stack stack-3">${dialHtml('setpoint_winter_c', 'Winter setting')}${dialHtml('setpoint_summer_c', 'Summer setting')}</div>`)}
+      ${fieldBlock('thermostat', 'What kind of thermostat do you have?', '', `<div class="ptile-grid cols-3" role="radiogroup" aria-labelledby="lab-thermostat">${THERMOSTAT.map(o => regTile('home.thermostat', o, h.thermostat===o.id, HCI.art('thermostat:'+o.id), 'ptile-sm')).join('')}</div>`)}
+      ${fieldBlock('setpoints', 'Usual thermostat setting', 'When someone is home. Skip it if it doesn&rsquo;t apply.', dialHtml('setpoint_winter_c', 'Heating setting'))}
     </div>`;
   },
   windows: () => {
@@ -1453,33 +1541,33 @@ const REGS = {
     return `<div class="stack stack-6">
       ${fieldBlock('windows', 'What kind of windows?', 'Look at the edge of the glass: two or three panes with a gap between them.', `<div class="ptile-grid cols-4" role="radiogroup" aria-labelledby="lab-windows">${WINDOWS.map(o => regTile('home.windows', o, h.windows===o.id, HCI.art('windows:'+o.id), 'ptile-sm')).join('')}</div>`)}
       ${fieldBlock('windows_open', 'Can the windows be opened?', '', `<div class="ptile-grid cols-3" role="radiogroup" aria-labelledby="lab-windows_open">${WINDOWS_OPEN.map(o => regTile('home.windows_open', o, h.windows_open===o.id, HCI.art('windows_open:'+o.id), 'ptile-sm')).join('')}</div>`)}
-      ${fieldBlock('facing', 'Which way do the main living-room windows face?', 'Tap a direction on the compass.', `${compass()}<div class="center"><button class="chip" aria-pressed="${h.facing==='unsure'}" data-act="reg-pick" data-k="home.facing" data-v="unsure"><span class="chip-ic">${ic('help')}</span><span class="chip-check">${ic('check')}</span>Not sure</button></div>`)}
-      ${fieldBlock('draftiness', 'How drafty is it in winter?', '', `<div class="ptile-grid cols-5" role="radiogroup" aria-labelledby="lab-draftiness">${DRAFTS.map(o => `<button class="ptile ptile-sm" role="radio" aria-checked="${h.draftiness===o.id}" aria-label="${o.id}, ${o.n.toLowerCase()}" data-act="reg-pick" data-k="home.draftiness" data-v="${o.id}"><span class="ptile-art">${HCI.art('draftiness:'+o.id)}</span><span class="ptile-label">${o.id}</span>${HCI.tick()}</button>`).join('')}</div><div class="scale-ends" aria-hidden="true"><span>Never drafty</span><span>Very drafty</span></div>`)}
+      ${directionHelp()}
+      ${fieldBlock('facing', 'Which way do your main windows face?', 'The main windows of the room you use most during the day, usually the living room.', compass('facing', 'Which way the main windows face'))}
+      ${fieldBlock('bedroom_facing', 'Which way does your bedroom window face?', 'If it has more than one window, choose the biggest.', compass('bedroom_facing', 'Which way the bedroom window faces'))}
     </div>`;
   },
   review: () => {
-    const r = REG, f = regFields(), u = r.units;
-    const ht = f.height_cm == null ? null : u === 'us' ? (() => { const t = Math.round(f.height_cm / 2.54); return `${Math.floor(t/12)} ft ${t%12} in`; })() : Math.round(f.height_cm) + ' cm';
-    const wt = f.weight_kg == null ? null : u === 'us' ? Math.round(f.weight_kg / 0.45359237) + ' lb' : f.weight_kg + ' kg';
+    const f = regFields();
+    const ht = f.height_cm == null ? null : (() => { const t = Math.round(f.height_cm / 2.54); return `${Math.floor(t/12)} ft ${t%12} in`; })();
+    const wt = f.weight_kg == null ? null : Math.round(f.weight_kg / 0.45359237) + ' lb';
     const you = [['user','Name', f.name || null], ['mail','Email', f.email || null], ['users','Gender', label(GENDERS, f.gender) || null], ['calendar','Year of birth', f.birth_year ? String(f.birth_year) : null],
-      ['ruler','Height', ht], ['ruler','Weight', wt], ['thermometer','In general', label(SENSITIVITY, f.sensitivity) || null], ['sliders','Units', u === 'us' ? 'US (°F, sq ft)' : 'Metric (°C, m²)']];
+      ['ruler','Height', ht], ['ruler','Weight', wt], ['thermometer','Most like you', label(SENSITIVITY, f.sensitivity) || null]];
     return `<div class="stack stack-4">
-      <section class="card glance-card"><div class="card-head"><h2 class="card-title">About you</h2><button class="btn btn-quiet btn-sm" data-act="reg-edit" data-step="1" aria-label="Edit about you">${ic('edit')}Edit</button></div>
+      <section class="card glance-card"><div class="card-head"><h2 class="card-title">About you</h2><button class="btn btn-quiet btn-sm" data-act="reg-edit" data-step="you" aria-label="Edit about you">${ic('edit')}Edit</button></div>
         <div class="glance">${you.map(([i, k, v]) => glanceItem(ic(i), k, v, k === 'Name' || k === 'Email')).join('')}</div></section>
-      ${homeGlance(r.home, u, true)}
+      ${homeGlance(REG.home, 'us', true)}
       <div class="note">${ic('shield')}<div>Joining means you agree to take part as described on the <a href="../">study page</a>.</div></div>
     </div>`;
   }
 };
 const REG_TITLES = {
-  units: ['How should we show measurements?', ''],
-  you: ['Tell us about you', 'Name and email are needed; the rest is optional but helps.'],
+  you: ['Tell us about you', 'These help us compare how different people feel. Only the last question is optional.'],
   where: ['Where is your home?', ''],
   type: ['What type of home do you live in?', 'Pick the closest match.'],
   size: ['How big and how old is it?', ''],
   rooms: ['Rooms and people', ''],
-  heat: ['How do you heat and cool?', 'Select everything you use.'],
-  windows: ['Windows and drafts', ''],
+  heat: ['How do you heat your home?', ''],
+  windows: ['Windows and directions', 'The directions matter a lot for the study, so take a moment to get them right.'],
   review: ['Your home, at a glance', 'Check everything, then join. Tap Edit to change a section.']
 };
 function regScreen(){
@@ -1509,6 +1597,7 @@ function closeSheet(){
   if(typeof d.close === 'function') d.close(); else d.removeAttribute('open');
 }
 function sheetClosed(){
+  stopCompass();
   document.body.classList.remove('is-locked');
   const o = sheetOpener; sheetOpener = null;
   if(o && document.contains(o)) o.focus({ preventScroll:true });
@@ -1566,7 +1655,22 @@ document.addEventListener('click', async e => {
     case 'tab': if(S.screen === d.to){ window.scrollTo({ top:0, behavior: reduceMotion() ? 'auto' : 'smooth' }); break; } go(d.to); break;
     case 'back': back(); break;
     case 'close': go('today'); break;
-    case 'start': startSession('self'); break;
+    case 'start': if(needsNotif()){ notifSheet(b); break; } startSession('self'); break;
+    case 'start-anyway': closeSheet(); startSession('self'); break;
+    /* one tap: permission, this phone registered, the hours saved so far (or 7 AM-10 PM) */
+    case 'notif-on': {
+      const then = d.then;
+      LS.set(HOURS_KEY, JSON.stringify(hours()));
+      b.disabled = true; b.classList.add('is-busy');
+      try{
+        const r = await PUSH.enable();
+        if(r === 'on'){
+          if(then === 'start'){ closeSheet(); startSession('self'); }
+          else { rerender(); if(S.screen === 'settings') remMsg(`Notifications are on. ${daysWord(hours())}; change the hours below.`, 'ok'); }
+          showToast({ title:'Notifications are on', sub: daysWord(hours()).replace(/&ndash;/g, '–') });
+        } else { if(then === 'start') notifSheet(); else rerender(); }   // not allowed: the steps to allow them
+      }catch(err){ b.disabled = false; b.classList.remove('is-busy'); notifMsg(err.message || 'Something went wrong, please try again.', 'warn'); }
+      break; }
     case 'home': onHome(d.v); break;
     case 'pause': setPause(d.v); break;
     case 'nothome': go('away'); break;
@@ -1589,7 +1693,6 @@ document.addEventListener('click', async e => {
     case 'sheet-close': closeSheet(); break;
     case 'toast-action': { const t = TOAST; if(t && t.o.onAction) t.o.onAction(); break; }
     case 'go-reminders': go('settings'); { const r = $('#reminders'); if(r){ r.scrollIntoView({ block:'start' }); r.focus({ preventScroll:true }); } } break;
-    case 'units': LS.set(UNITS_KEY, d.v === 'metric' ? 'metric' : 'us'); rerender(); break;
     case 'add-win': { remDraft = readHours(); remDraft[d.w+'2_start'] = '07:00'; remDraft[d.w+'2_end'] = '09:00'; rerender(); $('#'+(d.w==='weekday'?'h_ws2':'h_es2'))?.focus({ preventScroll:true }); break; }
     case 'rm-win': { remDraft = readHours(); remDraft[d.w+'2_start'] = null; remDraft[d.w+'2_end'] = null; rerender(); $(`[data-act="add-win"][data-w="${d.w}"]`)?.focus({ preventScroll:true }); break; }
     case 'install-skip': {                                    // "Continue in Safari anyway": where the link was going
@@ -1603,13 +1706,6 @@ document.addEventListener('click', async e => {
     case 'forget': forgetIdentity(''); break;
     case 'signout': confirmSignOut(b); break;
     case 'signout-yes': { b.disabled = true; b.classList.add('is-busy'); if(PUSH.status() === 'on') await PUSH.disable(); closeSheet(); forgetIdentity('You’re signed out on this phone.'); break; }
-    case 'push-on': {
-      const h = readHours(), why = hoursProblem(h);
-      if(why){ remMsg(why, 'warn'); break; }
-      LS.set(HOURS_KEY, JSON.stringify(h)); remDraft = null; b.disabled = true; b.classList.add('is-busy');
-      try{ const r = await PUSH.enable(); rerender(); if(r === 'on') remMsg('Reminders are on. You&rsquo;ll get one an hour while you&rsquo;re home.', 'ok'); }
-      catch(err){ b.disabled = false; b.classList.remove('is-busy'); remMsg(err.message || 'Something went wrong, please try again.', 'warn'); }
-      break; }
     case 'save-hours': {
       const h = readHours(), why = hoursProblem(h);
       if(why){ remMsg(why, 'warn'); break; }
@@ -1625,13 +1721,21 @@ document.addEventListener('click', async e => {
     /* the sign-up wizard */
     case 'reg-next': regNext(); break;
     case 'reg-later': saveReg(); welcomeNote = 'Your answers so far are saved on this phone. Tap “I’m new here” to carry on.'; go('welcome'); break;
-    case 'reg-edit': REG.edit = true; regGo(Number(d.step)); break;
-    case 'reg-units': convertUnits(d.v); saveReg(); rerender(); break;
+    case 'reg-edit': REG.edit = true; regGo(stepOf(d.step)); break;
     case 'reg-pick': {
-      let v = d.v; if(['home.floors','home.draftiness'].includes(d.k)) v = Number(v);
+      let v = d.v; if(['home.floors','home.bedroom_share'].includes(d.k)) v = Number(v);
       regSet(d.k, v);
       if(d.k === 'home.home_type' && !isApt()) delete REG.home.unit_floor;
-      saveReg(); rerender(); if(d.k === 'home.home_type' || d.k === 'home.facing') fieldError(d.k.slice(5), '');
+      if(d.k === 'home.facing' || d.k === 'home.bedroom_facing') delete REG.home[d.k.slice(5) + '_deg'];   // tapped by hand: no measured degrees
+      saveReg(); rerender(); if(d.k === 'home.home_type') fieldError('home_type', '');
+      break; }
+    case 'reg-measure': measureCompass(d.k, b); break;
+    case 'cmp-use': {
+      if(!CMP || CMP.h === null) break;
+      const k = d.k, h = CMP.h;
+      REG.home[k] = dir8(h).id; REG.home[k + '_deg'] = Math.round(h) % 360; saveReg();
+      closeSheet(); rerender();
+      showToast({ title:'Direction saved', sub: `${dir8(h).n}, ${Math.round(h) % 360}°` });
       break; }
     case 'reg-toggle': {
       const key = d.k.slice(5), arr = Array.isArray(REG.home[key]) ? [...REG.home[key]] : [];
@@ -1661,7 +1765,7 @@ document.addEventListener('input', e => {
   }
   if(t.classList && t.classList.contains('time-in')){ remDraft = readHours(); ['weekday','weekend'].forEach(p => { const s = $('#strip-' + p); if(s) s.innerHTML = strip(remDraft, p); }); const m = $('#remMsg'); if(m) m.hidden = true; }
 });
-document.addEventListener('change', e => { const t = e.target; if(t.tagName === 'SELECT' && t.dataset.reg){ regSet(t.dataset.reg, t.value); saveReg(); } });
+document.addEventListener('change', e => { const t = e.target; if(t.tagName === 'SELECT' && t.dataset.reg){ regSet(t.dataset.reg, t.value); saveReg(); const f = $('#f-' + t.id); if(f && f.classList.contains('is-invalid')) fieldError(t.id, ''); } });
 document.addEventListener('keydown', e => {
   const t = e.target;
   /* arrow keys move between the options of a radio group (choosing still takes Enter or Space) */

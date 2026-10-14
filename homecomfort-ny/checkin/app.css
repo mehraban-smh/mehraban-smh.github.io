@@ -65,6 +65,23 @@ body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))
 .skip-line{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:0 2px;font-size:14.5px;color:var(--ink-2);text-align:center}
 .skip-line .btn-quiet{padding:0 8px;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px}
 
+/* what changed / worth noting: related answers in boxes, each answer a tile with its own check */
+.aboxes{display:flex;flex-direction:column;gap:12px}
+.abox{display:flex;flex-direction:column;gap:10px;min-width:0;margin:0;padding:12px;border:1px solid var(--line);border-radius:var(--r-lg);background:#fff;box-shadow:var(--sh-1)}
+.abox-h{display:flex;align-items:center;gap:8px;padding:0;font-size:14.5px;font-weight:800;color:var(--ink)}
+.abox-opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.abox-opts.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.abox-opt{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-width:0;min-height:76px;padding:10px 8px;border:2px solid var(--line);border-radius:16px;background:var(--surface-2);color:var(--ink);font:inherit;font-size:13.5px;font-weight:700;line-height:1.2;text-align:center;cursor:pointer;transition:background-color var(--dur-2),border-color var(--dur-2),box-shadow var(--dur-2)}
+.abox-opt:hover{border-color:var(--violet-200)}
+.abox-opt:active{transform:scale(.985)}
+.abox-ic{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#fff;color:var(--violet-700)}
+.abox-ic .ic{width:22px;height:22px}
+.abox-opt[aria-pressed="true"]{border-color:var(--violet);background:var(--violet-50);box-shadow:var(--halo)}
+.abox-opt[aria-pressed="true"] .abox-ic{background:var(--violet);color:#fff}
+.abox-opt>.tick{top:6px;right:6px;width:20px;height:20px}
+.abox-opt>.tick .ic{width:12px;height:12px}
+.aboxes .option-list{margin-top:2px}
+
 /* clothing: the figure, the clo total and the garment tiles */
 .fig{--fig-skin:#F4EAE1;--fig-hair:#4A3F6B;--g-tshirt:#A9DCFF;--g-long:#C9B8FF;--g-sweater:#FFC2A8;--g-hoodie:#9C8BF0;--g-shorts:#8EC5F0;--g-pants:#6F7FC9;--g-sweatpants:#B9B4CF;--g-skirt:#F4B3D0;--g-socks:#FFFFFF;--g-slippers:#FFD3C1;--g-blanket:#BDEBD6;--g-comforter:#EDE8FF;display:block;flex:none}
 .fig svg{display:block;width:100%;height:100%}
@@ -80,7 +97,7 @@ body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))
 .garments .ptile-hint{font-size:11.5px}
 
 /* quick check and review */
-.quick{display:flex;flex-direction:column;gap:6px;padding:14px 14px 8px 16px}
+.quick{display:flex;flex-direction:column;gap:10px}
 .quick-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .fig-sm{width:54px;height:94px;margin:-4px 0 -6px}
 .answers{display:flex;flex-direction:column;margin:0;padding:0;list-style:none}
@@ -92,10 +109,32 @@ body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))
 .ans-text b{font-weight:800}
 .ans-text .open{color:var(--warn);font-weight:700}
 .ans-edit{flex:none;margin-right:-6px}
-.review .list-item{min-height:62px}
-.review .li-title{font-size:15.5px;font-weight:700;line-height:1.35}
-.review .li-sub{margin:0 0 2px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
 .sense-inline{display:inline-flex;align-items:center;gap:8px}
+.screen-sub .ic-xs{width:15px;height:15px;vertical-align:-2px;color:var(--violet-700)}
+/* answer tiles (quick check, review): two columns, the feeling, the outfit and the lists across both */
+.atiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0;padding:0;list-style:none}
+.atile{position:relative;display:flex;align-items:center;gap:10px;min-width:0;min-height:68px;padding:10px 44px 10px 10px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:var(--sh-1)}
+.atile.is-wide{grid-column:1 / -1}
+.atile-ic{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:13px;background:var(--violet-50);color:var(--violet-700)}
+.atile-ic .ic{width:22px;height:22px}
+.atile-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.atile-k{font-size:11.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.atile-v{font-size:14.5px;font-weight:700;line-height:1.3;color:var(--ink);overflow-wrap:anywhere}
+.atile-v small{display:block;margin-top:2px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.atile-v .open{color:var(--warn);font-weight:700}
+.atile-edit{position:absolute;top:50%;right:4px;width:40px;height:40px;margin-top:-20px;background:transparent;box-shadow:none;color:var(--violet-700)}
+.atile-edit .ic{width:19px;height:19px}
+.atile-edit:hover{background:var(--violet-50)}
+.atile.is-feel{min-height:76px;border-color:transparent;background:var(--sc-tint,var(--surface-2))}
+.atile.is-feel .orb{--size:48px}
+.atile.is-feel .atile-v{font-family:var(--font-display);font-size:21px;font-weight:800;letter-spacing:-.02em;color:var(--sc-text,var(--ink))}
+.atile.is-feel .atile-k{color:var(--sc-text,var(--ink-3));opacity:.8}
+.atile-fig{width:46px;height:80px;margin:-4px 0}
+.atile.is-clo{padding-top:6px;padding-bottom:6px}
+.achips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.achip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px 4px 7px;border-radius:var(--r-pill);background:var(--violet-50);color:var(--violet-800);font-size:12.5px;font-weight:700;line-height:1.2}
+.achip .ic{width:15px;height:15px;color:var(--violet-700)}
+.quick-top .pill .ic{width:15px;height:15px}
 
 /* done */
 .done{padding-top:8px}
@@ -130,6 +169,17 @@ body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))
 .status-card .li-title{font-size:15px;line-height:1.3}
 .status-card .chev{color:var(--ink-3);flex:none}
 .status-card .badge{margin-bottom:5px}
+.status-link{display:inline-flex;align-items:center;gap:4px;margin-left:8px;font-weight:800;color:var(--violet-700);white-space:nowrap}
+.status-link .ic{width:14px;height:14px}
+/* "Turn on notifications": first on Today until they are on */
+.notif-card{display:flex;flex-direction:column;gap:12px;padding:16px;border:2px solid var(--violet-200);background:linear-gradient(160deg,#fff 0%,var(--violet-50) 100%)}
+.notif-card.is-warn{border-color:#F3C98B;background:linear-gradient(160deg,#fff 0%,#FFF6E8 100%)}
+.notif-top{display:flex;align-items:center;gap:12px}
+.notif-top .eyebrow{display:block;margin-bottom:2px}
+.notif-ic{background:var(--violet);color:#fff}
+.is-warn .notif-ic{background:#F3A33A;color:#fff}
+.notif-body{display:flex;flex-direction:column;gap:8px;font-size:14.5px;line-height:1.45;color:var(--ink-2)}
+.notif-body .field-hint .ic{vertical-align:-2px;color:var(--violet-700)}
 .week-card .card-head{margin-bottom:6px}
 .wd-svg{display:block;width:100%;height:auto;margin-top:4px;overflow:visible}
 .wd-grid{stroke:var(--grid);stroke-width:1}
@@ -288,6 +338,49 @@ body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))
 .compass-pt{position:absolute;width:48px;height:48px;padding:0;border:2px solid var(--line-2);border-radius:50%;background:#fff;color:var(--ink);font-size:14px;font-weight:800;transform:translate(-50%,-50%);cursor:pointer;transition:background-color var(--dur-2),border-color var(--dur-2),box-shadow var(--dur-2)}
 .compass-pt:hover{border-color:var(--violet-200);background:var(--violet-50)}
 .compass-pt[aria-checked="true"]{border-color:var(--violet);background:var(--violet);color:#fff;box-shadow:var(--halo)}
+.cmp-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px}
+.cmp-actions .btn .ic{width:18px;height:18px}
+.cmp-measured{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13.5px;color:var(--ink-2)}
+.cmp-measured .ic{color:var(--good)}
+/* how to find a window's direction */
+.dir-help{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border:1px solid var(--violet-200);background:var(--violet-50)}
+.dir-help-top{display:flex;align-items:center;gap:12px}
+.dir-pic{width:118px;height:auto;flex:none}
+.dp-r{font-size:10px;font-weight:700;fill:var(--ink-3)}
+.dp-room{fill:#fff;stroke:var(--line-2);stroke-width:2}
+.dp-win{fill:#BFE3FF;stroke:var(--sky-700,#1F6FB0);stroke-width:2}
+.dp-ray{fill:none;stroke:var(--violet);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.dp-phone{fill:var(--ink);stroke:none}
+.dp-cam{stroke:#fff;stroke-width:2;stroke-linecap:round}
+.dp-dot{fill:var(--violet)}
+.dp-t{font-size:10px;font-weight:800;fill:var(--violet-700)}
+.dir-help .steps{font-size:14px}
+.dir-help .field-hint .ic{vertical-align:-2px;color:var(--peach-700,#B4532A)}
+/* the live phone compass (sheet) */
+.cmp-live{display:flex;flex-direction:column;align-items:center;gap:10px;padding:4px 0 6px}
+.cmp-dial{position:relative;width:220px;height:220px}
+.cmp-rose{display:block;width:100%;height:100%;transition:transform .12s linear}
+.cr-ring{fill:var(--surface-2);stroke:var(--line-2);stroke-width:2}
+.cr-tick{stroke:var(--ink-3);stroke-width:1.6;stroke-linecap:round}
+.cr-l{font-family:var(--font-display);font-size:20px;font-weight:800;fill:var(--ink-2)}
+.cr-l.is-n{fill:#D9412B}
+.cmp-arrow{position:absolute;left:50%;top:-6px;width:0;height:0;margin-left:-12px;border-left:12px solid transparent;border-right:12px solid transparent;border-bottom:22px solid var(--violet)}
+.cmp-read{display:flex;align-items:baseline;gap:10px}
+.cmp-read b{font-family:var(--font-display);font-size:28px;font-weight:800;letter-spacing:-.02em}
+.cmp-read span{font-size:17px;font-weight:800;color:var(--ink-2)}
+#cmpHint{max-width:34ch}
+/* "Do you share your bedroom?": one small figure per person */
+.share-art{display:flex;align-items:flex-end;justify-content:center}
+.share-art i{display:grid;margin:0 -7px;color:var(--ink-3);--duo:var(--ink-4)}
+.share-art i.is-me{color:var(--violet-700);--duo:var(--violet)}
+.share-art .art{width:34px;height:34px}
+.share-grid .ptile-art{overflow:hidden}
+.share-art.n-2 i{margin:0 -6px}
+.share-art.n-3 .art{width:27px;height:27px}
+.share-art.n-3 i{margin:0 -5px}
+.share-art.n-4 .art{width:23px;height:23px}
+.share-art.n-4 i{margin:0 -4.5px}
+.share-grid .ptile-label{font-size:12px}
 
 /* ============================================================================================ debug */
 .debug{margin-top:8px;padding-bottom:40px}

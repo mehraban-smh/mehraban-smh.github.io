@@ -36,18 +36,33 @@ const SUN = [
   {id:'no',   n:'No direct sun', s:'Daylight, but not on me',    ic:'cloud'},
   {id:'dark', n:"It's dark",     s:'Evening, or blinds closed',  ic:'moon'}
 ];
+/* What changed in the last 30 minutes. Shown as boxes (window, door, heating, clothing and blankets) and
+ * two rows on their own; within a box the two sides of a pair (opened/closed, up/down, on/off) exclude
+ * each other. n is the full name used in summaries, s the short label inside a box. ac_up, ac_down and fan
+ * are no longer offered (the study runs in the heating season) but still name older check-ins. */
 const ACTIONS = [
-  {id:'win_open', n:'Opened a window', ic:'window'},          {id:'win_close', n:'Closed a window', ic:'window'},
-  {id:'heat_up',  n:'Turned the heat up', ic:'radiator'},     {id:'heat_down', n:'Turned the heat down or off', ic:'radiator'},
-  {id:'ac_up',    n:'Turned the AC on or up', ic:'snow'},     {id:'ac_down',   n:'Turned the AC down or off', ic:'snow'},
-  {id:'fan',      n:'Fan on', ic:'fan'},                      {id:'layer_on',  n:'Put on a layer', ic:'layer-on'},
-  {id:'layer_off',n:'Took off a layer', ic:'layer-off'},      {id:'blanket',   n:'Got a blanket', ic:'blanket'},
-  {id:'curtains', n:'Closed blinds or curtains', ic:'curtain'},{id:'moved',    n:'Moved room', ic:'door'}
+  {id:'win_open',  n:'Opened a window',    s:'Opened',       ic:'window-open'}, {id:'win_close',  n:'Closed a window', s:'Closed', ic:'window'},
+  {id:'door_open', n:'Opened a door',      s:'Opened',       ic:'door-open'},   {id:'door_close', n:'Closed a door',   s:'Closed', ic:'door'},
+  {id:'heat_up',   n:'Turned the heat up', s:'Turned it up', ic:'arrow-up'},    {id:'heat_down',  n:'Turned the heat down or off', s:'Turned it down or off', ic:'arrow-down'},
+  {id:'layer_on',  n:'Put on a layer',   ic:'layer-on'}, {id:'layer_off', n:'Took off a layer', ic:'layer-off'}, {id:'blanket', n:'Got a blanket', ic:'blanket'},
+  {id:'curtains',  n:'Closed blinds or curtains', ic:'curtain'}, {id:'moved', n:'Changed rooms', ic:'walk'},
+  {id:'ac_up', n:'Turned the AC on or up', ic:'snow', old:true}, {id:'ac_down', n:'Turned the AC down or off', ic:'snow', old:true}, {id:'fan', n:'Fan on', ic:'fan', old:true}
 ];
+const ACTION_BOXES = [
+  {n:'Window',                ic:'window',   ids:['win_open','win_close']},
+  {n:'Door',                  ic:'door',     ids:['door_open','door_close']},
+  {n:'Heating',               ic:'radiator', ids:['heat_up','heat_down']},
+  {n:'Clothing and blankets', ic:'layer-on', ids:['layer_on','layer_off','blanket']}
+];
+const ACTION_SOLO = ['curtains','moved'];
+const PAIRED = { win_open:'win_close', win_close:'win_open', door_open:'door_close', door_close:'door_open', heat_up:'heat_down', heat_down:'heat_up', layer_on:'layer_off', layer_off:'layer_on' };
+/* Anything worth noting: drinks and food in boxes, two rows on their own (any number may be chosen). */
 const NOTES = [
   {id:'hot_drink',n:'Hot drink',ic:'mug'}, {id:'cold_drink',n:'Cold drink',ic:'glass'}, {id:'ate',n:'Just ate',ic:'fork'},
   {id:'hungry',n:'Hungry',ic:'apple'}, {id:'tired',n:'Tired',ic:'zzz'}, {id:'unwell',n:'Feeling unwell',ic:'thermometer'}
 ];
+const NOTE_BOXES = [{n:'Drinks', ic:'mug', ids:['hot_drink','cold_drink']}, {n:'Food', ic:'fork', ids:['ate','hungry']}];
+const NOTE_SOLO = ['tired','unwell'];
 
 /* Clothing: the same clo values as SWITCH (ASHRAE 55; blanket and comforter are estimates). */
 const GARMENTS = [
@@ -121,6 +136,8 @@ const optRow = (q, o, on, cls='') => `<button class="option-row ${cls}" role="ra
 /* multiple choice: toggles, plus one "none" row that clears the others */
 const multiRow = (q, o, on) => `<button class="option-row is-compact" aria-pressed="${on?'true':'false'}" data-act="toggle" data-q="${q}" data-v="${o.id}"><span class="icon-tile">${ic(o.ic)}</span><span class="option-text"><span class="option-title">${o.n}</span></span>${HCI.tick()}</button>`;
 const noneRow = (q, on, label) => `<button class="option-row is-compact is-none" aria-pressed="${on?'true':'false'}" data-act="none" data-q="${q}"><span class="icon-tile it-plain">${ic('check-circle')}</span><span class="option-text"><span class="option-title">${label}</span></span>${HCI.tick()}</button>`;
+/* a box of related answers (the window, the door, drinks...): one tile per answer, each with its own check */
+const answerBox = (q, list, box, on) => `<fieldset class="abox"><legend class="abox-h"><span class="icon-tile it-sm">${ic(box.ic)}</span>${box.n}</legend><div class="abox-opts cols-${box.ids.length}">${box.ids.map(id => { const o = byId(list, id); return `<button class="abox-opt" type="button" aria-pressed="${on(id)?'true':'false'}" aria-label="${box.n}: ${o.s || o.n}" data-act="toggle" data-q="${q}" data-v="${id}"><span class="abox-ic">${ic(o.ic)}</span><span class="abox-l">${o.s || o.n}</span>${HCI.tick()}</button>`; }).join('')}</div></fieldset>`;
 const footNext = (ok, label='Next', note='') => `<div class="footbar">${note}<button class="btn btn-primary btn-block" data-act="next" ${ok?'':'disabled'}>${label} ${ic('arrow-right')}</button></div>`;
 
 /* ---------- the eight question screens (read S.a for the current answers) ---------- */
@@ -154,37 +171,47 @@ const Q = {
   sun: () => qhead('Sunlight', 'Is the sun shining on you?') +
     `<div class="option-list" role="radiogroup" aria-label="Sunlight">${SUN.map(o=>optRow('sun',o,S.a.sun===o.id)).join('')}</div>`,
   actions: () => {
-    const ids = S.a.actions;
-    return qhead('Since last time', 'Have you changed anything?', 'Tap all that apply.') +
-      `<div class="option-list is-multi" role="group" aria-label="What changed">${ACTIONS.map(o=>multiRow('actions',o,ids&&ids.includes(o.id))).join('')}${noneRow('actions', ids&&ids.length===0, 'Nothing changed')}</div>` + footNext(!!ids);
+    const ids = S.a.actions, on = id => !!(ids && ids.includes(id));
+    return qhead('Last 30 minutes', 'Did you change anything in the last 30 minutes?', 'Tap all that apply.') +
+      `<div class="aboxes" role="group" aria-label="What changed in the last 30 minutes">${ACTION_BOXES.map(b => answerBox('actions', ACTIONS, b, on)).join('')}
+        <div class="option-list is-multi">${ACTION_SOLO.map(id => multiRow('actions', byId(ACTIONS, id), on(id))).join('')}${noneRow('actions', ids&&ids.length===0, 'Nothing changed')}</div></div>` + footNext(!!ids);
   },
   notes: () => {
-    const ids = S.a.notes;
+    const ids = S.a.notes, on = id => !!(ids && ids.includes(id));
     return qhead('Anything else', 'Anything worth noting?', 'In the last hour.') +
-      `<div class="option-list is-multi" role="group" aria-label="Anything worth noting">${NOTES.map(o=>multiRow('notes',o,ids&&ids.includes(o.id))).join('')}${noneRow('notes', ids&&ids.length===0, 'Nothing to note')}</div>` + footNext(!!ids);
+      `<div class="aboxes" role="group" aria-label="Anything worth noting">${NOTE_BOXES.map(b => answerBox('notes', NOTES, b, on)).join('')}
+        <div class="option-list is-multi">${NOTE_SOLO.map(id => multiRow('notes', byId(NOTES, id), on(id))).join('')}${noneRow('notes', ids&&ids.length===0, 'Nothing to note')}</div></div>` + footNext(!!ids);
   }
 };
 
 /* ---------- sign-up: the home profile (values exactly as in homecomfort-ny/README.md) ---------- */
 const GENDERS = [{id:'woman',n:'Woman'},{id:'man',n:'Man'},{id:'non_binary',n:'Non-binary'},{id:'self_describe',n:'Another identity'},{id:'prefer_not',n:'Prefer not to say'}];
 const SENSITIVITY = [
-  {id:'cold',    n:'Feel the cold easily',   ic:'snow'},
-  {id:'average', n:'About average',          ic:'leaf'},
-  {id:'warm',    n:'Feel the warmth easily', ic:'sun'}
+  {id:'cold',    n:'I feel the cold easily',  ic:'snow'},
+  {id:'average', n:'I’m about average',       ic:'leaf'},
+  {id:'warm',    n:'I feel the heat easily',  ic:'sun'}
 ];
 const TENURE = [
-  {id:'own',  n:'Own',   h:'I or my family own it'},
-  {id:'rent', n:'Rent',  h:'I rent it'},
-  {id:'other',n:'Other', h:'e.g. living with family'}
+  {id:'own',        n:'Own',                h:'I or my family own it'},
+  {id:'rent',       n:'Rent',               h:'I rent it'},
+  {id:'subsidized', n:'Subsidized housing', h:'Public or rent-assisted'},
+  {id:'other',      n:'Other',              h:'e.g. living with family'}
 ];
+/* Four types (semi_attached and attached use the duplex and townhouse pictures, see icons.js). Older
+ * profiles may hold townhouse, duplex, mobile, dorm or other: the dashboard still names them. */
 const HOME_TYPES = [
-  {id:'detached', n:'Detached house', h:'Single-family'},
-  {id:'townhouse',n:'Townhouse',      h:'Row house, shared walls'},
-  {id:'duplex',   n:'Duplex',         h:'Two-family house'},
-  {id:'apartment',n:'Apartment',      h:'or condo'},
-  {id:'mobile',   n:'Mobile home',    h:'Manufactured home'},
-  {id:'dorm',     n:'Dorm',           h:'Student housing'},
-  {id:'other',    n:'Something else', h:'None of these'}
+  {id:'detached',      n:'Detached',      h:'A house that stands on its own'},
+  {id:'semi_attached', n:'Semi-attached', h:'Shares one wall, like a twin or duplex'},
+  {id:'attached',      n:'Attached',      h:'Row house or townhouse'},
+  {id:'apartment',     n:'Apartment',     h:'or condo'}
+];
+/* the bedroom: how many others sleep in it (3 means 3 or more) and whether it has its own thermostat */
+const BED_SHARE = [{id:0,n:'Just me'},{id:1,n:'1 other person'},{id:2,n:'2 others'},{id:3,n:'3 or more'}];
+const BED_THERMOSTAT = [
+  {id:'own',    n:'Its own thermostat',     h:'In the bedroom', art:'bedrooms'},
+  {id:'shared', n:'One for the whole home', h:'Somewhere else', art:'home_type:detached'},
+  {id:'none',   n:'No thermostat',          h:'',               art:'none'},
+  {id:'unsure', n:'Not sure',               h:'',               art:'unsure'}
 ];
 const YEAR_BUILT = [
   {id:'pre1940',n:'Before 1940'},{id:'1940_1969',n:'1940–1969'},{id:'1970_1989',n:'1970–1989'},

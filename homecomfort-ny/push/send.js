@@ -40,7 +40,7 @@ const path = require('path');
 const MIN = 60000;
 const STUDY_ZONE = 'America/New_York';                 // when config.js has no timeZone
 // The app's defaults (DEFAULT_HOURS in checkin/app.js), used for a main-window bound that is missing.
-const DEFAULT_HOURS = { weekday_start: '17:00', weekday_end: '22:30', weekend_start: '09:00', weekend_end: '22:30' };
+const DEFAULT_HOURS = { weekday_start: '07:00', weekday_end: '22:00', weekend_start: '07:00', weekend_end: '22:00' };
 const toMin = hhmm => { const m = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(String(hhmm || '').trim()); return m ? (+m[1]) * 60 + (+m[2]) : null; };
 const LATE_START_MIN = 5;                            // grace for a run that starts late; below the :07 backup run
 // The browser push services (the same list as push_endpoint_ok() in supabase-setup.sql).
@@ -89,6 +89,7 @@ function insideHomeHours(sub, clock) {
 function decide(sub, now, opts) {
   const force = (opts && opts.force) || '';
   if (force) return sub.participant === force ? 'send' : 'not the test participant';
+  if (opts && opts.endsAt && now >= opts.endsAt) return 'the study has ended';
   if (!sub.enabled) return 'reminders off';
   if (sub.paused_until && new Date(sub.paused_until) > now) return 'paused (away)';
   if (sub.settled_at && now - new Date(sub.settled_at) < 60 * MIN) return 'settling in after arriving home';
@@ -105,6 +106,17 @@ function decide(sub, now, opts) {
   const at = now % (60 * MIN) < LATE_START_MIN * MIN ? new Date(now - now % (60 * MIN)) : now;
   if (!insideHomeHours(sub, localClock(at, sub.tz, opts && opts.zone))) return 'outside home hours';
   return 'send';
+}
+
+/* The moment a study day ends in a time zone: midnight at the start of the following day, as a Date.
+ * studyEnd "2026-11-20" in New York is 2026-11-21 00:00 EST, i.e. 05:00 UTC. Null for an unreadable date. */
+function dayEndsAt(ymd, zone) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || '').trim());
+  if (!m || !clockFor(zone)) return null;
+  const guess = Date.UTC(+m[1], +m[2] - 1, +m[3] + 1, 0, 0);            // that midnight, read as if it were UTC
+  const p = {}; for (const x of new Intl.DateTimeFormat('en-US', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date(guess))) p[x.type] = x.value;
+  const shown = Date.UTC(+p.year, +p.month - 1, +p.day, (+p.hour) % 24, +p.minute);
+  return new Date(guess - (shown - guess));                               // shift by the zone's offset at that moment
 }
 
 /* ---- self-check of the rules:  SELFTEST=1 node send.js  ---- */
@@ -158,8 +170,14 @@ function selfTest() {
     // main-window bounds: seconds are fine, a missing or broken bound takes the app's default, never "any time"
     ['main window stored as HH:MM:SS', { ...one, weekday_start: '17:00:00', weekday_end: '22:30:00' }, weekday('03:00'), 'outside home hours'],
     ['main window stored as HH:MM:SS, inside', { ...one, weekday_start: '17:00:00', weekday_end: '22:30:00' }, weekday('18:00'), 'send'],
-    ['main window bounds missing: default 17:00-22:30', { ...one, weekday_start: null, weekday_end: '' }, weekday('03:00'), 'outside home hours'],
-    ['main window bounds broken: default 17:00-22:30', { ...one, weekday_start: 'teatime', weekday_end: 'late' }, weekday('18:00'), 'send'],
+    ['main window bounds missing: default 07:00-22:00', { ...one, weekday_start: null, weekday_end: '' }, weekday('03:00'), 'outside home hours'],
+    ['main window bounds missing: default 07:00-22:00, 07:00 inside', { ...one, weekday_start: null, weekday_end: null }, weekday('07:00'), 'send'],
+    ['main window bounds broken: default 07:00-22:00', { ...one, weekday_start: 'teatime', weekday_end: 'late' }, weekday('18:00'), 'send'],
+    ['main window bounds broken: default ends 22:00', { ...one, weekday_start: 'teatime', weekday_end: 'late' }, weekday('22:30'), 'outside home hours'],
+    // the end of the study (studyEnd in config.js, the last day in New York)
+    ['study over: 20 Nov 2026 ends at 05:00Z', { ...one, tz: 'America/New_York' }, new Date('2026-11-21T05:00:00Z'), 'the study has ended', { endsAt: dayEndsAt('2026-11-20', 'America/New_York') }],
+    ['last evening of the study, 21:00 New York', { ...one, tz: 'America/New_York' }, new Date('2026-11-21T02:00:00Z'), 'send', { endsAt: dayEndsAt('2026-11-20', 'America/New_York') }],
+    ['study end is ignored for a forced test', { ...one }, new Date('2026-12-01T18:00:00Z'), 'send', { force: 'P01', endsAt: dayEndsAt('2026-11-20', 'America/New_York') }],
     // "until midnight" saved by an older app as 00:00, or a window past midnight: until 23:59, as the app reads it
     ['main window 18:00-00:00 (older app): 23:30 is inside', { ...one, weekday_start: '18:00', weekday_end: '00:00' }, weekday('23:30'), 'send'],
     ['main window 18:00-00:00 (older app): 17:30 is outside', { ...one, weekday_start: '18:00', weekday_end: '00:00' }, weekday('17:30'), 'outside home hours'],
@@ -216,6 +234,7 @@ const PUB = cfgVal('vapidPublicKey');
 const TABLE = cfgVal('pushTable') || 'push_subscriptions';
 const INTERVAL = cfgNum('reminderIntervalMin');   // minutes between reminders; the same value the app shows
 const ZONE = cfgVal('timeZone') || STUDY_ZONE;     // home hours of phones that have not reported a time zone
+const ENDS_AT = dayEndsAt(cfgVal('studyEnd'), clockFor(ZONE) ? ZONE : STUDY_ZONE);   // no reminders once the last study day is over
 const cleanUrl = u => (u || '').trim().replace(/\/+$/, '').replace(/\/(rest|auth)\/v1$/, '');
 const looksLikeProject = u => /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(u);
 const envUrl = cleanUrl(process.env.SUPABASE_URL);
@@ -237,6 +256,7 @@ console.log(`Secret key:   ${mask(KEY)}`);
 console.log(`VAPID key:    ${PRIV ? PRIV.length + ' chars' : '(empty)'}${DRY ? ' (dry run)' : ''}`);
 console.log(`Interval:     ${INTERVAL ? INTERVAL + ' min (config.js)' : 'not in config.js, using each phone\'s interval_min'}`);
 console.log(`Time zone:    ${ZONE}${clockFor(ZONE) ? '' : ' (unknown, using ' + STUDY_ZONE + ')'} for phones that have not reported one`);
+console.log(`Study ends:   ${ENDS_AT ? ENDS_AT.toISOString() + ' (end of ' + cfgVal('studyEnd') + ' in ' + ZONE + ')' : 'no studyEnd in config.js'}`);
 if (!URL_) fail('supabaseUrl is empty in homecomfort-ny/config.js');
 if (!looksLikeProject(URL_)) fail(`supabaseUrl in homecomfort-ny/config.js does not look like a project URL: "${URL_}"`);
 if (!KEY) fail('SUPABASE_SERVICE_ROLE_KEY secret is empty. Create a secret key under Settings > API Keys > Secret keys');
@@ -281,7 +301,7 @@ async function main() {
   for (const sub of subs) {
     let verdict;
     if (!PUSH_SERVICE.test(sub.endpoint || '')) verdict = 'not a push service endpoint';
-    else try { verdict = decide(sub, now, { force: FORCE, interval: INTERVAL, zone: ZONE }); }
+    else try { verdict = decide(sub, now, { force: FORCE, interval: INTERVAL, zone: ZONE, endsAt: ENDS_AT }); }
     catch (e) { verdict = 'could not decide'; console.error(`could not decide for ${sub.participant}: ${e.message}`); }   // one odd row never stops the rest
     summary[verdict] = (summary[verdict] || 0) + 1;
     if (verdict !== 'send') continue;

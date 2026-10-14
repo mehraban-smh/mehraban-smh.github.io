@@ -84,6 +84,8 @@
     'layers': '<path d="m12 4 8.5 4.5L12 13 3.5 8.5z"/><path d="m3.5 12.5 8.5 4.5 8.5-4.5M3.5 16.5 12 21l8.5-4.5"/>',
     'door': '<path d="M6 20.5V5a1.5 1.5 0 0 1 1.5-1.5h9A1.5 1.5 0 0 1 18 5v15.5"/><path d="M4 20.5h16"/><path d="M14.5 12.5v.2"/>',
     'window': '<rect x="5" y="3.5" width="14" height="15" rx="1.6"/><path d="M12 3.5v15M5 11h14M3.5 20.5h17"/>',
+    'window-open': '<rect x="5" y="3.5" width="14" height="15" rx="1.6"/><path d="M12 3.5v15M3.5 20.5h17"/><path d="M12 5.5 17 3v13l-5 2.5"/>',
+    'door-open': '<path d="M6 20.5V5a1.5 1.5 0 0 1 1.5-1.5h9A1.5 1.5 0 0 1 18 5v15.5"/><path d="M4 20.5h16"/><path d="M6 5 12 7v15l-6-1.5"/><path d="M10 13.5v.2"/>',
     'curtain': '<path d="M3.5 4h17"/><path d="M5.5 4v16.5c2.6-.8 4-4.2 4-8.4S8 4.4 5.5 4zM18.5 4v16.5c-2.6-.8-4-4.2-4-8.4S16 4.4 18.5 4z"/>',
     'fan': '<circle cx="12" cy="10" r="6.5"/><circle cx="12" cy="10" r="1.3"/><path d="M12 8.7c-.4-2 .4-3.2 1.8-3.2M13.2 10.7c1.7.9 2.1 2.3 1.4 3.3M10.8 10.6c-1.6 1-3 .7-3.4-.6"/><path d="M12 16.5v3.5M8.5 20.5h7"/>',
     'radiator': '<rect x="4.5" y="6" width="3.6" height="13" rx="1.8"/><rect x="10.2" y="6" width="3.6" height="13" rx="1.8"/><rect x="15.9" y="6" width="3.6" height="13" rx="1.8"/><path d="M2.5 9.5h2M19.5 9.5h2"/>',
@@ -172,6 +174,9 @@
   A['tenure:rent'] = D('<path d="M6 25 17 16l11 9v15H6z"/>') +
     '<path d="M3 27.5 17 15.5l14 12"/><path d="M6 25v15h22V25"/><path d="M14.5 40v-7h5v7"/>' +
     '<path d="M38 12.5v27.5"/><path d="M32 16h12"/><rect x="31" y="19.5" width="14" height="9.5" rx="1.8"/><path d="M34 19.5V16M42 19.5V16"/><path d="M34.5 24.2h7"/>' + G;
+  A['tenure:subsidized'] = D('<path d="M6 25 17 16l11 9v15H6z"/>') +
+    '<path d="M3 27.5 17 15.5l14 12"/><path d="M6 25v15h22V25"/><path d="M14.5 40v-7h5v7"/>' +
+    '<path d="M37 30.5c-3.6-2.4-6.6-4.9-6.6-8.3 0-2.1 1.5-3.6 3.5-3.6 1.3 0 2.4.7 3.1 1.7.7-1 1.8-1.7 3.1-1.7 2 0 3.5 1.5 3.5 3.6 0 3.4-3 5.9-6.6 8.3z"/>' + G;
   A['tenure:other'] = null; // alias, filled in below
 
   /* heating */
@@ -322,6 +327,9 @@
     'tenure:other': 'other', 'heating:other': 'other', 'heating:none': 'none', 'cooling:none': 'none',
     'cooling:mini_split': 'heating:mini_split', 'thermostat:none': 'none', 'windows:unsure': 'unsure',
     'year_built:unsure': 'unsure', 'facing:unsure': 'unsure',
+    'home_type:semi_attached': 'home_type:duplex', 'home_type:attached': 'home_type:townhouse',
+    'bedroom_thermostat:own': 'bedrooms', 'bedroom_thermostat:shared': 'home_type:detached', 'bedroom_thermostat:none': 'none', 'bedroom_thermostat:unsure': 'unsure',
+    'bedroom_share:0': 'people:adult', 'bedroom_share:1': 'people:adult', 'bedroom_share:2': 'people:adult', 'bedroom_share:3': 'people:adult',
     'adults': 'people:adult', 'children': 'people:child', 'pets': 'people:pet', 'floors': 'floors:2'
   };
   Object.keys(ALIAS).forEach(k => { if (!A[k]) A[k] = A[ALIAS[k]]; });
