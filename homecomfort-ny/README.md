@@ -94,7 +94,8 @@ study runs in the heating season); older profiles may still hold `cooling`, `set
 | `floors` | floors in the home, 1–4 (4 means 4 or more) |
 | `unit_floor` | for apartments: the floor the home is on, US numbering (1 = ground floor, 0 = basement) |
 | `floor_area_m2` | number, or null when not sure (the app converts from sq ft) |
-| `bedrooms`, `rooms` | counts (bedrooms 0–6, 6 meaning 6 or more; rooms 1–12) |
+| `bedrooms` | count, 0–6 (6 meaning 6 or more) |
+| `rooms` | no longer asked since 1.1.1; older profiles: rooms in total, 1–12 |
 | `adults`, `children`, `pets` | counts |
 | `bedroom_share` | how many others sleep in the participant's bedroom: 0, 1, 2, 3 (3 means 3 or more) |
 | `bedroom_thermostat` | `own` (the bedroom has its own), `shared` (one for the whole home), `none`, `unsure` |
@@ -104,9 +105,10 @@ study runs in the heating season); older profiles may still hold `cooling`, `set
 | `setpoint_winter_c` | usual thermostat setting in the heating season in °C, or null (`setpoint_summer_c`: older profiles only) |
 | `windows` | `single`, `double`, `triple`, `unsure` |
 | `windows_open` | `yes`, `some`, `no` (can the windows be opened) |
-| `facing` | `N`, `NE`, `E`, `SE`, `S`, `SW`, `W`, `NW`, `unsure`: the main windows of the room used most during the day |
-| `facing_deg` | when measured with the phone's compass: the heading in degrees (0 = north, 90 = east), as the phone reports it (most likely magnetic north, about 12° west of true north in New York State); missing when tapped by hand |
-| `bedroom_facing`, `bedroom_facing_deg` | the same for the bedroom window (the biggest one) |
+| `bedroom_facing` | `N`, `NE`, `E`, `SE`, `S`, `SW`, `W`, `NW`, `unsure`: the way the bedroom window faces (the biggest one), read from the phone's compass app with the phone pointing out of the window |
+| `bedroom_side` | the same values: the side of the home the bedroom is on, read standing in the middle of the home with the phone pointing toward the bedroom |
+| `bedroom_facing_deg`, `bedroom_side_deg` | the number the participant typed from the compass app (0–359, 0 = north, 90 = east), when they typed one; the app picks the direction from it |
+| `facing`, `facing_deg` | older profiles only (1.1.0): the main windows of the room used most during the day |
 | `draftiness` | no longer asked; older profiles: 1 (never drafty) – 5 (very drafty) in winter |
 
 ## The check-in

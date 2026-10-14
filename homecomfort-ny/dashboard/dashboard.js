@@ -37,8 +37,8 @@
   const PCOLS = ['code', 'name', 'email', 'gender', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity', 'units', 'approved', 'created_at'];
   const PNUM = new Set(['birth_year', 'height_cm', 'weight_kg']);
   // cooling, setpoint_summer_c and draftiness are no longer asked (heating season); kept for earlier profiles
-  const HOME_KEYS = ['zip', 'home_type', 'tenure', 'year_built', 'floors', 'unit_floor', 'floor_area_m2', 'bedrooms', 'rooms', 'adults', 'children', 'pets', 'bedroom_share', 'bedroom_thermostat', 'heating', 'cooling', 'thermostat', 'setpoint_winter_c', 'setpoint_summer_c', 'windows', 'windows_open', 'facing', 'facing_deg', 'bedroom_facing', 'bedroom_facing_deg', 'draftiness'];
-  const HOME_NUM = new Set(['floors', 'unit_floor', 'floor_area_m2', 'bedrooms', 'rooms', 'adults', 'children', 'pets', 'bedroom_share', 'setpoint_winter_c', 'setpoint_summer_c', 'facing_deg', 'bedroom_facing_deg', 'draftiness']);
+  const HOME_KEYS = ['zip', 'home_type', 'tenure', 'year_built', 'floors', 'unit_floor', 'floor_area_m2', 'bedrooms', 'rooms', 'adults', 'children', 'pets', 'bedroom_share', 'bedroom_thermostat', 'heating', 'cooling', 'thermostat', 'setpoint_winter_c', 'setpoint_summer_c', 'windows', 'windows_open', 'facing', 'facing_deg', 'bedroom_facing', 'bedroom_facing_deg', 'bedroom_side', 'bedroom_side_deg', 'draftiness'];
+  const HOME_NUM = new Set(['floors', 'unit_floor', 'floor_area_m2', 'bedrooms', 'rooms', 'adults', 'children', 'pets', 'bedroom_share', 'setpoint_winter_c', 'setpoint_summer_c', 'facing_deg', 'bedroom_facing_deg', 'bedroom_side_deg', 'draftiness']);
 
   /* ---------------------------------------------------------------- words for stored values */
   const L = {
@@ -937,7 +937,7 @@
     const med = (ic, big, small) => `<div class="med"><span class="icon-tile">${icon(ic)}</span><span><b>${big}</b><small>${small}</small></span></div>`;
     addChart('setp', w => setpointSvg(w, list));
     const tRows = [];
-    [['Home type', 'home_type', 'home_type', false], ['Heating', 'heating', 'heating', true], ['Cooling', 'cooling', 'cooling', true], ['Thermostat', 'thermostat', 'thermostat', false], ['Bedroom thermostat', 'bedroom_thermostat', 'bedroom_thermostat', false], ['Bedroom shared', 'bedroom_share', 'bedroom_share', false], ['Main windows face', 'facing', 'facing', false], ['Bedroom window faces', 'bedroom_facing', 'facing', false], ['Year built', 'year_built', 'year_built', false], ['Tenure', 'tenure', 'tenure', false]]
+    [['Home type', 'home_type', 'home_type', false], ['Heating', 'heating', 'heating', true], ['Cooling', 'cooling', 'cooling', true], ['Thermostat', 'thermostat', 'thermostat', false], ['Bedroom thermostat', 'bedroom_thermostat', 'bedroom_thermostat', false], ['Bedroom shared', 'bedroom_share', 'bedroom_share', false], ['Bedroom window faces', 'bedroom_facing', 'facing', false], ['Bedroom side of the home', 'bedroom_side', 'facing', false], ['Main windows face', 'facing', 'facing', false], ['Year built', 'year_built', 'year_built', false], ['Tenure', 'tenure', 'tenure', false]]
       .forEach(([g, key, group, multi]) => tally(key, multi).forEach(([v, n]) => tRows.push([esc(g), esc(lab(group, v)), fmtN(n), pct(n, nH)])));
     const spRows = list.filter(p => num(homeOf(p).setpoint_winter_c) !== null || num(homeOf(p).setpoint_summer_c) !== null)
       .map(p => [esc(p.code), esc(fmtTemp(homeOf(p).setpoint_winter_c) || '–'), esc(fmtTemp(homeOf(p).setpoint_summer_c) || '–')]);
@@ -1024,8 +1024,9 @@
       g(artOf('thermostat', h.thermostat), 'Thermostat', [lab('thermostat', h.thermostat), setp].filter(Boolean).join(' · ')),
       g(artOf('windows', h.windows), 'Windows', [lab('windows', h.windows), h.windows_open ? lab('windows_open', h.windows_open).toLowerCase() : ''].filter(Boolean).join(' · ')),
       g(HCI.art('people:adult'), 'Bedroom', [h.bedroom_share != null ? lab('bedroom_share', String(num(h.bedroom_share))) : '', h.bedroom_thermostat ? 'thermostat: ' + lab('bedroom_thermostat', h.bedroom_thermostat).toLowerCase() : ''].filter(Boolean).join(' · ')),
-      g(HCI.art('facing'), 'Main windows face', [lab('facing', h.facing), num(h.facing_deg) !== null ? num(h.facing_deg) + '° measured' : ''].filter(Boolean).join(' · ')),
-      g(HCI.art('facing'), 'Bedroom window faces', [lab('facing', h.bedroom_facing), num(h.bedroom_facing_deg) !== null ? num(h.bedroom_facing_deg) + '° measured' : ''].filter(Boolean).join(' · ')),
+      g(HCI.art('facing'), 'Bedroom window faces', [lab('facing', h.bedroom_facing), num(h.bedroom_facing_deg) !== null ? num(h.bedroom_facing_deg) + '°' : ''].filter(Boolean).join(' · ')),
+      g(HCI.art('facing'), 'Bedroom side of home', [lab('facing', h.bedroom_side), num(h.bedroom_side_deg) !== null ? num(h.bedroom_side_deg) + '°' : ''].filter(Boolean).join(' · ')),
+      g(HCI.art('facing'), 'Main windows face', [lab('facing', h.facing), num(h.facing_deg) !== null ? num(h.facing_deg) + '°' : ''].filter(Boolean).join(' · ')),
       g(known('draftiness', String(num(h.draftiness))) ? HCI.art('draftiness:' + num(h.draftiness)) : HCI.art('unsure'), 'In winter', h.draftiness != null ? lab('draftiness', String(num(h.draftiness))) : ''),
       g(HCI.art('zip'), 'ZIP code', h.zip ? String(h.zip) : '')
     ].filter(Boolean).join('');

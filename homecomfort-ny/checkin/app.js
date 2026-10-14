@@ -570,12 +570,13 @@ function homeSections(h, u){
     ['Home type', 'type', [[h.home_type ? 'home_type:' + h.home_type : 'home_type:detached', 'Home', label(HOME_TYPES, h.home_type) || OLD_HOME_TYPES[h.home_type] || null]]],
     ['Size and age', 'size', [['floor_area', 'Floor area', areaWord(h.floor_area_m2, u)], [h.year_built ? 'year_built:' + h.year_built : 'year_built', 'Year built', label(YEAR_BUILT, h.year_built)],
       ['floors:' + (h.floors || 2), 'Floors', h.floors ? (h.floors >= 4 ? '4 or more' : String(h.floors)) : null]].concat(apt ? [['unit_floor', 'Your floor', typeof h.unit_floor === 'number' ? floorWord(h.unit_floor) : null]] : [])],
-    ['Rooms and people', 'rooms', [['bedrooms', 'Bedrooms', countWord(h.bedrooms, 6)], ['rooms', 'Rooms', countWord(h.rooms)], ['people:adult', 'Adults', countWord(h.adults)], ['people:child', 'Children', countWord(h.children)], ['people:pet', 'Pets', countWord(h.pets)],
-      ['people:adult', 'Bedroom shared with', share], [h.bedroom_thermostat ? (byId(BED_THERMOSTAT, h.bedroom_thermostat) || {}).art || 'unsure' : 'bedrooms', 'Bedroom thermostat', label(BED_THERMOSTAT, h.bedroom_thermostat)]]],
+    ['Rooms and people', 'rooms', [['bedrooms', 'Bedrooms', countWord(h.bedrooms, 6)]].concat(typeof h.rooms === 'number' ? [['rooms', 'Rooms', countWord(h.rooms)]] : []).concat([['people:adult', 'Adults', countWord(h.adults)], ['people:child', 'Children', countWord(h.children)], ['people:pet', 'Pets', countWord(h.pets)],
+      ['people:adult', 'Bedroom shared with', share], [h.bedroom_thermostat ? (byId(BED_THERMOSTAT, h.bedroom_thermostat) || {}).art || 'unsure' : 'bedrooms', 'Bedroom thermostat', label(BED_THERMOSTAT, h.bedroom_thermostat)]])],
     ['Heating', 'heat', [[h.heating && h.heating[0] ? 'heating:' + h.heating[0] : 'heating:furnace', 'Heating', list(HEATING, h.heating)],
       [h.thermostat ? 'thermostat:' + h.thermostat : 'thermostat:manual', 'Thermostat', label(THERMOSTAT, h.thermostat)], ['setpoint', 'Usual setting', tempWord(h.setpoint_winter_c, u)]]],
     ['Windows', 'windows', [[h.windows ? 'windows:' + h.windows : 'windows:double', 'Windows', label(WINDOWS, h.windows)], [h.windows_open ? 'windows_open:' + h.windows_open : 'windows_open:yes', 'Can be opened', label(WINDOWS_OPEN, h.windows_open)],
-      ['facing', 'Main windows face', facingWord(h.facing, h.facing_deg)], ['facing', 'Bedroom window faces', facingWord(h.bedroom_facing, h.bedroom_facing_deg)]]]
+      ['facing', 'Bedroom window faces', facingWord(h.bedroom_facing, h.bedroom_facing_deg)], ['facing', 'Bedroom is on the', h.bedroom_side === 'unsure' ? 'Not sure' : facingWord(h.bedroom_side, h.bedroom_side_deg) && facingWord(h.bedroom_side, h.bedroom_side_deg).replace(/^(\w+)/, '$1 side')]]
+      .concat(h.facing ? [['facing', 'Main windows face', facingWord(h.facing, h.facing_deg)]] : [])]   // older profiles only
   ];
 }
 const glanceItem = (art, k, v, wide) => `<div class="glance-item${v==null?' is-empty':''}${wide?' is-wide':''}">${art}<span class="glance-text"><span class="glance-k">${k}</span><span class="glance-v">${v==null ? 'Not answered' : esc(v)}</span></span></div>`;
@@ -1041,6 +1042,16 @@ function hours(){
   });
   return h;
 }
+/* Phones that turned reminders on before version 1.1 saved the first defaults (weekdays 5-10:30 PM,
+ * weekends 9 AM-10:30 PM). Unless the participant changed them, they move once to the study's 7 AM-10 PM
+ * every day; the next syncReminders() sends the new hours to the reminder service. */
+(function(){
+  if(LS.get('hcny_hours_v2')) return;
+  let h = null; try{ h = JSON.parse(LS.get(HOURS_KEY) || 'null'); }catch(e){}
+  if(h && h.weekday_start === '17:00' && h.weekday_end === '22:30' && h.weekend_start === '09:00' && h.weekend_end === '22:30' && !h.weekday2_start && !h.weekend2_start)
+    LS.set(HOURS_KEY, JSON.stringify(DEFAULT_HOURS));
+  LS.set('hcny_hours_v2', '1');
+})();
 let remDraft = null;                                        // unsaved hours in Settings while they are edited
 /* "7 AM–9 AM & 5 PM–10:30 PM", windows in order of the day */
 function hoursWord(h, p){
@@ -1258,7 +1269,7 @@ function regFields(){
     if(lb !== null) weight_kg = Math.round(lb * 0.45359237 * 10) / 10;
   } else { height_cm = numOf(r.cm); weight_kg = numOf(r.kg); }
   const by = numOf(r.birth_year), h = r.home, home = {};
-  ['zip','home_type','tenure','year_built','floors','unit_floor','floor_area_m2','bedrooms','rooms','adults','children','pets','bedroom_share','bedroom_thermostat','heating','thermostat','setpoint_winter_c','windows','windows_open','facing','facing_deg','bedroom_facing','bedroom_facing_deg']
+  ['zip','home_type','tenure','year_built','floors','unit_floor','floor_area_m2','bedrooms','rooms','adults','children','pets','bedroom_share','bedroom_thermostat','heating','thermostat','setpoint_winter_c','windows','windows_open','bedroom_facing','bedroom_facing_deg','bedroom_side','bedroom_side_deg']
     .forEach(k => { if(h[k] !== undefined && h[k] !== '') home[k] = Array.isArray(h[k]) ? [...h[k]] : h[k]; });
   if(!isApt()) delete home.unit_floor;
   if(Array.isArray(home.heating) && !home.heating.length) delete home.heating;
@@ -1399,77 +1410,35 @@ function dialFromPointer(el, e, start){
 const AREA = { us:{ min:500, max:4000, step:50, mid:1500 }, metric:{ min:50, max:370, step:5, mid:140 } };
 function areaShown(){ const u = REG.units, A = AREA[u], m2 = REG.home.floor_area_m2; if(typeof m2 !== 'number') return null; const v = u === 'us' ? m2 / SQFT : m2; return Math.max(A.min, Math.min(A.max, Math.round(v / A.step) * A.step)); }
 function areaText(v){ const u = REG.units, A = AREA[u]; if(v === null) return REG.home.floor_area_m2 === null ? 'Not sure' : 'Not set yet'; return (v >= A.max ? v.toLocaleString('en-US') + '+' : v.toLocaleString('en-US')) + `<small>${u === 'us' ? 'sq ft' : 'm²'}</small>`; }
-/* A compass of eight directions for one set of windows (k: facing or bedroom_facing), the phone-compass
- * button, what was measured and "Not sure". */
+/* A compass of eight directions for one direction question (k: bedroom_facing or bedroom_side), the
+ * optional degrees read from the phone's compass app (which also picks the direction) and "Not sure". */
+const dir8 = h => FACING[Math.round((((h % 360) + 360) % 360) / 45) % 8];
 function compass(k, title){
   const v = REG.home[k], deg = REG.home[k + '_deg'];
   const ring = `<div class="compass" role="radiogroup" aria-label="${title}">${HCI.art('facing', 'compass-art')}` +
     FACING.map((f, i) => { const a = (i * 45 - 90) * Math.PI / 180, x = 50 + 39 * Math.cos(a), y = 50 + 39 * Math.sin(a);
       return `<button class="compass-pt" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%" role="radio" aria-checked="${v===f.id}" aria-label="${f.n}" data-act="reg-pick" data-k="home.${k}" data-v="${f.id}">${f.id}</button>`; }).join('') + `</div>`;
-  const measured = typeof deg === 'number' && v && v !== 'unsure' ? `<p class="cmp-measured">${ic('check-circle','ic-sm')}Measured with your phone: <b>${label(FACING, v)} &middot; ${deg}&deg;</b></p>` : '';
-  return ring + measured + `<div class="cmp-actions">${canCompass() ? `<button class="btn btn-secondary btn-sm" data-act="reg-measure" data-k="${k}">${ic('compass')}Use my phone&rsquo;s compass</button>` : ''}<button class="chip" aria-pressed="${v==='unsure'}" data-act="reg-pick" data-k="home.${k}" data-v="unsure"><span class="chip-ic">${ic('help')}</span><span class="chip-check">${ic('check')}</span>Not sure</button></div>`;
+  const degIn = `<div class="deg-row"><label class="label" for="deg-${k}">The number on the compass <span class="opt">(optional)</span></label><div class="input-group deg-in"><input class="input" id="deg-${k}" data-deg="${k}" inputmode="numeric" maxlength="3" placeholder="e.g. 271" value="${typeof deg === 'number' ? deg : ''}" aria-describedby="degw-${k}"><span class="input-suffix" aria-hidden="true">°</span></div><span class="deg-word" id="degw-${k}" aria-live="polite">${typeof deg === 'number' ? '= ' + dir8(deg).n : ''}</span></div>`;
+  return ring + degIn + `<div class="cmp-actions"><button class="chip" aria-pressed="${v==='unsure'}" data-act="reg-pick" data-k="home.${k}" data-v="unsure"><span class="chip-ic">${ic('help')}</span><span class="chip-check">${ic('check')}</span>Not sure</button></div>`;
 }
-/* How to find a window's direction, once above the two compasses: in words, a small top-down picture and
- * a check against the sun. */
-const directionHelp = () => `<section class="card card-flat dir-help" aria-labelledby="dirH"><div class="dir-help-top"><svg class="dir-pic" viewBox="0 0 150 104" aria-hidden="true" focusable="false"><rect x="6" y="22" width="138" height="76" rx="9" class="dp-room"/><rect x="47" y="16" width="56" height="12" rx="3" class="dp-win"/><path d="M75 62V6" class="dp-ray"/><path d="m67 14 8-9 8 9" class="dp-ray"/><rect x="65" y="60" width="20" height="32" rx="4.5" class="dp-phone"/><path d="M71.5 65h7" class="dp-cam"/><text x="86" y="48" class="dp-t">look out</text><text x="16" y="90" class="dp-r">room</text></svg>
-  <div><h3 class="reg-q-title" id="dirH">How to find the direction</h3><p class="field-hint">It&rsquo;s the way you face when you look <b>out</b> of the window.</p></div></div>
-  <ol class="steps"><li>Stand at the window with your back to the room, looking straight out.</li><li>Hold your phone flat, screen up, with its top edge pointing out of the window.</li><li>${canCompass() ? 'Tap <b>Use my phone&rsquo;s compass</b>, wait a moment for it to settle, then save it.' : 'Open your phone&rsquo;s Compass app (on Android, Google Maps: tap the blue dot to see where you face) and tap the same direction here.'}</li></ol>
-  <p class="field-hint">${ic('sun','ic-xs')} Check with the sun: morning sun usually means east, afternoon or evening sun west, and sun around midday south. North-facing windows rarely get direct sun.</p></section>`;
-/* ---- the phone's compass ----
- * iPhone gives a heading from north (webkitCompassHeading, after asking permission straight from the tap);
- * Android Chrome gives deviceorientationabsolute, whose alpha counts the other way. Readings are smoothed on
- * the circle. The heading is the phone's own (most likely magnetic north, about 12° from true north in New
- * York State); it is snapped to the nearest of eight directions and also kept in degrees. */
-const canCompass = () => 'DeviceOrientationEvent' in window && matchMedia('(pointer: coarse)').matches;
-const dir8 = h => FACING[Math.round((((h % 360) + 360) % 360) / 45) % 8];
-let CMP = null;
-function stopCompass(){ if(!CMP) return; window.removeEventListener(CMP.ev, CMP.fn); clearTimeout(CMP.timer); cancelAnimationFrame(CMP.raf); CMP = null; }
-function compassFail(why){
-  if(!CMP) return;
-  const hint = $('#cmpHint'); if(hint){ hint.className = 'note note-warn'; hint.innerHTML = ic('alert') + `<div>${why === 'denied' ? 'The app wasn&rsquo;t allowed to use the compass.' : 'This phone isn&rsquo;t sharing its compass with the app.'} Use your phone&rsquo;s Compass app instead, then tap the same direction on the circle.</div>`; }
-  const d = $('#cmpDir'); if(d) d.textContent = 'No compass reading';
+/* A picture of a phone's compass app, read the way participants should read theirs: the top of the phone
+ * points west, so the big reading at the bottom says 271° W. Drawn, not a screenshot. */
+function compassPic(){
+  const ticks = Array.from({length:72}, (_, i) => { const a = i * 5 * Math.PI / 180, r1 = i % 6 === 0 ? 33 : 37; return `<path d="M${(60 + r1 * Math.sin(a)).toFixed(1)} ${(52 - r1 * Math.cos(a)).toFixed(1)}L${(60 + 41 * Math.sin(a)).toFixed(1)} ${(52 - 41 * Math.cos(a)).toFixed(1)}"/>`; }).join('');
+  // heading 271 (west at the top): north sits 89° clockwise from the top, i.e. on the right
+  const L = (t, deg, cls) => { const a = (deg - 271) * Math.PI / 180; return `<text x="${(60 + 25 * Math.sin(a)).toFixed(1)}" y="${(52 - 25 * Math.cos(a) + 4).toFixed(1)}" text-anchor="middle"${cls ? ` class="${cls}"` : ''}>${t}</text>`; };
+  return `<svg class="cpic" viewBox="0 0 120 132" aria-hidden="true" focusable="false"><rect width="120" height="132" rx="14" class="cpic-bg"/>
+    <g class="cpic-ticks" transform="rotate(-271 60 52)">${ticks}</g><path d="M60 6v14" class="cpic-head"/>
+    ${L('N', 0, 'cpic-n')}${L('E', 90)}${L('S', 180)}${L('W', 270)}<path d="m104 49 6 3-6 3z" class="cpic-red"/>
+    <text x="60" y="117" text-anchor="middle" class="cpic-read">271° W</text></svg>`;
 }
-function paintCompass(){
-  if(!CMP) return; CMP.raf = 0;
-  const h = CMP.h, f = dir8(h), rose = $('#cmpRose'), d = $('#cmpDir'), g = $('#cmpDeg'), use = $('[data-act="cmp-use"]');
-  if(rose) rose.style.transform = `rotate(${(-h).toFixed(1)}deg)`;
-  if(d) d.textContent = f.n; if(g) g.textContent = Math.round(h) + '°';
-  if(use) use.disabled = false;
-}
-function measureCompass(k, opener){
-  stopCompass();
-  const rose = `<svg class="cmp-rose" id="cmpRose" viewBox="0 0 200 200" aria-hidden="true" focusable="false"><circle cx="100" cy="100" r="92" class="cr-ring"/>` +
-    Array.from({length:72}, (_, i) => { const a = i * 5 * Math.PI / 180, r1 = i % 9 === 0 ? 74 : i % 3 === 0 ? 80 : 84; return `<path d="M${(100 + r1 * Math.sin(a)).toFixed(1)} ${(100 - r1 * Math.cos(a)).toFixed(1)}L${(100 + 88 * Math.sin(a)).toFixed(1)} ${(100 - 88 * Math.cos(a)).toFixed(1)}" class="cr-tick"/>`; }).join('') +
-    [['N',0],['E',90],['S',180],['W',270]].map(([t, deg]) => { const a = deg * Math.PI / 180; return `<text x="${(100 + 60 * Math.sin(a)).toFixed(1)}" y="${(100 - 60 * Math.cos(a) + 7).toFixed(1)}" text-anchor="middle" class="cr-l${t === 'N' ? ' is-n' : ''}">${t}</text>`; }).join('') + `</svg>`;
-  openSheet(`<div class="sheet-grab" aria-hidden="true"></div><div class="sheet-head"><div><span class="eyebrow">${k === 'bedroom_facing' ? 'Your bedroom window' : 'Your main windows'}</span><h2 class="sheet-title" id="sheetTitle">Point your phone out of the window</h2></div></div>
-    <div class="sheet-body"><div class="cmp-live"><div class="cmp-dial">${rose}<span class="cmp-arrow" aria-hidden="true"></span></div>
-      <p class="cmp-read" aria-live="polite"><b id="cmpDir">Finding north&hellip;</b><span id="cmpDeg"></span></p>
-      <div class="field-hint center" id="cmpHint">Stand with your back to the room. Hold the phone flat, screen up, top edge pointing out of the window.</div></div></div>
-    <div class="sheet-foot"><button class="btn btn-ghost" data-act="sheet-close">Cancel</button><button class="btn btn-primary" data-act="cmp-use" data-k="${k}" disabled>${ic('check')}Use this direction</button></div>`, '[data-act="sheet-close"]', opener);
-  const start = () => {
-    const ev = 'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
-    let sx = 0, sy = 0, n = 0;
-    const fn = e => {
-      let h = null;
-      if(typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) h = e.webkitCompassHeading;
-      else if((ev === 'deviceorientationabsolute' || e.absolute) && typeof e.alpha === 'number') h = 360 - e.alpha;
-      if(h === null || !CMP) return;
-      const turn = screen.orientation && typeof screen.orientation.angle === 'number' ? screen.orientation.angle : (Number(window.orientation) || 0);
-      const r = (h + turn) * Math.PI / 180;
-      sx = n ? sx * 0.8 + Math.sin(r) * 0.2 : Math.sin(r); sy = n ? sy * 0.8 + Math.cos(r) * 0.2 : Math.cos(r); n++;
-      CMP.h = (Math.atan2(sx, sy) * 180 / Math.PI + 360) % 360;
-      if(!CMP.raf) CMP.raf = requestAnimationFrame(paintCompass);
-    };
-    CMP = { k, ev, fn, h:null, raf:0, timer: setTimeout(() => { if(CMP && CMP.h === null) compassFail('none'); }, 4000) };
-    window.addEventListener(ev, fn);
-  };
-  // Only iPhone asks (Chrome has the same function but may refuse it where there is no prompt; there the
-  // readings simply come, or not, and the four-second check says so).
-  if(PUSH.ios && typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
-    CMP = { k, ev:'deviceorientation', fn(){}, h:null, raf:0, timer:0 };          // so a refusal can be shown
-    DeviceOrientationEvent.requestPermission().then(p => { if(!CMP) return; if(p === 'granted'){ CMP = null; start(); } else compassFail('denied'); }).catch(() => compassFail('denied'));
-  } else start();
-}
+/* How to find a direction with the phone's own compass app, once above the two compasses. */
+const directionHelp = () => `<section class="card card-flat dir-help" aria-labelledby="dirH">
+  <h3 class="reg-q-title dir-help-h" id="dirH">${ic('compass')}Use your phone&rsquo;s compass</h3>
+  <div class="dir-os"><div><p class="dir-os-h">iPhone</p><p>Swipe down on the Home Screen, type <b>Compass</b> and open the app.</p></div>
+    <div><p class="dir-os-h">Android</p><p>Open the <b>Google</b> app and search <b>compass</b>: a live compass shows at the top. Some phones also have a <b>Compass</b> app.</p></div></div>
+  <div class="dir-read">${compassPic()}<div><p class="dir-os-h">How to read it</p><ol class="steps"><li>Hold the phone flat, screen up, with its top edge pointing the way the question asks.</li><li>Read the big number and letter at the bottom. In this picture, <b>271° W</b> means the phone points <b>west</b>.</li><li>Tap the same letters on the circle (W, NW, N&hellip;). You can also type the number.</li></ol></div></div>
+  <p class="field-hint">The red mark always shows north. N = north, E = east, S = south, W = west; NE, SE, SW and NW are in between.</p></section>`;
 const shareArt = n => `<span class="share-art n-${n + 1}">${Array.from({length: n + 1}, (_, i) => `<i class="${i ? '' : 'is-me'}">${HCI.art('people:adult')}</i>`).join('')}</span>`;
 function people(){
   const h = REG.home, fig = (art, n, cls) => Array.from({length: Math.min(n, 6)}, () => `<span class="pfig ${cls}">${HCI.art(art)}</span>`).join('') + (n > 6 ? `<span class="pfig-more">+${n-6}</span>` : '');
@@ -1519,7 +1488,6 @@ const REGS = {
     const row = (k, art, lab, hint) => `<div class="stepper-row"><span class="sr-art">${HCI.art(art)}</span><span class="sr-text"><span class="sr-lab">${lab}</span>${hint ? `<span class="field-hint">${hint}</span>` : ''}</span>${stepper('home.'+k, h[k], STEP_LIMITS[k][0], STEP_LIMITS[k][1], lab, '', k === 'bedrooms')}</div>`;
     return `<div class="stack stack-6">
       ${fieldBlock('bedrooms', 'How many bedrooms does your home have?', '', `<div class="card card-flat rows-card">${row('bedrooms', 'bedrooms', 'Bedrooms', '')}</div>`)}
-      ${fieldBlock('rooms', 'And how many rooms in total?', '', `<div class="card card-flat rows-card">${row('rooms', 'rooms', 'Rooms', 'Not counting bathrooms or hallways')}</div>`)}
       ${fieldBlock('people', 'Who lives here?', 'Including you.', `<div class="card card-flat rows-card">${people()}${row('adults', 'people:adult', 'Adults', '')}${row('children', 'people:child', 'Children', 'Under 18')}${row('pets', 'people:pet', 'Pets', 'Cats, dogs and other furry friends')}</div>`)}
       ${fieldBlock('bedroom_share', 'Do you share your bedroom with anyone?', 'Count everyone else who sleeps in the same room.', `<div class="ptile-grid cols-4 share-grid" role="radiogroup" aria-labelledby="lab-bedroom_share">${BED_SHARE.map(o => regTile('home.bedroom_share', o, h.bedroom_share===o.id, shareArt(o.id), 'ptile-sm')).join('')}</div>`)}
       ${fieldBlock('bedroom_thermostat', 'Does your bedroom have its own thermostat?', 'Or is there one thermostat for the whole home?', `<div class="ptile-grid" role="radiogroup" aria-labelledby="lab-bedroom_thermostat">${BED_THERMOSTAT.map(o => regTile('home.bedroom_thermostat', o, h.bedroom_thermostat===o.id, HCI.art(o.art), 'ptile-sm')).join('')}</div>`)}
@@ -1542,8 +1510,8 @@ const REGS = {
       ${fieldBlock('windows', 'What kind of windows?', 'Look at the edge of the glass: two or three panes with a gap between them.', `<div class="ptile-grid cols-4" role="radiogroup" aria-labelledby="lab-windows">${WINDOWS.map(o => regTile('home.windows', o, h.windows===o.id, HCI.art('windows:'+o.id), 'ptile-sm')).join('')}</div>`)}
       ${fieldBlock('windows_open', 'Can the windows be opened?', '', `<div class="ptile-grid cols-3" role="radiogroup" aria-labelledby="lab-windows_open">${WINDOWS_OPEN.map(o => regTile('home.windows_open', o, h.windows_open===o.id, HCI.art('windows_open:'+o.id), 'ptile-sm')).join('')}</div>`)}
       ${directionHelp()}
-      ${fieldBlock('facing', 'Which way do your main windows face?', 'The main windows of the room you use most during the day, usually the living room.', compass('facing', 'Which way the main windows face'))}
-      ${fieldBlock('bedroom_facing', 'Which way does your bedroom window face?', 'If it has more than one window, choose the biggest.', compass('bedroom_facing', 'Which way the bedroom window faces'))}
+      ${fieldBlock('bedroom_facing', 'Which way does your bedroom window face?', 'Stand at the bedroom window with your back to the room and point the top of your phone out of the window. More than one window? Use the biggest.', compass('bedroom_facing', 'Which way the bedroom window faces'))}
+      ${fieldBlock('bedroom_side', 'Which side of your home is your bedroom on?', 'Stand in the middle of your home and point the top of your phone toward your bedroom.', compass('bedroom_side', 'Which side of the home the bedroom is on'))}
     </div>`;
   },
   review: () => {
@@ -1597,7 +1565,6 @@ function closeSheet(){
   if(typeof d.close === 'function') d.close(); else d.removeAttribute('open');
 }
 function sheetClosed(){
-  stopCompass();
   document.body.classList.remove('is-locked');
   const o = sheetOpener; sheetOpener = null;
   if(o && document.contains(o)) o.focus({ preventScroll:true });
@@ -1726,16 +1693,8 @@ document.addEventListener('click', async e => {
       let v = d.v; if(['home.floors','home.bedroom_share'].includes(d.k)) v = Number(v);
       regSet(d.k, v);
       if(d.k === 'home.home_type' && !isApt()) delete REG.home.unit_floor;
-      if(d.k === 'home.facing' || d.k === 'home.bedroom_facing') delete REG.home[d.k.slice(5) + '_deg'];   // tapped by hand: no measured degrees
+      if(['home.facing','home.bedroom_facing','home.bedroom_side'].includes(d.k)) delete REG.home[d.k.slice(5) + '_deg'];   // tapped by hand: the typed number no longer applies
       saveReg(); rerender(); if(d.k === 'home.home_type') fieldError('home_type', '');
-      break; }
-    case 'reg-measure': measureCompass(d.k, b); break;
-    case 'cmp-use': {
-      if(!CMP || CMP.h === null) break;
-      const k = d.k, h = CMP.h;
-      REG.home[k] = dir8(h).id; REG.home[k + '_deg'] = Math.round(h) % 360; saveReg();
-      closeSheet(); rerender();
-      showToast({ title:'Direction saved', sub: `${dir8(h).n}, ${Math.round(h) % 360}°` });
       break; }
     case 'reg-toggle': {
       const key = d.k.slice(5), arr = Array.isArray(REG.home[key]) ? [...REG.home[key]] : [];
@@ -1754,6 +1713,15 @@ document.addEventListener('click', async e => {
 });
 document.addEventListener('input', e => {
   const t = e.target;
+  if(t.dataset && t.dataset.deg){
+    const k = t.dataset.deg, raw = t.value.trim(), n = /^\d{1,3}$/.test(raw) ? Number(raw) : null, w = $('#degw-' + k);
+    if(n !== null && n <= 360){ REG.home[k + '_deg'] = n % 360; REG.home[k] = dir8(n).id; if(w) w.textContent = '= ' + dir8(n).n; }
+    else { delete REG.home[k + '_deg']; if(w) w.textContent = raw ? 'Type a number from 0 to 359' : ''; }
+    saveReg();
+    $$(`.compass-pt[data-k="home.${k}"]`).forEach(p => p.setAttribute('aria-checked', String(p.dataset.v === REG.home[k])));
+    const un = $(`[data-act="reg-pick"][data-k="home.${k}"][data-v="unsure"]`); if(un) un.setAttribute('aria-pressed', String(REG.home[k] === 'unsure'));
+    return;
+  }
   if(t.dataset && t.dataset.reg){ regSet(t.dataset.reg, t.value); saveReg(); const id = t.id; if($('#f-' + id) && $('#f-' + id).classList.contains('is-invalid')) fieldError(id, ''); if(id === 'r_in' && $('#f-r_ft').classList.contains('is-invalid')) fieldError('r_ft', ''); return; }
   if(t.id === 'reg-area'){
     const u = REG.units, v = Number(t.value);

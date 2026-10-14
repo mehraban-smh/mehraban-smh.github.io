@@ -79,6 +79,13 @@ const GARMENTS = [
   {id:'blanket',    n:'Blanket',        clo:0.60, ic:'blanket', est:true},
   {id:'comforter',  n:'Comforter',      clo:2.00, ic:'bed',     est:true}
 ];
+/* the clothing screen shows the garments in four boxes */
+const GARMENT_GROUPS = [
+  {n:'Tops',                ic:'tshirt',  ids:['tshirt','long','sweater','hoodie']},
+  {n:'Bottoms',             ic:'pants',   ids:['shorts','pants','sweatpants','skirt']},
+  {n:'Feet',                ic:'socks',   ids:['socks','slippers']},
+  {n:'Blankets and covers', ic:'blanket', ids:['blanket','comforter']}
+];
 const cloOf = ids => Math.round((ids||[]).reduce((s,id)=>s+(GARMENTS.find(g=>g.id===id)?.clo||0),0)*100)/100;
 
 /* Every check-in asks the same eight questions in the same order. "Still the same as last time?" shows the
@@ -136,6 +143,10 @@ const optRow = (q, o, on, cls='') => `<button class="option-row ${cls}" role="ra
 /* multiple choice: toggles, plus one "none" row that clears the others */
 const multiRow = (q, o, on) => `<button class="option-row is-compact" aria-pressed="${on?'true':'false'}" data-act="toggle" data-q="${q}" data-v="${o.id}"><span class="icon-tile">${ic(o.ic)}</span><span class="option-text"><span class="option-title">${o.n}</span></span>${HCI.tick()}</button>`;
 const noneRow = (q, on, label) => `<button class="option-row is-compact is-none" aria-pressed="${on?'true':'false'}" data-act="none" data-q="${q}"><span class="icon-tile it-plain">${ic('check-circle')}</span><span class="option-text"><span class="option-title">${label}</span></span>${HCI.tick()}</button>`;
+/* one box of garments (tops, bottoms...), each garment a tile with its clo value */
+const gbox = (grp, ids) => { const n = grp.ids.filter(id => ids.includes(id)).length;
+  return `<fieldset class="abox gbox"><legend class="abox-h"><span class="icon-tile it-sm">${ic(grp.ic)}</span>${grp.n}${n ? `<span class="gbox-n">${n}</span>` : ''}</legend><div class="ptile-grid cols-${grp.ids.length > 2 ? 4 : 2} is-multi garments">${grp.ids.map(id => { const g = byId(GARMENTS, id);
+    return `<button class="ptile ptile-sm" aria-pressed="${ids.includes(g.id)?'true':'false'}" data-act="toggle" data-q="clo" data-v="${g.id}"><span class="ptile-art">${ic(g.ic,'ic-lg')}</span><span class="ptile-label">${g.n}</span><span class="ptile-hint">${g.est?'&asymp;':''}${g.clo.toFixed(2)} clo</span>${HCI.tick()}</button>`; }).join('')}</div></fieldset>`; };
 /* a box of related answers (the window, the door, drinks...): one tile per answer, each with its own check */
 const answerBox = (q, list, box, on) => `<fieldset class="abox"><legend class="abox-h"><span class="icon-tile it-sm">${ic(box.ic)}</span>${box.n}</legend><div class="abox-opts cols-${box.ids.length}">${box.ids.map(id => { const o = byId(list, id); return `<button class="abox-opt" type="button" aria-pressed="${on(id)?'true':'false'}" aria-label="${box.n}: ${o.s || o.n}" data-act="toggle" data-q="${q}" data-v="${id}"><span class="abox-ic">${ic(o.ic)}</span><span class="abox-l">${o.s || o.n}</span>${HCI.tick()}</button>`; }).join('')}</div></fieldset>`;
 const footNext = (ok, label='Next', note='') => `<div class="footbar">${note}<button class="btn btn-primary btn-block" data-act="next" ${ok?'':'disabled'}>${label} ${ic('arrow-right')}</button></div>`;
@@ -159,7 +170,7 @@ const Q = {
       `<div class="dress card card-raised"><div class="fig" aria-hidden="true">${avatar(ids)}</div>
         <div class="dress-side"><div class="clo-val" aria-live="polite"><b class="num">${clo.toFixed(2)}</b><span>clo</span><span class="sr-only"> clothing insulation</span></div>
         <p class="caption">${ids.length ? `${ids.length} item${ids.length===1?'':'s'} &middot; insulation of your outfit` : 'Your outfit&rsquo;s insulation adds up here'}</p>${lastBtn}</div></div>` +
-      `<div class="ptile-grid cols-3 is-multi garments" role="group" aria-label="Clothing">${GARMENTS.map(g=>`<button class="ptile ptile-sm" aria-pressed="${ids.includes(g.id)?'true':'false'}" data-act="toggle" data-q="clo" data-v="${g.id}"><span class="ptile-art">${ic(g.ic,'ic-lg')}</span><span class="ptile-label">${g.n}</span><span class="ptile-hint">${g.est?'&asymp;':''}${g.clo.toFixed(2)} clo</span>${HCI.tick()}</button>`).join('')}</div>` +
+      `<div class="gboxes">${gbox(GARMENT_GROUPS[0], ids)}${gbox(GARMENT_GROUPS[1], ids)}<div class="gbox-pair">${gbox(GARMENT_GROUPS[2], ids)}${gbox(GARMENT_GROUPS[3], ids)}</div></div>` +
       footNext(ids.length>0, 'Next', `<p class="caption center foot-note" aria-hidden="true">${ids.length ? `${ids.length} item${ids.length===1?'':'s'} &middot; <b class="num">${clo.toFixed(2)}</b> clo` : 'Tap what you&rsquo;re wearing'}</p>`);
   },
   act: () => qhead('Activity', 'What have you been doing for the last 15 minutes?') +

@@ -91,6 +91,15 @@ body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))
 .clo-val{display:flex;align-items:baseline;gap:6px;line-height:1}
 .clo-val b{font-family:var(--font-display);font-size:44px;font-weight:800;letter-spacing:-.03em;color:var(--violet-700)}
 .clo-val span{font-size:16px;font-weight:800;color:var(--ink-2)}
+.gboxes{display:flex;flex-direction:column;gap:10px}
+.gbox-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.gbox{padding:10px}
+.gbox .abox-h{font-size:14px}
+.gbox-n{display:inline-grid;place-items:center;min-width:22px;height:22px;margin-left:auto;padding:0 6px;border-radius:11px;background:var(--violet);color:#fff;font-size:12px;font-weight:800}
+.gbox .ptile-grid{gap:6px}
+.gbox .ptile-sm{padding:5px 4px 8px}
+.gbox .ptile-sm .ptile-art{height:50px}
+.gbox .ptile-label{font-size:12px;line-height:1.2}
 .garments .ptile-art{color:var(--ink)}
 .garments .ptile-art .ic{width:30px;height:30px}
 .garments .ptile[aria-pressed="true"] .ptile-art{color:var(--violet-700)}
@@ -339,36 +348,31 @@ body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))
 .compass-pt:hover{border-color:var(--violet-200);background:var(--violet-50)}
 .compass-pt[aria-checked="true"]{border-color:var(--violet);background:var(--violet);color:#fff;box-shadow:var(--halo)}
 .cmp-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px}
-.cmp-actions .btn .ic{width:18px;height:18px}
-.cmp-measured{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13.5px;color:var(--ink-2)}
-.cmp-measured .ic{color:var(--good)}
-/* how to find a window's direction */
-.dir-help{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border:1px solid var(--violet-200);background:var(--violet-50)}
-.dir-help-top{display:flex;align-items:center;gap:12px}
-.dir-pic{width:118px;height:auto;flex:none}
-.dp-r{font-size:10px;font-weight:700;fill:var(--ink-3)}
-.dp-room{fill:#fff;stroke:var(--line-2);stroke-width:2}
-.dp-win{fill:#BFE3FF;stroke:var(--sky-700,#1F6FB0);stroke-width:2}
-.dp-ray{fill:none;stroke:var(--violet);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
-.dp-phone{fill:var(--ink);stroke:none}
-.dp-cam{stroke:#fff;stroke-width:2;stroke-linecap:round}
-.dp-dot{fill:var(--violet)}
-.dp-t{font-size:10px;font-weight:800;fill:var(--violet-700)}
-.dir-help .steps{font-size:14px}
-.dir-help .field-hint .ic{vertical-align:-2px;color:var(--peach-700,#B4532A)}
-/* the live phone compass (sheet) */
-.cmp-live{display:flex;flex-direction:column;align-items:center;gap:10px;padding:4px 0 6px}
-.cmp-dial{position:relative;width:220px;height:220px}
-.cmp-rose{display:block;width:100%;height:100%;transition:transform .12s linear}
-.cr-ring{fill:var(--surface-2);stroke:var(--line-2);stroke-width:2}
-.cr-tick{stroke:var(--ink-3);stroke-width:1.6;stroke-linecap:round}
-.cr-l{font-family:var(--font-display);font-size:20px;font-weight:800;fill:var(--ink-2)}
-.cr-l.is-n{fill:#D9412B}
-.cmp-arrow{position:absolute;left:50%;top:-6px;width:0;height:0;margin-left:-12px;border-left:12px solid transparent;border-right:12px solid transparent;border-bottom:22px solid var(--violet)}
-.cmp-read{display:flex;align-items:baseline;gap:10px}
-.cmp-read b{font-family:var(--font-display);font-size:28px;font-weight:800;letter-spacing:-.02em}
-.cmp-read span{font-size:17px;font-weight:800;color:var(--ink-2)}
-#cmpHint{max-width:34ch}
+/* how to find a direction with the phone's compass app */
+.dir-help{display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid var(--violet-200);background:var(--violet-50)}
+.dir-help-h{display:flex;align-items:center;gap:8px}
+.dir-help-h .ic{width:20px;height:20px;color:var(--violet-700)}
+.dir-os{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.dir-os>div{padding:10px 12px;border-radius:14px;background:#fff;font-size:13.5px;line-height:1.4;color:var(--ink-2)}
+.dir-os-h{margin-bottom:3px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--violet-700)}
+.dir-read{display:flex;align-items:flex-start;gap:12px}
+.dir-read .steps{font-size:13.5px;gap:6px;padding-left:18px}
+.cpic{width:120px;height:auto;flex:none;border-radius:14px;box-shadow:var(--sh-1)}
+.cpic-bg{fill:#111}
+.cpic-ticks path{stroke:#fff;stroke-width:1.2;opacity:.85}
+.cpic-head{stroke:#fff;stroke-width:3;stroke-linecap:round}
+.cpic text{font-family:var(--font-ui);font-size:10px;font-weight:700;fill:#fff}
+.cpic .cpic-n{fill:#fff}
+.cpic-red{fill:#FF3B30}
+.cpic .cpic-read{font-size:17px;font-weight:600}
+.dir-help>.field-hint{font-size:13px}
+/* the number from the compass app */
+.deg-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 10px;margin-top:6px}
+.deg-row .label{width:100%;text-align:center;font-size:14px}
+.deg-in{width:120px}
+.deg-in .input{text-align:center;font-variant-numeric:tabular-nums;padding-right:30px}
+.deg-word{min-width:84px;font-size:15px;font-weight:800;color:var(--violet-700)}
+
 /* "Do you share your bedroom?": one small figure per person */
 .share-art{display:flex;align-items:flex-end;justify-content:center}
 .share-art i{display:grid;margin:0 -7px;color:var(--ink-3);--duo:var(--ink-4)}
