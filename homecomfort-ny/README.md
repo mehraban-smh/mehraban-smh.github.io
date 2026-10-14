@@ -154,13 +154,10 @@ first (one tap: permission, the phone registered with the default hours). No rem
 `?debug=1` on the check-in URL shows what gets stored, with a copy-as-CSV button and example data.
 In local mode (no Supabase values in `config.js`) nothing needs approving and nothing leaves the browser.
 
-## Starting fresh before the study
+## The one-time clean start (October 2026)
 
-Participants removed on the dashboard leave their check-ins behind under their code, and the code counter
-never goes back, so after test sign-ups the first real participant would be NY004 or later. To clear test
-data and start numbering again: remove the test participants on the dashboard, then run
-`homecomfort-ny/supabase-start-fresh.sql` in Supabase (SQL Editor). It deletes only the check-ins and
-phones of participants who are no longer in the list, and sets the next code to the lowest free one
-(NY001 when nobody is left). The app rebuilds each device's history from the database at sign-in, and
-notify.js only treats a code as already announced when the issue was opened after that person registered,
-so codes given again behave like new ones.
+Before the study, the test sign-ups were removed and `homecomfort-ny/supabase-start-fresh.sql` was run
+once in Supabase: it deleted the check-ins and phones left behind by the removed test participants and set
+the next code back to NY001. **Do not run it again.** From the start of the study, removing a participant
+on the dashboard deletes only their profile and phones; their check-ins stay in the database under their
+code, and the code counter keeps counting, so no code is ever given to two people.

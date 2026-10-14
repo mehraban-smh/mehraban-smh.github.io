@@ -1,4 +1,6 @@
--- Home Comfort NY: start fresh before the study.
+-- Home Comfort NY: ONE-TIME clean start before the study (October 2026). Do NOT run this during or after the
+-- study: from then on, participants removed on the dashboard keep their check-ins in the database (their
+-- code is never given to anyone else), and this script would delete those records.
 -- 1. Deletes the check-ins and reminder phones left behind by participants who were removed on the
 --    dashboard (test data). Check-ins of anyone still in the participant list are not touched.
 -- 2. Sets the numbering so the next person to join gets the lowest free code: NY001 when nobody is left.
