@@ -959,6 +959,10 @@ function forgetIdentity(note){
  * (HC.key). With it the device sends check-ins and loads the person's check-ins from all their devices. */
 const needsKey = () => HC.live && !!PARTICIPANT && !HC.key() && !VIA_URL;
 function signedIn(r){
+  // The history shown comes from the database (pullHistory): only check-ins still waiting to be sent stay
+  // from before, so a code given again after a reset never shows an earlier person's check-ins.
+  const waiting = new Set(HC.pending().map(x => x.client_id));
+  if(store.votes.some(v => !waiting.has(v.id))){ store.votes = store.votes.filter(v => waiting.has(v.id)); save(); }
   setIdentity(r.code, r.name);
   HC.setKey(r.device_key); LS.set(UNITS_KEY, 'us');
   if(r.home && typeof r.home === 'object' && Object.keys(r.home).length) LS.set(HOME_KEY, JSON.stringify(r.home));

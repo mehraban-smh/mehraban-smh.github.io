@@ -9,6 +9,7 @@ exclude:
   - homecomfort-ny/README.md
   - homecomfort-ny/supabase-setup.sql
   - homecomfort-ny/supabase-reminder-clock.sql
+  - homecomfort-ny/supabase-start-fresh.sql
   - homecomfort-ny/push
   - switch/README.md
   - switch/supabase-setup.sql

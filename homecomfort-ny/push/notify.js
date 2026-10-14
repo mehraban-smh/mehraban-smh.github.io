@@ -71,15 +71,20 @@ const issueBody = list => [
   '',
   `Open the dashboard at ${DASHBOARD}, check who they are, and click Approve so they can start checking in (or Remove for anyone you do not recognise), then close this issue.`
 ].join('\n');
-// Guards against a second email if a previous run opened the issue but could not record it: the
-// codes already mentioned in an approval issue (open or closed) are not listed again.
+// Guards against a second email if a previous run opened the issue but could not record it: a code
+// already mentioned in an approval issue (open or closed) is not listed again, but only when that issue
+// was opened after the participant registered. Codes can be given again after the numbering is reset
+// before the study, and a new NY001 must not be mistaken for the test NY001 of an older issue.
 function codesAlreadyListed() {
-  const seen = new Set();
+  const seen = new Map();            // code -> when the latest issue mentioning it was opened (ms)
   try {
-    const out = gh(['issue', 'list', '--repo', GH_REPO, '--state', 'all', '--search', `"${STUDY}" "waiting for approval" in:title`, '--json', 'body', '--limit', '100']);
-    for (const issue of JSON.parse(out || '[]')) for (const c of String(issue.body || '').match(/\bNY\d{3,}\b/g) || []) seen.add(c);
+    const out = gh(['issue', 'list', '--repo', GH_REPO, '--state', 'all', '--search', `"${STUDY}" "waiting for approval" in:title`, '--json', 'body,createdAt', '--limit', '100']);
+    for (const issue of JSON.parse(out || '[]')) {
+      const t = Date.parse(issue.createdAt) || 0;
+      for (const c of String(issue.body || '').match(/\bNY\d{3,}\b/g) || []) seen.set(c, Math.max(seen.get(c) || 0, t));
+    }
   } catch (e) { /* treated as "none found": at worst one extra email */ }
-  return seen;
+  return { has: p => (seen.get(p.code) || 0) >= (Date.parse(p.created_at) || 0) && seen.has(p.code) };
 }
 function openIssue(list) {
   const args = ['issue', 'create', '--repo', GH_REPO, '--title', title(list.length), '--body', issueBody(list)];
@@ -140,7 +145,7 @@ async function main() {
       console.log(`[dry run] would open one issue "${title(waiting.length)}" listing ${waiting.map(p => `${p.code} (registered ${when(p.created_at)})`).join(', ')} and mark them as notified`);
     } else {
       const seen = codesAlreadyListed();
-      const listed = waiting.filter(p => seen.has(p.code)), fresh = waiting.filter(p => !seen.has(p.code));
+      const listed = waiting.filter(p => seen.has(p)), fresh = waiting.filter(p => !seen.has(p));
       if (listed.length) { console.log(`${codes(listed)}: already listed in an issue, not opening another`); toMark.push(...listed); }
       if (fresh.length) {
         try { const url = openIssue(fresh); opened++; console.log(`opened ${url || 'an issue'} for ${codes(fresh)}`); toMark.push(...fresh); }
