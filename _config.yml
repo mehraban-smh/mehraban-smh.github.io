@@ -1,0 +1,16 @@
+# GitHub Pages (Jekyll) settings for mehraban.uk.
+# Internal notes, setup scripts and the reminder scripts stay in the repository but are not published as
+# pages of the website (before this file existed, e.g. CLAUDE.md was served as /CLAUDE.html). The study
+# setup steps link the SQL files on GitHub, never on the website. Folders starting with "_" (such as
+# _twin-src) are skipped by Jekyll anyway.
+exclude:
+  - CLAUDE.md
+  - README.md
+  - homecomfort-ny/README.md
+  - homecomfort-ny/supabase-setup.sql
+  - homecomfort-ny/supabase-reminder-clock.sql
+  - homecomfort-ny/push
+  - switch/README.md
+  - switch/supabase-setup.sql
+  - switch/supabase-reminder-clock.sql
+  - switch/push

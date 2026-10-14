@@ -89,6 +89,28 @@ function openIssue(list) {
   catch (e) { return gh(args); }
 }
 const ghError = e => (e && e.code === 'ENOENT') ? 'the gh CLI is not installed on this runner' : String((e && (e.stderr || e.message)) || e).trim();
+/* An approval issue closes itself once everyone it lists has been approved or removed on the dashboard,
+ * so an open issue always means someone is still waiting. Problems are logged, never fatal. */
+async function closeSettledIssues() {
+  let issues = [];
+  try { issues = JSON.parse(gh(['issue', 'list', '--repo', GH_REPO, '--state', 'open', '--search', `"${STUDY}" "waiting for approval" in:title`, '--json', 'number,body', '--limit', '50']) || '[]'); }
+  catch (e) { console.error(`could not list the open approval issues: ${ghError(e)}`); return 0; }
+  let closed = 0;
+  for (const issue of issues) {
+    const listed = [...new Set(String(issue.body || '').match(/\bNY\d{3,}\b/g) || [])];
+    if (!listed.length) continue;
+    const r = await fetch(rest(`?select=code,approved&code=in.(${listed.join(',')})`), { headers });
+    if (!r.ok) { console.error(`issue #${issue.number}: could not read ${listed.join(', ')} (${r.status})`); continue; }
+    const rows = await r.json();
+    if (rows.some(p => !p.approved)) continue;              // someone it lists is still waiting
+    if (DRY) { console.log(`[dry run] would close issue #${issue.number}: ${listed.join(', ')} approved or removed`); continue; }
+    try {
+      gh(['issue', 'close', String(issue.number), '--repo', GH_REPO, '--comment', 'Everyone listed here has been approved or removed on the dashboard, so this issue was closed automatically.']);
+      closed++; console.log(`closed issue #${issue.number}: ${listed.join(', ')} approved or removed`);
+    } catch (e) { console.error(`could not close issue #${issue.number}: ${ghError(e)}`); }
+  }
+  return closed;
+}
 
 async function main() {
   const now = new Date();
@@ -136,7 +158,8 @@ async function main() {
     if (u.ok) marked++;
     else { failed++; console.error(`${p.code}: could not record the notification (${u.status}): ${await u.text()}`); }
   }
-  console.log(`${now.toISOString()} - ${all.length} participant(s) not yet notified, opened ${opened} issue(s), marked ${marked} as notified${failed ? `, ${failed} failed` : ''}`);
+  const closed = await closeSettledIssues();
+  console.log(`${now.toISOString()} - ${all.length} participant(s) not yet notified, opened ${opened} issue(s), marked ${marked} as notified, closed ${closed} settled issue(s)${failed ? `, ${failed} failed` : ''}`);
   if (failed) process.exitCode = 1;
 }
 main().catch(err => fail(err.message));
