@@ -165,6 +165,13 @@ first (one tap: permission, the phone registered with the default hours). No rem
 `?debug=1` on the check-in URL shows what gets stored, with a copy-as-CSV button and example data.
 In local mode (no Supabase values in `config.js`) nothing needs approving and nothing leaves the browser.
 
+## The video guide
+
+`how-to-take-part.mp4` (9 minutes, 1080p, H.264/AAC with a voice-over; captions in `how-to-take-part.vtt`,
+poster `how-to-take-part.jpg`) plays in the "Video guide" section of the study page, with chapter buttons.
+It was recorded from the real app (1.3.2) on the local test bench; the scripts and the voice (Kokoro, made
+locally) live outside the repository. Re-make it when the app changes in a way participants would notice.
+
 ## The one-time clean start (October 2026)
 
 Before the study, the test sign-ups were removed and `homecomfort-ny/supabase-start-fresh.sql` was run

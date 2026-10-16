@@ -272,6 +272,14 @@ ul.ip-team{display:grid;gap:12px;margin:0;padding:0;list-style:none}
 .ip-team-link .ic{width:16px;height:16px}
 .ip-team-link:hover{text-decoration:underline}
 .ip-foot .caption{margin-top:4px}
+/* video guide: the player and its chapters */
+.ip-video{position:relative;aspect-ratio:16/9;border-radius:24px;overflow:hidden;background:#1E1B3A;box-shadow:var(--sh-2)}
+.ip-video video{display:block;width:100%;height:100%;background:#1E1B3A}
+.ip-chapters{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0;padding:0;list-style:none}
+.ip-chapters button{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:6px 14px;border:1px solid var(--line);border-radius:var(--r-pill);background:#fff;color:var(--ink);font:inherit;font-size:14px;font-weight:700;line-height:1.2;cursor:pointer;transition:border-color var(--dur-2),color var(--dur-2)}
+.ip-chapters button:hover{border-color:var(--violet-200);color:var(--violet-700)}
+.ip-chapters .num{color:var(--violet-700);font-variant-numeric:tabular-nums}
+@media (min-width:720px){ .ip-video{border-radius:32px} }
 </style>
 </head>
 <body class="bg-aurora">
@@ -284,6 +292,7 @@ ul.ip-team{display:grid;gap:12px;margin:0;padding:0;list-style:none}
   </div>
   <nav class="ip-nav" aria-label="On this page">
     <ul>
+      <li><a href="#video">Video</a></li>
       <li><a href="#how">How it works</a></li>
       <li><a href="#data">Your data</a></li>
       <li><a href="#faq">FAQ</a></li>
@@ -305,6 +314,7 @@ ul.ip-team{display:grid;gap:12px;margin:0;padding:0;list-style:none}
           <a class="btn btn-primary btn-lg" href="checkin/?start=join">Join the study<i data-ic="arrow-right"></i></a>
           <a class="btn btn-secondary btn-lg" href="checkin/?start=signin"><i data-ic="signin"></i>Sign in</a>
         </div>
+        <p class="ip-note"><i data-ic="play"></i><span>New here? <a href="#video">Watch the 9-minute video guide</a>: every step, from joining to your check-ins.</span></p>
         <p class="ip-note"><i data-ic="key"></i><span>Already taking part? <a href="checkin/?start=signin">Sign in</a> with the email you joined with.</span></p>
         <p class="ip-note"><i data-ic="phone"></i><span>On an iPhone? Add the check-in app to your Home Screen first, then join or sign in from there. <a href="#faq-reminders">Here&rsquo;s how</a></span></p>
         <ul class="ip-facts" role="list">
@@ -378,6 +388,34 @@ ul.ip-team{display:grid;gap:12px;margin:0;padding:0;list-style:none}
           <path d="M300 46c1.08 3.72 2.28 4.92 6 6-3.72 1.08-4.92 2.28-6 6-1.08-3.72-2.28-4.92-6-6 3.72-1.08 4.92-2.28 6-6z" fill="#FF9E7A"/>
         </svg>
       </div>
+    </section>
+
+    <!-- ====================================================== video guide -->
+    <section class="ip-section" id="video" aria-labelledby="video-title">
+      <div class="section-head">
+        <span class="eyebrow">Video guide</span>
+        <h2 class="section-title" id="video-title">Watch how to take part</h2>
+        <p class="section-sub">Nine minutes, step by step on an iPhone: the study page, adding the app to your Home Screen, joining, and your check-ins. Captions can be turned on in the player.</p>
+      </div>
+      <div class="ip-video">
+        <video id="guideVideo" controls playsinline preload="metadata" poster="how-to-take-part.jpg" width="1920" height="1080">
+          <source src="how-to-take-part.mp4" type="video/mp4">
+          <track kind="captions" src="how-to-take-part.vtt" srclang="en" label="English">
+          Your browser cannot play this video. <a href="how-to-take-part.mp4">Download it</a> instead.
+        </video>
+      </div>
+      <ol class="ip-chapters" role="list" aria-label="Jump to a part of the video">
+        <li><button type="button" data-t="0"><span class="num">0:00</span>Introduction</button></li>
+        <li><button type="button" data-t="16"><span class="num">0:16</span>The study page</button></li>
+        <li><button type="button" data-t="85"><span class="num">1:25</span>Add to Home Screen</button></li>
+        <li><button type="button" data-t="110"><span class="num">1:50</span>Join</button></li>
+        <li><button type="button" data-t="308"><span class="num">5:08</span>Approval</button></li>
+        <li><button type="button" data-t="319"><span class="num">5:19</span>Notifications</button></li>
+        <li><button type="button" data-t="343"><span class="num">5:43</span>A check-in</button></li>
+        <li><button type="button" data-t="503"><span class="num">8:23</span>Timing and goals</button></li>
+        <li><button type="button" data-t="513"><span class="num">8:33</span>When you are out</button></li>
+        <li><button type="button" data-t="525"><span class="num">8:45</span>Your comfort story</button></li>
+      </ol>
     </section>
 
     <!-- ====================================================== how it works -->
@@ -714,6 +752,15 @@ ul.ip-team{display:grid;gap:12px;margin:0;padding:0;list-style:none}
   }
   openFromHash();
   window.addEventListener('hashchange', openFromHash);
+  // video guide: a chapter button jumps to its part and plays from there
+  var guide = document.getElementById('guideVideo');
+  document.addEventListener('click', function (e) {
+    var b = guide && e.target && e.target.closest ? e.target.closest('.ip-chapters [data-t]') : null;
+    if (!b) return;
+    guide.currentTime = Number(b.getAttribute('data-t')) || 0;
+    var p = guide.play(); if (p && p.catch) p.catch(function () {});
+    guide.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
   // "Here's how" links: open the answer even when the address already ends in that #faq-... (no hashchange then)
   document.addEventListener('click', function (e) {
     var a = e.target && e.target.closest ? e.target.closest('a[href^="#faq-"]') : null;
