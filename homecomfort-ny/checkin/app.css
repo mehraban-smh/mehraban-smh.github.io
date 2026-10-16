@@ -170,7 +170,8 @@ body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))
 .goal-top{display:flex;align-items:center;gap:18px}
 .goal-legend{display:flex;flex-direction:column;gap:14px;min-width:0}
 /* "100%" is wider than the inner ring's 66px opening at 24px: a little smaller only then */
-.goal-card .ring-value.is-full{font-size:20px}
+.goal-card .ring-value{font-size:30px}
+.goal-card .ring-value small{font-size:16px;font-weight:700;color:var(--ink-2)}
 .gl{display:flex;align-items:flex-start;gap:10px;line-height:1.2}
 .gl b{display:block;font-size:19px;font-weight:800;letter-spacing:-.02em}
 .gl b+span{display:block;margin-top:2px;font-size:13px;font-weight:600;color:var(--ink-2)}
@@ -180,6 +181,7 @@ body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))
 .streak-card{display:flex;align-items:center;gap:10px;padding:10px;border-radius:18px;background:rgba(255,255,255,.84)}
 .streak-card .daypips{gap:2px}
 .streak-card .daypips i{width:17px;height:17px;border-radius:5px}
+.daypips i.is-part{background:var(--violet-100);color:var(--violet-700)}   /* checked in, daily goal not reached yet */
 .streak-card .icon-tile{--it-size:38px;border-radius:12px}
 .streak-text{flex:1;min-width:0;line-height:1.2}
 .streak-text b{display:block;font-size:14.5px;font-weight:800}

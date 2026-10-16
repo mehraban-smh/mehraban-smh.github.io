@@ -20,10 +20,10 @@ self.HC_CONFIG = {
   vapidPublicKey: "BDqHJMzCcb8e8NZLfcw0mAyV2C9ouZvzrlAyil3MzaC9ZYUGYhroQTWMZBTUHvH5-uoyLAT88W1-jA-0B2e7IY4",
   reminderIntervalMin: 60,
   checkinGapMin: 60,        // minutes from one check-in until the app opens the next; no reminder comes sooner either
-  dailyGoal: 3,             // check-ins a day the goal ring counts towards; the week counts at most this many a day (goal 7 times this)
+  dailyGoal: 3,             // check-ins a day for the daily goal; the weekly goal is 7 days that reach it
   timeZone: "America/New_York",   // the sender reads home hours in this zone for phones that have not reported their own
   studyName: "Home Comfort NY",
   studyStart: "2026-10-20",     // first day of the study (New York time)
   studyEnd: "2026-11-20",       // last day: reminders stop after this day ends in New York (push/send.js)
-  appVersion: "1.3.0"
+  appVersion: "1.3.1"
 };

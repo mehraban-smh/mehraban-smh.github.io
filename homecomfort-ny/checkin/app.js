@@ -15,7 +15,7 @@ const REG_KEY = 'hcny_reg';                                 // the sign-up draft
 const PENDING_KEY = 'hcny_pending';                         // api.js: check-ins waiting to be sent
 const INTERVAL = HC.cfg.reminderIntervalMin || 60;          // minutes between reminders, same as the sender
 const GOAL = Math.max(1, Math.round(Number(HC.cfg.dailyGoal) || 3));
-const WEEK_GOAL = GOAL * 7;
+const WEEK_GOAL = 7;                                        // the weekly goal: every day of the week a goal day (GOAL check-ins)
 const GAP_MIN = Math.max(1, Number(HC.cfg.checkinGapMin) || 60);   // minutes from one check-in until the next one opens; the sender waits as long before reminding
 const MANUAL_PAUSE_H = 12;                                  // "I'll tell you when I'm back": reminders resume by themselves after this long
 const HOLD_MS = 6000;                                       // a new check-in waits this long (Undo) before it is sent
@@ -107,13 +107,15 @@ function seed(){
 /* Monday 00:00 of the current calendar week (the week pips and the "this week" figures use it). */
 function weekStart(){ const d = startOfDay(new Date()); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; }
 const todayCount = list => { const k = dayKey(new Date()); return list.filter(v => dayKey(new Date(v.ts))===k).length; };
-/* The week's progress counts each day on its own: at most GOAL check-ins a day, so extra ones today never
- * stand in for tomorrow's (5 today count 3 toward the week, tomorrow starts again at 0 of 3). */
-function weekCount(list){
+/* Check-ins per day this week ({ '2026-10-19': 3, ... }), and the week's progress: the days that reached
+ * the daily goal, out of 7. Each day counts on its own, so 5 check-ins today are one goal day and never
+ * stand in for tomorrow's. */
+function weekDays(list){
   const ws = weekStart(), perDay = {};
   list.filter(v => new Date(v.ts) >= ws).forEach(v => { const k = dayKey(new Date(v.ts)); perDay[k] = (perDay[k] || 0) + 1; });
-  return Object.values(perDay).reduce((s, n) => s + Math.min(n, GOAL), 0);
+  return perDay;
 }
+const weekCount = list => Object.values(weekDays(list)).filter(n => n >= GOAL).length;
 /* When the next check-in opens: GAP_MIN after the last one (from any of the participant's devices), or
  * null when one can be made now. A last check-in stamped in the future (a device with a wrong clock)
  * never locks anyone out. */
@@ -394,22 +396,21 @@ function notifSheet(opener){
 function notifMsg(t, kind){ const m = $('#notifMsg') || $('#remMsg'); if(!m) return; m.hidden = false; m.className = 'note' + (kind==='ok' ? ' note-good' : ' note-warn'); m.innerHTML = ic(kind==='ok' ? 'check-circle' : 'alert') + '<div>' + t + '</div>'; }
 /* ---- Today: the goal ring, the streak, the 7-day dot chart ---- */
 function goalCard(list){
-  const t = todayCount(list), w = weekCount(list), st = streakInfo(list);
-  const pct = Math.round(Math.min(1, w/WEEK_GOAL)*100);
+  const t = todayCount(list), w = weekCount(list), st = streakInfo(list), per = weekDays(list);
   const ring = HCI.ring({ size:128, stroke:13, gap:5, rings:[{ value:w/WEEK_GOAL, color:'grad' }, { value:t/GOAL, color:'var(--sky)', track:'var(--sky-100)' }],
-    center:`<b class="ring-value${pct >= 100 ? ' is-full' : ''}">${pct}%</b><span class="ring-label">of goal</span>`, label:`${w} of ${WEEK_GOAL} check-ins this week, ${t} of ${GOAL} today` });
+    center:`<b class="ring-value num${w >= WEEK_GOAL ? ' is-full' : ''}">${w}<small>/${WEEK_GOAL}</small></b><span class="ring-label">days</span>`, label:`${w} of ${WEEK_GOAL} goal days this week, ${t} of ${GOAL} check-ins today` });
   const ws = weekStart(), today = startOfDay(new Date());
+  // a filled pip: a goal day; a light one: checked in, goal not reached; an outline: today, still open
   const pips = ['M','T','W','T','F','S','S'].map((l, i) => { const d = new Date(ws); d.setDate(d.getDate()+i);
-    const done = st.days.has(dayKey(d)), isT = d.getTime()===today.getTime();
-    return `<i class="${done?'is-done':''} ${isT && !done?'is-today':''}">${l}</i>`; }).join('');
-  const daysThisWeek = [...st.days].filter(k => k >= dayKey(ws)).length;
+    const n = per[dayKey(d)] || 0, done = n >= GOAL, isT = d.getTime()===today.getTime();
+    return `<i class="${done ? 'is-done' : n ? 'is-part' : ''}${isT && !done ? ' is-today' : ''}">${l}</i>`; }).join('');
   const streak = st.cur ? `<b class="nowrap">${st.cur}-day streak</b><span>Best: ${st.best} day${st.best===1?'':'s'}</span>` : `<b class="nowrap">No streak yet</b><span>${st.best ? `Best: ${st.best} day${st.best===1?'':'s'}` : 'Check in today'}</span>`;
   return `<section class="card-hero goal-card" aria-label="Your goals">
     <div class="goal-top">${ring}<div class="goal-legend">
-      <div class="gl"><i class="gl-dot gl-week" aria-hidden="true"></i><span><b class="num">${w} of ${WEEK_GOAL}</b><span>this week${w >= WEEK_GOAL ? ' &middot; goal met' : ` &middot; ${WEEK_GOAL - w} to go`}</span></span></div>
-      <div class="gl"><i class="gl-dot gl-day" aria-hidden="true"></i><span><b class="num">${t > GOAL ? t + ' today' : t + ' of ' + GOAL}</b><span>${t > GOAL ? `goal met &middot; ${GOAL} count this week` : t === GOAL ? 'today &middot; goal met' : 'today so far'}</span></span></div>
+      <div class="gl"><i class="gl-dot gl-week" aria-hidden="true"></i><span><b class="num">${w} of ${WEEK_GOAL} days</b><span>this week with <span class="nowrap">${GOAL} check-ins</span>${w >= WEEK_GOAL ? ' &middot; goal met' : ''}</span></span></div>
+      <div class="gl"><i class="gl-dot gl-day" aria-hidden="true"></i><span><b class="num">${t > GOAL ? t + ' today' : t + ' of ' + GOAL}</b><span>${t > GOAL ? 'goal met &middot; counts as one day' : t === GOAL ? 'today &middot; goal met' : 'today so far'}</span></span></div>
     </div></div>
-    <div class="streak-card"><span class="icon-tile it-streak">${ic('streak')}</span><span class="streak-text">${streak}</span><span class="daypips" aria-hidden="true">${pips}</span><span class="sr-only">Checked in on ${daysThisWeek} day${daysThisWeek===1?'':'s'} this week.</span></div>
+    <div class="streak-card"><span class="icon-tile it-streak">${ic('streak')}</span><span class="streak-text">${streak}</span><span class="daypips" aria-hidden="true">${pips}</span><span class="sr-only">Reached the daily goal on ${w} day${w===1?'':'s'} this week.</span></div>
   </section>`;
 }
 const PARTS = [
@@ -722,7 +723,8 @@ const SCREENS = {
     const list = votes(), l = list[0], t = todayCount(list), st = streakInfo(list);
     const ring = HCI.ring({ size:148, stroke:14, value:Math.min(1, t/GOAL), color:'grad', center:`<b class="ring-value num">${t}<small>/${GOAL}</small></b><span class="ring-label">today</span>`, label:`${t} of ${GOAL} check-ins today` });
     const title = t === GOAL ? 'That&rsquo;s today&rsquo;s goal!' : `Thank you${firstName() ? ', ' + esc(firstName()) : ''}!`;
-    const sub = t > GOAL ? `Above and beyond today, thank you! Up to ${GOAL} a day count toward your week.` : t === GOAL ? 'Thank you for showing up, every one counts.' : `${GOAL - t} more today reaches your goal.`;
+    const wk = weekCount(list);
+    const sub = t > GOAL ? 'Above and beyond today, thank you! Today already counts as a goal day for your week.' : t === GOAL ? `Today counts as a goal day: ${wk} of ${WEEK_GOAL} this week.` : `${GOAL - t} more today reaches your goal.`;
     const open = nextOpen();
     return `<div class="done stack stack-6">
       <section class="card-hero done-hero stack stack-4 center"><div class="done-ring">${ring}</div>

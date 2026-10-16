@@ -6,7 +6,7 @@
  * connection (check-ins made offline wait in the app's queue). Ported from the SWITCH app's sw.js. */
 importScripts('../config.js');
 const CFG = self.HC_CONFIG || {};
-const CACHE = 'hcny-checkin-v6';
+const CACHE = 'hcny-checkin-v7';
 const BASE = new URL('../', self.registration.scope).pathname;   // /homecomfort-ny/
 
 self.addEventListener('install', () => self.skipWaiting());
