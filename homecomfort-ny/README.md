@@ -91,14 +91,14 @@ the participant has none yet. Signing out on a phone also clears that person's c
 
 Stored as one JSON object in `participants.home`, always in metric units. Participants answer in US units
 (`participants.units` is `us`; earlier test sign-ups may say `metric`); the dashboard can show either.
-Only `home_type` is required; any other key may be missing if skipped. Since version 1.1.0 (14 October
+Since 1.2 every question is required ("Not sure" is stored as `unsure`, or null for the floor area and the thermostat setting); profiles from earlier versions may miss keys that were skipped then. Since version 1.1.0 (14 October
 2026) the cooling question, the summer thermostat setting and the draft question are no longer asked (the
 study runs in the heating season); older profiles may still hold `cooling`, `setpoint_summer_c` and
 `draftiness`, and the older home types `townhouse`, `duplex`, `mobile`, `dorm`, `other`.
 
 | Key | Values |
 |---|---|
-| `zip` | the home's 5-digit US ZIP code (optional; for matching check-ins to local weather) |
+| `zip` | the home's 5-digit US ZIP code (required since 1.2; for matching check-ins to local weather) |
 | `home_type` | `detached`, `semi_attached` (shares one wall), `attached` (row house or townhouse), `apartment` |
 | `tenure` | `own`, `rent`, `subsidized` (subsidized housing), `other` |
 | `year_built` | `pre1940`, `1940_1969`, `1970_1989`, `1990_2009`, `2010_plus`, `unsure` |
