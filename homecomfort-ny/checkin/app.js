@@ -108,8 +108,8 @@ function seed(){
 function weekStart(){ const d = startOfDay(new Date()); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; }
 const todayCount = list => { const k = dayKey(new Date()); return list.filter(v => dayKey(new Date(v.ts))===k).length; };
 /* Check-ins per day this week ({ '2026-10-19': 3, ... }), and the week's progress: the days that reached
- * the daily goal, out of 7. Each day counts on its own, so 5 check-ins today are one goal day and never
- * stand in for tomorrow's. */
+ * the daily goal, out of 7. Each day counts on its own, so extra check-ins today never stand in for
+ * tomorrow's. */
 function weekDays(list){
   const ws = weekStart(), perDay = {};
   list.filter(v => new Date(v.ts) >= ws).forEach(v => { const k = dayKey(new Date(v.ts)); perDay[k] = (perDay[k] || 0) + 1; });
@@ -408,7 +408,7 @@ function goalCard(list){
   return `<section class="card-hero goal-card" aria-label="Your goals">
     <div class="goal-top">${ring}<div class="goal-legend">
       <div class="gl"><i class="gl-dot gl-week" aria-hidden="true"></i><span><b class="num">${w} of ${WEEK_GOAL} days</b><span>this week with <span class="nowrap">${GOAL} check-ins</span>${w >= WEEK_GOAL ? ' &middot; goal met' : ''}</span></span></div>
-      <div class="gl"><i class="gl-dot gl-day" aria-hidden="true"></i><span><b class="num">${t > GOAL ? t + ' today' : t + ' of ' + GOAL}</b><span>${t > GOAL ? 'goal met &middot; counts as one day' : t === GOAL ? 'today &middot; goal met' : 'today so far'}</span></span></div>
+      <div class="gl"><i class="gl-dot gl-day" aria-hidden="true"></i><span><b class="num">${t > GOAL ? t + ' today' : t + ' of ' + GOAL}</b><span>${t > GOAL ? 'today &middot; above your goal, keep going!' : t === GOAL ? 'today &middot; goal met, more are welcome' : 'today so far'}</span></span></div>
     </div></div>
     <div class="streak-card"><span class="icon-tile it-streak">${ic('streak')}</span><span class="streak-text">${streak}</span><span class="daypips" aria-hidden="true">${pips}</span><span class="sr-only">Reached the daily goal on ${w} day${w===1?'':'s'} this week.</span></div>
   </section>`;
@@ -724,7 +724,7 @@ const SCREENS = {
     const ring = HCI.ring({ size:148, stroke:14, value:Math.min(1, t/GOAL), color:'grad', center:`<b class="ring-value num">${t}<small>/${GOAL}</small></b><span class="ring-label">today</span>`, label:`${t} of ${GOAL} check-ins today` });
     const title = t === GOAL ? 'That&rsquo;s today&rsquo;s goal!' : `Thank you${firstName() ? ', ' + esc(firstName()) : ''}!`;
     const wk = weekCount(list);
-    const sub = t > GOAL ? 'Above and beyond today, thank you! Today already counts as a goal day for your week.' : t === GOAL ? `Today counts as a goal day: ${wk} of ${WEEK_GOAL} this week.` : `${GOAL - t} more today reaches your goal.`;
+    const sub = t > GOAL ? 'Above and beyond today, thank you! Every extra check-in makes your comfort story clearer.' : t === GOAL ? `${wk} of ${WEEK_GOAL} goal days this week. More check-ins today are always welcome.` : `${GOAL - t} more today reaches your goal.`;
     const open = nextOpen();
     return `<div class="done stack stack-6">
       <section class="card-hero done-hero stack stack-4 center"><div class="done-ring">${ring}</div>
@@ -865,7 +865,7 @@ function hold(row){
   // app is closed still goes out the next time it opens.
   if(HC.live){ const rec = HC.toRecord(row, PARTICIPANT); rec.hold_until = Date.now() + HOLD_MS; HC.queue(rec); }
   const list = votes(), t = todayCount(list), on = PUSH.status()==='on';
-  showToast({ title:'Check-in saved', sub: on ? 'Next reminder ' + whenWord(nextReminder()) : `${t} of ${GOAL} today`, action:'Undo', onAction:() => undo(row.id), onClose:() => commit(row.id), ms:HOLD_MS, hold:true });
+  showToast({ title:'Check-in saved', sub: on ? 'Next reminder ' + whenWord(nextReminder()) : t > GOAL ? `${t} today` : `${t} of ${GOAL} today`, action:'Undo', onAction:() => undo(row.id), onClose:() => commit(row.id), ms:HOLD_MS, hold:true });
 }
 /* The Undo time is over: send the check-in now. This also runs when the toast closes early (another
  * message replaced it, or the app went to the background), so the row's hold mark is removed here,

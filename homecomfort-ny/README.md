@@ -143,9 +143,10 @@ hungry, tired, unwell).
 
 **One hour between check-ins (since 1.3.0).** The next check-in opens `checkinGapMin` (60) minutes after
 the last one, counting check-ins from all of the participant's devices. Before then Today shows "Next
-check-in at 5:17 PM" and tapping it (or a reminder) explains when to come back. The daily goal is `dailyGoal` (3)
-check-ins; the weekly goal is 7 goal days ("1 of 7 days"): a day counts once it reaches 3, so extra
-check-ins today never stand in for tomorrow's.
+check-in at 5:17 PM" and tapping it (or a reminder) explains when to come back. The daily goal is `dailyGoal` (4 since
+1.3.2) check-ins; the weekly goal is 7 goal days ("1 of 7 days"): a day counts once it reaches 4, so extra
+check-ins today never stand in for tomorrow's. After the goal the app keeps encouraging more ("above
+your goal, keep going!"), never saying that extra check-ins don't count.
 
 ## Reminders
 
