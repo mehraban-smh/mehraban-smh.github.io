@@ -62,10 +62,10 @@
     at_home: { long: 'Home over an hour', recent: 'Just got in' },
     activity: { sleep: 'Sleeping', lying: 'Lying down', sit: 'Sitting relaxed', desk: 'Desk work', stand: 'Standing', house: 'Cooking or housework', walk: 'Walking around', exercise: 'Exercising' },
     room: { living: 'Living room', bedroom: 'Bedroom', kitchen: 'Kitchen', office: 'Home office', bathroom: 'Bathroom', basement: 'Basement', other: 'Elsewhere' },
-    air: { still: 'Still air', slight: 'Slight breeze', drafty: 'Drafty', draughty: 'Drafty' },
+    air: { still: 'Still air', slight: 'Gentle air flow', drafty: 'Clear air flow', draughty: 'Clear air flow' },
     sun: { yes: 'Sun on me', no: 'No direct sun', dark: 'It’s dark' },
-    actions: { win_open: 'Opened a window', win_close: 'Closed a window', heat_up: 'Turned the heat up', heat_down: 'Turned the heat down or off', door_open: 'Opened a door', door_close: 'Closed a door', ac_up: 'Turned the AC on or up', ac_down: 'Turned the AC down or off', fan: 'Fan on', layer_on: 'Put on a layer', layer_off: 'Took off a layer', blanket: 'Got a blanket', curtains: 'Closed blinds or curtains', moved: 'Changed rooms' },
-    notes: { hot_drink: 'Hot drink', cold_drink: 'Cold drink', ate: 'Just ate', hungry: 'Hungry', tired: 'Tired', unwell: 'Feeling unwell' },
+    actions: { win_open: 'Opened a window', win_close: 'Closed a window', heat_up: 'Turned the heat up', heat_down: 'Turned the heat down or off', door_open: 'Opened a door', door_close: 'Closed a door', ac_up: 'Turned the AC on or up', ac_down: 'Turned the AC down or off', fan: 'Fan on', layer_on: 'Put on a layer', layer_off: 'Took off a layer', blanket: 'Got a blanket', curtains: 'Closed blinds or curtains', moved: 'Moved to another room' },
+    notes: { hot_drink: 'Hot drink', cold_drink: 'Cold drink', ate: 'Ate something', hungry: 'Felt hungry', tired: 'Felt tired', unwell: 'Felt unwell' },
     garments: { tshirt: 'T-shirt', long: 'Long sleeves', sweater: 'Sweater', hoodie: 'Hoodie or fleece', shorts: 'Shorts', pants: 'Pants or jeans', sweatpants: 'Sweatpants', skirt: 'Skirt or dress', socks: 'Socks', slippers: 'Slippers', blanket: 'Blanket', comforter: 'Comforter' }
   };   // the ids are the ones checkin/questions.js stores; keep the two in step
   const pretty = v => { const s = String(v == null ? '' : v).replace(/[_-]+/g, ' ').trim(); return s ? s[0].toUpperCase() + s.slice(1) : ''; };

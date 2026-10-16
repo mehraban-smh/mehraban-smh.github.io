@@ -21,45 +21,50 @@ const ACTS = [
   {id:'walk',     n:'Walking around',       met:1.7, ic:'walk'},
   {id:'exercise', n:'Exercising',           met:3.5, ic:'dumbbell'}
 ];
+/* Bedroom and living room come first and are shown large (main): most check-ins are made in one of them. */
 const ROOMS = [
-  {id:'living',n:'Living room',ic:'sofa'}, {id:'bedroom',n:'Bedroom',ic:'bed'}, {id:'kitchen',n:'Kitchen',ic:'pan'},
+  {id:'bedroom',n:'Bedroom',ic:'bed',main:true}, {id:'living',n:'Living room',ic:'sofa',main:true}, {id:'kitchen',n:'Kitchen',ic:'pan'},
   {id:'office',n:'Home office',ic:'laptop'}, {id:'bathroom',n:'Bathroom',ic:'drop'}, {id:'basement',n:'Basement',ic:'stairs'},
   {id:'other',n:'Elsewhere',ic:'door'}
 ];
+/* Air movement in everyday words; n and s are what the question shows, k the short form in summaries.
+ * The ids stay as before (drafty = air clearly moving). */
 const AIR = [
-  {id:'still',  n:'Still',         s:'No air movement I can feel', ic:'still'},
-  {id:'slight', n:'Slight breeze', s:'A gentle movement of air',   ic:'breeze'},
-  {id:'drafty', n:'Drafty',        s:'I can clearly feel a draft', ic:'wind'}
+  {id:'still',  n:'No, the air feels still', s:'I can’t feel any air moving',           k:'Still air',             ic:'still'},
+  {id:'slight', n:'Yes, a little',           s:'I can just feel a gentle flow of air', k:'Gentle air flow',       ic:'breeze'},
+  {id:'drafty', n:'Yes, clearly',            s:'I can clearly feel air blowing on me', k:'Clear air flow',        ic:'wind'}
 ];
 const SUN = [
   {id:'yes',  n:'Sun on me',     s:'Direct sunlight where I am', ic:'sun'},
   {id:'no',   n:'No direct sun', s:'Daylight, but not on me',    ic:'cloud'},
   {id:'dark', n:"It's dark",     s:'Evening, or blinds closed',  ic:'moon'}
 ];
-/* What changed in the last 30 minutes. Shown as boxes (window, door, heating, clothing and blankets) and
- * two rows on their own; within a box the two sides of a pair (opened/closed, up/down, on/off) exclude
- * each other. n is the full name used in summaries, s the short label inside a box. ac_up, ac_down and fan
- * are no longer offered (the study runs in the heating season) but still name older check-ins. */
+/* What the participant DID in the last 30 minutes (not how things are now). Shown as boxes (window, door,
+ * heating, clothes and blankets) and two rows on their own; within a box the two sides of a pair
+ * (opened/closed, up/down, on/off) exclude each other. q is the wording on the question screen, always
+ * "I ..." so it reads as something done; n the name in summaries. ac_up, ac_down and fan are no longer
+ * offered (the study runs in the heating season) but still name older check-ins. */
 const ACTIONS = [
-  {id:'win_open',  n:'Opened a window',    s:'Opened',       ic:'window-open'}, {id:'win_close',  n:'Closed a window', s:'Closed', ic:'window'},
-  {id:'door_open', n:'Opened a door',      s:'Opened',       ic:'door-open'},   {id:'door_close', n:'Closed a door',   s:'Closed', ic:'door'},
-  {id:'heat_up',   n:'Turned the heat up', s:'Turned it up', ic:'arrow-up'},    {id:'heat_down',  n:'Turned the heat down or off', s:'Turned it down or off', ic:'arrow-down'},
-  {id:'layer_on',  n:'Put on a layer',   ic:'layer-on'}, {id:'layer_off', n:'Took off a layer', ic:'layer-off'}, {id:'blanket', n:'Got a blanket', ic:'blanket'},
-  {id:'curtains',  n:'Closed blinds or curtains', ic:'curtain'}, {id:'moved', n:'Changed rooms', ic:'walk'},
+  {id:'win_open',  n:'Opened a window',    q:'I opened a window',      ic:'window-open'}, {id:'win_close',  n:'Closed a window', q:'I closed a window', ic:'window'},
+  {id:'door_open', n:'Opened a door',      q:'I opened a door',        ic:'door-open'},   {id:'door_close', n:'Closed a door',   q:'I closed a door',   ic:'door'},
+  {id:'heat_up',   n:'Turned the heat up', q:'I turned the heat up',   ic:'arrow-up'},    {id:'heat_down',  n:'Turned the heat down or off', q:'I turned the heat down or off', ic:'arrow-down'},
+  {id:'layer_on',  n:'Put on a layer',     q:'I put on a layer',       ic:'layer-on'}, {id:'layer_off', n:'Took off a layer', q:'I took off a layer', ic:'layer-off'}, {id:'blanket', n:'Got a blanket', q:'I got a blanket', ic:'blanket'},
+  {id:'curtains',  n:'Closed blinds or curtains', q:'I closed the blinds or curtains', ic:'curtain'}, {id:'moved', n:'Moved to another room', q:'I moved to another room', ic:'walk'},
   {id:'ac_up', n:'Turned the AC on or up', ic:'snow', old:true}, {id:'ac_down', n:'Turned the AC down or off', ic:'snow', old:true}, {id:'fan', n:'Fan on', ic:'fan', old:true}
 ];
 const ACTION_BOXES = [
   {n:'Window',                ic:'window',   ids:['win_open','win_close']},
   {n:'Door',                  ic:'door',     ids:['door_open','door_close']},
   {n:'Heating',               ic:'radiator', ids:['heat_up','heat_down']},
-  {n:'Clothing and blankets', ic:'layer-on', ids:['layer_on','layer_off','blanket']}
+  {n:'Clothes and blankets',  ic:'layer-on', ids:['layer_on','layer_off','blanket']}
 ];
 const ACTION_SOLO = ['curtains','moved'];
 const PAIRED = { win_open:'win_close', win_close:'win_open', door_open:'door_close', door_close:'door_open', heat_up:'heat_down', heat_down:'heat_up', layer_on:'layer_off', layer_off:'layer_on' };
-/* Anything worth noting: drinks and food in boxes, two rows on their own (any number may be chosen). */
+/* Also the last 30 minutes: drinks and food in boxes, two rows on their own (any number may be chosen).
+ * q is the wording on the question screen, n the name in summaries. */
 const NOTES = [
-  {id:'hot_drink',n:'Hot drink',ic:'mug'}, {id:'cold_drink',n:'Cold drink',ic:'glass'}, {id:'ate',n:'Just ate',ic:'fork'},
-  {id:'hungry',n:'Hungry',ic:'apple'}, {id:'tired',n:'Tired',ic:'zzz'}, {id:'unwell',n:'Feeling unwell',ic:'thermometer'}
+  {id:'hot_drink',n:'Hot drink',q:'I had a hot drink',ic:'mug'}, {id:'cold_drink',n:'Cold drink',q:'I had a cold drink',ic:'glass'}, {id:'ate',n:'Ate something',q:'I ate something',ic:'fork'},
+  {id:'hungry',n:'Felt hungry',q:'I felt hungry',ic:'apple'}, {id:'tired',n:'Felt tired',q:'I felt tired',ic:'zzz'}, {id:'unwell',n:'Felt unwell',q:'I felt unwell',ic:'thermometer'}
 ];
 const NOTE_BOXES = [{n:'Drinks', ic:'mug', ids:['hot_drink','cold_drink']}, {n:'Food', ic:'fork', ids:['ate','hungry']}];
 const NOTE_SOLO = ['tired','unwell'];
@@ -88,11 +93,10 @@ const GARMENT_GROUPS = [
 ];
 const cloOf = ids => Math.round((ids||[]).reduce((s,id)=>s+(GARMENTS.find(g=>g.id===id)?.clo||0),0)*100)/100;
 
-/* Every check-in asks the same eight questions in the same order. "Still the same as last time?" shows the
- * answers of the last check-in instead, each with an Edit button, and "Yes, still the same" saves them
- * without asking anything (what changed and anything to note start empty). */
+/* Every check-in asks the same eight questions in the same order, every one answered afresh (since 1.3
+ * there is no "Still the same as last time?" shortcut). */
 const FLOW_ALL = ['tsv','clo','act','room','air','sun','actions','notes'];
-const QNAME = { tsv:'how you feel', clo:'clothing', act:'activity', room:'room', air:'air movement', sun:'sunlight', actions:'what changed', notes:'notes' };
+const QNAME = { tsv:'how you feel', clo:'clothing', act:'activity', room:'room', air:'air movement', sun:'sunlight', actions:'what you changed', notes:'what you had or felt' };
 const byId = (list,id) => list.find(x=>x.id===id);
 const sense = v => HCI.senseOf(v);
 const tsvWord = v => (typeof v==='number' && sense(v)) ? sense(v).word : '';
@@ -141,14 +145,14 @@ const qhead = (eyebrow, h, p='') => `<div class="screen-head q-head"><span class
 /* single choice: a tall row (air, sun) or a compact row in a two-column grid (activity, room) */
 const optRow = (q, o, on, cls='') => `<button class="option-row ${cls}" role="radio" aria-checked="${on?'true':'false'}" data-act="pick" data-q="${q}" data-v="${o.id}"><span class="icon-tile">${ic(o.ic)}</span><span class="option-text"><span class="option-title">${o.n}</span>${o.s?`<span class="option-sub">${o.s}</span>`:''}</span>${HCI.tick()}</button>`;
 /* multiple choice: toggles, plus one "none" row that clears the others */
-const multiRow = (q, o, on) => `<button class="option-row is-compact" aria-pressed="${on?'true':'false'}" data-act="toggle" data-q="${q}" data-v="${o.id}"><span class="icon-tile">${ic(o.ic)}</span><span class="option-text"><span class="option-title">${o.n}</span></span>${HCI.tick()}</button>`;
+const multiRow = (q, o, on) => `<button class="option-row is-compact" aria-pressed="${on?'true':'false'}" data-act="toggle" data-q="${q}" data-v="${o.id}"><span class="icon-tile">${ic(o.ic)}</span><span class="option-text"><span class="option-title">${o.q || o.n}</span></span>${HCI.tick()}</button>`;
 const noneRow = (q, on, label) => `<button class="option-row is-compact is-none" aria-pressed="${on?'true':'false'}" data-act="none" data-q="${q}"><span class="icon-tile it-plain">${ic('check-circle')}</span><span class="option-text"><span class="option-title">${label}</span></span>${HCI.tick()}</button>`;
 /* one box of garments (tops, bottoms...), each garment a tile with its clo value */
 const gbox = (grp, ids) => { const n = grp.ids.filter(id => ids.includes(id)).length;
   return `<fieldset class="abox gbox"><legend class="abox-h"><span class="icon-tile it-sm">${ic(grp.ic)}</span>${grp.n}${n ? `<span class="gbox-n">${n}</span>` : ''}</legend><div class="ptile-grid cols-${grp.ids.length > 2 ? 4 : 2} is-multi garments">${grp.ids.map(id => { const g = byId(GARMENTS, id);
     return `<button class="ptile ptile-sm" aria-pressed="${ids.includes(g.id)?'true':'false'}" data-act="toggle" data-q="clo" data-v="${g.id}"><span class="ptile-art">${ic(g.ic,'ic-lg')}</span><span class="ptile-label">${g.n}</span><span class="ptile-hint">${g.est?'&asymp;':''}${g.clo.toFixed(2)} clo</span>${HCI.tick()}</button>`; }).join('')}</div></fieldset>`; };
 /* a box of related answers (the window, the door, drinks...): one tile per answer, each with its own check */
-const answerBox = (q, list, box, on) => `<fieldset class="abox"><legend class="abox-h"><span class="icon-tile it-sm">${ic(box.ic)}</span>${box.n}</legend><div class="abox-opts cols-${box.ids.length}">${box.ids.map(id => { const o = byId(list, id); return `<button class="abox-opt" type="button" aria-pressed="${on(id)?'true':'false'}" aria-label="${box.n}: ${o.s || o.n}" data-act="toggle" data-q="${q}" data-v="${id}"><span class="abox-ic">${ic(o.ic)}</span><span class="abox-l">${o.s || o.n}</span>${HCI.tick()}</button>`; }).join('')}</div></fieldset>`;
+const answerBox = (q, list, box, on) => `<fieldset class="abox"><legend class="abox-h"><span class="icon-tile it-sm">${ic(box.ic)}</span>${box.n}</legend><div class="abox-opts cols-${box.ids.length}">${box.ids.map(id => { const o = byId(list, id); return `<button class="abox-opt" type="button" aria-pressed="${on(id)?'true':'false'}" aria-label="${o.q || o.n}" data-act="toggle" data-q="${q}" data-v="${id}"><span class="abox-ic">${ic(o.ic)}</span><span class="abox-l">${o.q || o.n}</span>${HCI.tick()}</button>`; }).join('')}</div></fieldset>`;
 const footNext = (ok, label='Next', note='') => `<div class="footbar">${note}<button class="btn btn-primary btn-block" data-act="next" ${ok?'':'disabled'}>${label} ${ic('arrow-right')}</button></div>`;
 
 /* ---------- the eight question screens (read S.a for the current answers) ---------- */
@@ -176,22 +180,23 @@ const Q = {
   act: () => qhead('Activity', 'What have you been doing for the last 15 minutes?') +
     `<div class="option-grid" role="radiogroup" aria-label="Activity">${ACTS.map(o=>optRow('act',o,S.a.act===o.id,'is-compact')).join('')}</div>`,
   room: () => qhead('Location', 'Which room are you in?') +
-    `<div class="option-grid" role="radiogroup" aria-label="Room">${ROOMS.map(o=>optRow('room',o,S.a.room===o.id,'is-compact')).join('')}</div>`,
-  air: () => qhead('Air', 'How does the air feel?', 'Around you, right now.') +
-    `<div class="option-list" role="radiogroup" aria-label="Air movement">${AIR.map(o=>optRow('air',o,S.a.air===o.id)).join('')}</div>`,
+    `<div role="radiogroup" aria-label="Room"><div class="room-main">${ROOMS.filter(o => o.main).map(o => `<button class="room-big" role="radio" aria-checked="${S.a.room===o.id?'true':'false'}" data-act="pick" data-q="room" data-v="${o.id}"><span class="icon-tile">${ic(o.ic,'ic-lg')}</span><span class="option-title">${o.n}</span>${HCI.tick()}</button>`).join('')}</div>
+      <p class="room-more-h">Somewhere else</p><div class="option-grid">${ROOMS.filter(o => !o.main).map(o=>optRow('room',o,S.a.room===o.id,'is-compact')).join('')}</div></div>`,
+  air: () => qhead('Air movement', 'Can you feel air moving around you?', 'Like air from a window, a door, a vent or a fan. Not how warm or cool it is, only whether the air moves.') +
+    `<div class="option-list" role="radiogroup" aria-label="Can you feel air moving around you?">${AIR.map(o=>optRow('air',o,S.a.air===o.id)).join('')}</div>`,
   sun: () => qhead('Sunlight', 'Is the sun shining on you?') +
     `<div class="option-list" role="radiogroup" aria-label="Sunlight">${SUN.map(o=>optRow('sun',o,S.a.sun===o.id)).join('')}</div>`,
   actions: () => {
     const ids = S.a.actions, on = id => !!(ids && ids.includes(id));
-    return qhead('Last 30 minutes', 'Did you change anything in the last 30 minutes?', 'Tap all that apply.') +
-      `<div class="aboxes" role="group" aria-label="What changed in the last 30 minutes">${ACTION_BOXES.map(b => answerBox('actions', ACTIONS, b, on)).join('')}
-        <div class="option-list is-multi">${ACTION_SOLO.map(id => multiRow('actions', byId(ACTIONS, id), on(id))).join('')}${noneRow('actions', ids&&ids.length===0, 'Nothing changed')}</div></div>` + footNext(!!ids);
+    return qhead('Last 30 minutes', 'In the last 30 minutes, did you do any of these?', 'Only things you <b>did</b> in the last 30 minutes, not how things are now: a window that was already closed is not &ldquo;I closed a window&rdquo;. Tap all that apply.') +
+      `<div class="aboxes" role="group" aria-label="What you did in the last 30 minutes">${ACTION_BOXES.map(b => answerBox('actions', ACTIONS, b, on)).join('')}
+        <div class="option-list is-multi">${ACTION_SOLO.map(id => multiRow('actions', byId(ACTIONS, id), on(id))).join('')}${noneRow('actions', ids&&ids.length===0, 'I didn&rsquo;t do any of these')}</div></div>` + footNext(!!ids);
   },
   notes: () => {
     const ids = S.a.notes, on = id => !!(ids && ids.includes(id));
-    return qhead('Anything else', 'Anything worth noting?', 'In the last hour.') +
-      `<div class="aboxes" role="group" aria-label="Anything worth noting">${NOTE_BOXES.map(b => answerBox('notes', NOTES, b, on)).join('')}
-        <div class="option-list is-multi">${NOTE_SOLO.map(id => multiRow('notes', byId(NOTES, id), on(id))).join('')}${noneRow('notes', ids&&ids.length===0, 'Nothing to note')}</div></div>` + footNext(!!ids);
+    return qhead('Last 30 minutes', 'In the last 30 minutes, did you have or feel any of these?', 'Tap all that apply.') +
+      `<div class="aboxes" role="group" aria-label="What you had or felt in the last 30 minutes">${NOTE_BOXES.map(b => answerBox('notes', NOTES, b, on)).join('')}
+        <div class="option-list is-multi">${NOTE_SOLO.map(id => multiRow('notes', byId(NOTES, id), on(id))).join('')}${noneRow('notes', ids&&ids.length===0, 'None of these')}</div></div>` + footNext(!!ids);
   }
 };
 

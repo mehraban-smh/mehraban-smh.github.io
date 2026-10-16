@@ -6,7 +6,8 @@
  * A phone is sent to when:
  *   - reminders are on and not paused (the participant has not said they are out),
  *   - at least an hour has passed since they said they had just got in (settled_at),
- *   - at least 30 minutes have passed since their last check-in (last_vote_at),
+ *   - at least an hour has passed since their last check-in (last_vote_at; checkinGapMin in config.js):
+ *     the app does not open the next check-in any sooner, so a reminder never asks for one that is closed,
  *   - it has not had a reminder yet in this clock hour, nor in the last 45 minutes (last_prompt_at), so
  *     the clock and the backup runs at :07 and :37 never double up, and a late run followed by an early
  *     one does not send two in a row,
@@ -93,7 +94,8 @@ function decide(sub, now, opts) {
   if (!sub.enabled) return 'reminders off';
   if (sub.paused_until && new Date(sub.paused_until) > now) return 'paused (away)';
   if (sub.settled_at && now - new Date(sub.settled_at) < 60 * MIN) return 'settling in after arriving home';
-  if (sub.last_vote_at && now - new Date(sub.last_vote_at) < 30 * MIN) return 'checked in recently';
+  const gap = (opts && opts.gap) || 60;                 // minutes from a check-in until the app opens the next one
+  if (sub.last_vote_at && now - new Date(sub.last_vote_at) < gap * MIN) return 'checked in recently';
   const interval = (opts && opts.interval) || sub.interval_min || 60;
   if (sub.last_prompt_at) {
     const last = new Date(sub.last_prompt_at);
@@ -200,6 +202,9 @@ function selfTest() {
     ['pause over', { ...one, paused_until: iso(weekday('17:59')) }, weekday('18:00'), 'send'],
     ['settling in', { ...one, settled_at: iso(weekday('17:30')) }, weekday('18:00'), 'settling in after arriving home'],
     ['checked in recently', { ...one, last_vote_at: iso(weekday('17:45')) }, weekday('18:00'), 'checked in recently'],
+    ['checked in 55 minutes ago: the next check-in is not open yet', { ...one, last_vote_at: iso(weekday('17:05')) }, weekday('18:00'), 'checked in recently'],
+    ['checked in an hour ago', { ...one, last_vote_at: iso(weekday('17:00')) }, weekday('18:00'), 'send'],
+    ['checked in at 17:02, backup run at 18:12', { ...one, last_vote_at: iso(weekday('17:02')), last_prompt_at: iso(weekday('17:00')) }, weekday('18:12'), 'send'],
     ['reminded recently', { ...one, last_prompt_at: iso(weekday('17:45')) }, weekday('18:00'), 'reminded recently'],
     ['reminded 30 minutes ago, in the previous hour', { ...one, last_prompt_at: iso(weekday('17:30')) }, weekday('18:00'), 'reminded recently'],
     ['reminded at 17:01, backup run at 17:37', { ...one, last_prompt_at: iso(weekday('17:01')) }, weekday('17:37'), 'reminded recently'],
@@ -233,6 +238,7 @@ const cfgNum = k => { const m = config.match(new RegExp(k + ':\\s*(\\d+)')); ret
 const PUB = cfgVal('vapidPublicKey');
 const TABLE = cfgVal('pushTable') || 'push_subscriptions';
 const INTERVAL = cfgNum('reminderIntervalMin');   // minutes between reminders; the same value the app shows
+const GAP = cfgNum('checkinGapMin') || 60;         // minutes after a check-in before the app opens the next one
 const ZONE = cfgVal('timeZone') || STUDY_ZONE;     // home hours of phones that have not reported a time zone
 const ENDS_AT = dayEndsAt(cfgVal('studyEnd'), clockFor(ZONE) ? ZONE : STUDY_ZONE);   // no reminders once the last study day is over
 const cleanUrl = u => (u || '').trim().replace(/\/+$/, '').replace(/\/(rest|auth)\/v1$/, '');
@@ -255,6 +261,7 @@ console.log(`Supabase URL: ${URL_ || '(empty)'}`);
 console.log(`Secret key:   ${mask(KEY)}`);
 console.log(`VAPID key:    ${PRIV ? PRIV.length + ' chars' : '(empty)'}${DRY ? ' (dry run)' : ''}`);
 console.log(`Interval:     ${INTERVAL ? INTERVAL + ' min (config.js)' : 'not in config.js, using each phone\'s interval_min'}`);
+console.log(`After a check-in: no reminder for ${GAP} min`);
 console.log(`Time zone:    ${ZONE}${clockFor(ZONE) ? '' : ' (unknown, using ' + STUDY_ZONE + ')'} for phones that have not reported one`);
 console.log(`Study ends:   ${ENDS_AT ? ENDS_AT.toISOString() + ' (end of ' + cfgVal('studyEnd') + ' in ' + ZONE + ')' : 'no studyEnd in config.js'}`);
 if (!URL_) fail('supabaseUrl is empty in homecomfort-ny/config.js');
@@ -301,13 +308,13 @@ async function main() {
   for (const sub of subs) {
     let verdict;
     if (!PUSH_SERVICE.test(sub.endpoint || '')) verdict = 'not a push service endpoint';
-    else try { verdict = decide(sub, now, { force: FORCE, interval: INTERVAL, zone: ZONE, endsAt: ENDS_AT }); }
+    else try { verdict = decide(sub, now, { force: FORCE, interval: INTERVAL, gap: GAP, zone: ZONE, endsAt: ENDS_AT }); }
     catch (e) { verdict = 'could not decide'; console.error(`could not decide for ${sub.participant}: ${e.message}`); }   // one odd row never stops the rest
     summary[verdict] = (summary[verdict] || 0) + 1;
     if (verdict !== 'send') continue;
     const payload = JSON.stringify({
       title: 'How do you feel at home?',
-      body: 'A quick comfort check-in, under twenty seconds.',
+      body: 'A quick comfort check-in, under a minute.',
       url: './?from=push',
       participant: sub.participant,
       tag: 'switch-checkin',

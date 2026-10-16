@@ -20,7 +20,7 @@ check-ins stay in the participant's browser, and the dashboard shows only the br
 The study page (`index.html`) states: one month, 20 October to 20 November 2026 (`studyStart` and
 `studyEnd` in `config.js`; the reminder sender stops once `studyEnd` is over in New York), one or two
 small room sensors (temperature and humidity) lent to each participant and returned at the end, and the
-participants' main contact, Alireza Khodayarkhani (akhodaya@syr.edu, also `TEAM` in `checkin/app.js`),
+participants' main contact, Alireza Khodayarkhani (akhodayarkhani@esf.edu, also `TEAM` in `checkin/app.js`),
 with Shayan Mirzabeigi and Mohammad H. Mehraban listed as the research team. It links SARBEL
 (https://sarbel.org/) under the SUNY ESF line and no longer links the research dashboard (researchers use
 https://mehraban.uk/homecomfort-ny/dashboard/ directly). By the owner's choice it names no study title,
@@ -128,21 +128,31 @@ A check-in starts with "Are you at home right now?": "Yes, for over an hour" and
 on to the questions (`at_home` `long` or `recent`); "No, I'm out" offers a pause of one, three or five hours
 (each showing when it ends), until 7 pm (before 7 pm only), or until they are back (12 hours at most).
 
-Every check-in asks the same **eight questions** in the same order: how they feel (the seven-point thermal
-sensation vote, `tsv`, cold −3 … hot +3), clothing, activity, room, air movement, sunlight, what they changed
-in the last 30 minutes (boxes for the window, the door, the heating and clothing/blankets, where opened and
-closed or up and down exclude each other, plus blinds and changing rooms; ids `win_open`, `win_close`,
-`door_open`, `door_close`, `heat_up`, `heat_down`, `layer_on`, `layer_off`, `blanket`, `curtains`,
-`moved`; older check-ins may also hold `ac_up`, `ac_down`, `fan`), and anything worth noting (drinks: hot
-or cold; food: just ate, hungry; tired; unwell). From the
-second check-in on, a quick check comes first: the last answers with an Edit button each; "Yes, still the
-same" saves them at once (what changed and notes saved empty, `same_as_last`).
+Every check-in asks the same **eight questions** in the same order, all starting unanswered (since 1.3.0
+there is no "Still the same as last time?" shortcut, so `same_as_last` is false from then on; the clothing
+question offers "Same as last time" as one tap): how they feel (the seven-point thermal sensation vote,
+`tsv`, cold −3 … hot +3), clothing, activity, room (bedroom and living room first, as two large buttons),
+air movement ("Can you feel air moving around you?": `still` no, `slight` a little, `drafty` yes,
+clearly), sunlight, what they **did** in the last 30 minutes, worded "I opened a window", "I closed a
+window"… so it is not read as the current state (boxes for the window, the door, the heating and
+clothes/blankets, where opened and closed or up and down exclude each other, plus blinds and moving to
+another room; ids `win_open`, `win_close`, `door_open`, `door_close`, `heat_up`, `heat_down`,
+`layer_on`, `layer_off`, `blanket`, `curtains`, `moved`; older check-ins may also hold `ac_up`,
+`ac_down`, `fan`), and what they had or felt in the last 30 minutes (a hot or cold drink, ate something,
+hungry, tired, unwell).
+
+**One hour between check-ins (since 1.3.0).** The next check-in opens `checkinGapMin` (60) minutes after
+the last one, counting check-ins from all of the participant's devices. Before then Today shows "Next
+check-in at 5:17 PM" and tapping it (or a reminder) explains when to come back. The daily goal ring counts
+every check-in of the day; the weekly goal counts at most `dailyGoal` (3) a day, so extra check-ins today
+never stand in for tomorrow's.
 
 ## Reminders
 
 Hourly web-push reminders inside each participant's home hours, in the phone's own time zone (New York time
-when the phone has not reported one), never within 45 minutes of the last reminder or 30 minutes of a check-in,
-and not while they have said they are out. Same rules and code as the SWITCH sender, in `homecomfort-ny/push/`.
+when the phone has not reported one), never within 45 minutes of the last reminder or within an hour of a
+check-in (`checkinGapMin`, so a reminder never asks for a check-in that is not open yet), and not while
+they have said they are out. Same rules and code as the SWITCH sender, in `homecomfort-ny/push/`.
 The default hours are 7 AM–10 PM every day; participants change them in Settings. Notifications are part of
 the study: until they are on, Today leads with a "Turn on notifications" card and "Check in now" asks for them
 first (one tap: permission, the phone registered with the default hours). No reminders go out once

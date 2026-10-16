@@ -16,12 +16,12 @@ const PENDING_KEY = 'hcny_pending';                         // api.js: check-ins
 const INTERVAL = HC.cfg.reminderIntervalMin || 60;          // minutes between reminders, same as the sender
 const GOAL = Math.max(1, Math.round(Number(HC.cfg.dailyGoal) || 3));
 const WEEK_GOAL = GOAL * 7;
-const GAP_MIN = 30;                                         // the sender skips a phone that checked in less than this long ago
+const GAP_MIN = Math.max(1, Number(HC.cfg.checkinGapMin) || 60);   // minutes from one check-in until the next one opens; the sender waits as long before reminding
 const MANUAL_PAUSE_H = 12;                                  // "I'll tell you when I'm back": reminders resume by themselves after this long
 const HOLD_MS = 6000;                                       // a new check-in waits this long (Undo) before it is sent
 const LOCAL_CODE = 'NY000';                                 // the participant code in local mode
 const NOT_FOUND_MSG = 'This registration was not found. Please join again or contact the study team.';
-const TEAM = 'Alireza Khodayarkhani at <a href="mailto:akhodaya@syr.edu">akhodaya@syr.edu</a>';   // the participants' main contact
+const TEAM = 'Alireza Khodayarkhani at <a href="mailto:akhodayarkhani@esf.edu">akhodayarkhani@esf.edu</a>';   // the participants' main contact
 /* Safari's Share glyph (a box with an arrow), drawn like the HCI icons, for the "Add to Home Screen" steps */
 const SHARE_IC = '<span class="share-ic" aria-hidden="true"><svg class="ic ic-sm" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M12 14V3.5M8.5 7 12 3.5 15.5 7"/><path d="M9 10H7a1.5 1.5 0 0 0-1.5 1.5V19A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5v-7.5A1.5 1.5 0 0 0 17 10h-2"/></svg></span>';
 const pad = n => String(n).padStart(2,'0');
@@ -107,7 +107,23 @@ function seed(){
 /* Monday 00:00 of the current calendar week (the week pips and the "this week" figures use it). */
 function weekStart(){ const d = startOfDay(new Date()); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; }
 const todayCount = list => { const k = dayKey(new Date()); return list.filter(v => dayKey(new Date(v.ts))===k).length; };
-const weekCount = list => { const ws = weekStart(); return list.filter(v => new Date(v.ts) >= ws).length; };
+/* The week's progress counts each day on its own: at most GOAL check-ins a day, so extra ones today never
+ * stand in for tomorrow's (5 today count 3 toward the week, tomorrow starts again at 0 of 3). */
+function weekCount(list){
+  const ws = weekStart(), perDay = {};
+  list.filter(v => new Date(v.ts) >= ws).forEach(v => { const k = dayKey(new Date(v.ts)); perDay[k] = (perDay[k] || 0) + 1; });
+  return Object.values(perDay).reduce((s, n) => s + Math.min(n, GOAL), 0);
+}
+/* When the next check-in opens: GAP_MIN after the last one (from any of the participant's devices), or
+ * null when one can be made now. A last check-in stamped in the future (a device with a wrong clock)
+ * never locks anyone out. */
+function nextOpen(){
+  const l = lastVote(); if(!l) return null;
+  const t = new Date(l.ts).getTime(), now = Date.now();
+  if(!(t <= now + 2*60000)) return null;
+  const open = t + GAP_MIN*60000;
+  return open > now ? new Date(open) : null;
+}
 /* Days in a row with at least one check-in, ending today (or yesterday, until today is over), and the best run. */
 function streakInfo(list){
   const days = new Set(list.map(v => dayKey(new Date(v.ts))));
@@ -123,49 +139,36 @@ function streakInfo(list){
 }
 
 /* ---------- session state and navigation ---------- */
-/* S.orig: the quick check's starting answers (from the last check-in); S.quick: its answers, kept while
- * "Something has changed" runs the questions, so Back returns to them; S.editFrom: the screen an Edit
- * button was tapped on ('review' or 'same'), where answering that one question returns to. */
+/* S.editFrom: the screen an Edit button was tapped on (the review), where answering that one question
+ * returns to. */
 const ROOTS = ['today','comfort','myhome','settings','welcome','pending','install'];
 const TABS = ['today','comfort','myhome','settings'];
-const FLOW_SCREENS = ['athome','away','same','q','review'];
-const fresh = () => ({ screen:'welcome', flow:[], i:0, a:{}, t0:null, mode:'self', same:false, lock:false, hist:[], edit:false, editFrom:'review', editPrev:null, orig:null, quick:null, undoTo:null, histN:40 });
+const FLOW_SCREENS = ['athome','away','q','review'];
+const fresh = () => ({ screen:'welcome', flow:[], i:0, a:{}, t0:null, mode:'self', same:false, lock:false, hist:[], edit:false, editFrom:'review', editPrev:null, undoTo:null, histN:40 });
 let S = fresh();
-function startSession(mode){
+/* A new check-in, unless the last one was less than GAP_MIN ago: then a sheet says when the next one
+ * opens (from a reminder too, over Today). */
+function startSession(mode, opener){
   const from = TABS.includes(S.screen) ? S.screen : 'today';
+  const open = nextOpen();
+  if(open){ if(firstRender) go(from); waitSheet(open, opener); return; }
   S = Object.assign(fresh(), { t0:Date.now(), mode, screen:from });
   go('athome');
 }
-/* The same eight questions every time (FLOW_ALL, questions.js), with feeling, clothing, activity and room
- * already selected: as the quick check shows them (edits included) when coming from it, else from the
- * last check-in. */
+function waitSheet(open, opener){
+  const l = lastVote(), mins = Math.max(1, Math.ceil((open - Date.now()) / 60000));
+  openSheet(`<div class="sheet-grab" aria-hidden="true"></div><div class="sheet-head"><div><span class="eyebrow">Not yet</span><h2 class="sheet-title" id="sheetTitle">Come back at ${clock(open)}</h2></div></div>
+    <div class="sheet-body stack stack-3"><div class="wait-time">${ic('clock')}<div><b class="num">${clock(open)}</b><span>Your next check-in opens in ${mins} minute${mins===1?'':'s'}</span></div></div>
+      <p>You checked in at ${clock(new Date(l.ts))}. Check-ins need at least an hour between them, so each one tells us something new about your day.</p></div>
+    <div class="sheet-foot"><button class="btn btn-primary" data-act="sheet-close">OK</button></div>`, '[data-act="sheet-close"]', opener);
+}
+/* The same eight questions every time (FLOW_ALL, questions.js), all starting unanswered, so every
+ * check-in is answered afresh (the clothing question offers "Same as last time" as one tap). */
 function beginQuestions(){
-  const last = lastVote(), fromQuick = S.screen==='same';
-  if(fromQuick) S.quick = S.a;                              // Back from the first question returns to the quick check as it was
-  const src = fromQuick ? S.quick : last && { tsv:last.tsv, clo:last.garments, act:last.act, room:last.room };
   S.same = false;
   S.a = { home:S.a.home };
-  if(src) Object.assign(S.a, { tsv:src.tsv, clo:[...(src.clo||[])].filter(id => byId(GARMENTS, id)), act:byId(ACTS, src.act) ? src.act : undefined, room:byId(ROOMS, src.room) ? src.room : undefined });
   S.flow = [...FLOW_ALL];
   S.i = 0; go('q');
-}
-/* An earlier check-in as answers (S.a): the starting point of the quick check. What changed and anything
- * worth noting start empty; an answer the earlier check-in lacks, or that is no longer offered, stays unset. */
-function answersFrom(v){
-  const keep = (list, id) => byId(list, id) ? id : undefined;
-  return { tsv: typeof v.tsv==='number' ? v.tsv : undefined,
-    clo: (v.garments||[]).filter(id => byId(GARMENTS, id)), act: keep(ACTS, v.act), room: keep(ROOMS, v.room),
-    air: keep(AIR, v.air), sun: keep(SUN, v.sun), actions: [], notes: [] };
-}
-const answered = (a, q) => q==='clo' ? !!(a.clo && a.clo.length) : (q==='actions' || q==='notes') ? Array.isArray(a[q]) : a[q] !== undefined && a[q] !== null && a[q] !== '';
-const sameAnswer = (x, y) => Array.isArray(x) || Array.isArray(y) ? sameSet(x, y) : x === y;
-const quickEdited = () => !!S.orig && FLOW_ALL.some(q => !sameAnswer(S.a[q], S.orig[q]));
-/* "Still the same as last time?": the last check-in's answers, each with an Edit button. */
-function quickCheck(){
-  S.orig = answersFrom(lastVote());
-  Object.assign(S.a, S.orig, { clo:[...S.orig.clo], actions:[], notes:[] });
-  S.flow = [...FLOW_ALL];
-  go('same');
 }
 function go(screen, opts={}){
   closeSheet();
@@ -274,7 +277,6 @@ function back(){
   const prev = S.hist.pop();
   if(!prev){ go(PARTICIPANT ? 'today' : 'welcome'); return; }
   if(prev==='q' && from!=='away'){ S.i = Math.max(0, S.flow.length-1); }   // back from the review: the last question ("Not home" keeps its own)
-  if(prev==='same' && !editing){ if(S.quick){ S.a = S.quick; S.quick = null; } S.flow = [...FLOW_ALL]; }   // every Edit works again
   S.screen = prev; render();
 }
 
@@ -405,7 +407,7 @@ function goalCard(list){
   return `<section class="card-hero goal-card" aria-label="Your goals">
     <div class="goal-top">${ring}<div class="goal-legend">
       <div class="gl"><i class="gl-dot gl-week" aria-hidden="true"></i><span><b class="num">${w} of ${WEEK_GOAL}</b><span>this week${w >= WEEK_GOAL ? ' &middot; goal met' : ` &middot; ${WEEK_GOAL - w} to go`}</span></span></div>
-      <div class="gl"><i class="gl-dot gl-day" aria-hidden="true"></i><span><b class="num">${t} of ${GOAL}</b><span>${t >= GOAL ? 'today &middot; goal met' : 'today so far'}</span></span></div>
+      <div class="gl"><i class="gl-dot gl-day" aria-hidden="true"></i><span><b class="num">${t > GOAL ? t + ' today' : t + ' of ' + GOAL}</b><span>${t > GOAL ? `goal met &middot; ${GOAL} count this week` : t === GOAL ? 'today &middot; goal met' : 'today so far'}</span></span></div>
     </div></div>
     <div class="streak-card"><span class="icon-tile it-streak">${ic('streak')}</span><span class="streak-text">${streak}</span><span class="daypips" aria-hidden="true">${pips}</span><span class="sr-only">Checked in on ${daysThisWeek} day${daysThisWeek===1?'':'s'} this week.</span></div>
   </section>`;
@@ -507,9 +509,9 @@ function historyList(list){
   const more = list.length > shown.length ? `<button class="btn btn-ghost btn-block" data-act="more">Show older check-ins</button>` : '';
   return `<section class="stack stack-3" aria-labelledby="histTitle"><h2 class="section-h" id="histTitle">All check-ins</h2>${html}${more}</section>`;
 }
-/* "Changed: turned the AC on or up, opened a window": each action name starts lower case, but a word in
+/* "Last 30 min: turned the AC on or up, opened a window": each action name starts lower case, but a word in
  * capitals (AC) keeps them. */
-const changedText = ids => 'Changed: ' + namesOf(ACTIONS, ids).replace(/(^|, )([A-Z])(?=[a-z])/g, (m, a, b) => a + b.toLowerCase());
+const changedText = ids => 'Last 30 min: ' + namesOf(ACTIONS, ids).replace(/(^|, )([A-Z])(?=[a-z])/g, (m, a, b) => a + b.toLowerCase());
 /* everything one check-in holds, one line each (detail sheet) */
 function detailRows(l){
   const li = (icon, html) => html ? `<li class="ans"><span class="ans-ic">${icon}</span><span class="ans-text">${html}</span></li>` : '';
@@ -518,14 +520,14 @@ function detailRows(l){
     s && li(`<span class="orb orb-sm ${s.cls}">${ic(s.icon)}</span>`, `<b>${s.word}</b> <span class="num">(${s.sign})</span>`),
     (l.garments||[]).length ? li(ic('tshirt'), `${garmentNames(l.garments)} &middot; <span class="num">${(l.clo||0).toFixed(2)}</span> clo`) : '',
     act && li(ic(act.ic), act.n), room && li(ic(room.ic), room.n),
-    air && li(ic(air.ic), air.id==='still' ? 'Still air' : air.n), sun && li(ic(sun.ic), sun.n),
-    Array.isArray(l.actions) && li(ic(byId(ACTIONS, l.actions[0])?.ic || 'check-circle'), l.actions.length ? changedText(l.actions) : 'Nothing changed'),
-    Array.isArray(l.notes) && li(ic(byId(NOTES, l.notes[0])?.ic || 'info'), l.notes.length ? namesOf(NOTES, l.notes) : 'Nothing to note')
+    air && li(ic(air.ic), air.k || air.n), sun && li(ic(sun.ic), sun.n),
+    Array.isArray(l.actions) && li(ic(byId(ACTIONS, l.actions[0])?.ic || 'check-circle'), l.actions.length ? changedText(l.actions) : 'Last 30 min: changed nothing'),
+    Array.isArray(l.notes) && li(ic(byId(NOTES, l.notes[0])?.ic || 'info'), l.notes.length ? 'Last 30 min: ' + namesOf(NOTES, l.notes).replace(/(^|, )([A-Z])(?=[a-z])/g, (m, a, b) => a + b.toLowerCase()) : 'Last 30 min: nothing to note')
   ].filter(Boolean).join('');
 }
-/* The answers of the check-in being made (S.a) as picture tiles in FLOW_ALL order, for the quick check and
- * the review: the feeling in its own colour, the outfit on the figure, an icon for every other answer and a
- * chip per change or note. canEdit(q) says which tiles get an Edit button. */
+/* The answers of the check-in being made (S.a) as picture tiles in FLOW_ALL order, for the review: the
+ * feeling in its own colour, the outfit on the figure, an icon for every other answer and a chip per
+ * change or note. canEdit(q) says which tiles get an Edit button. */
 function answerTiles(a, canEdit){
   const open = '<span class="open">Not answered yet</span>';
   const tile = (q, art, k, v, cls) => `<li class="atile${cls ? ' ' + cls : ''}">${art}<span class="atile-t"><span class="atile-k">${k}</span><span class="atile-v">${v}</span></span>${canEdit(q) ? `<button class="btn btn-icon atile-edit" data-act="edit" data-q="${q}" aria-label="Edit ${QNAME[q]}">${ic('edit')}</button>` : ''}</li>`;
@@ -538,10 +540,10 @@ function answerTiles(a, canEdit){
     tile('clo', `<span class="fig atile-fig" aria-hidden="true">${avatar(a.clo||[])}</span>`, 'Wearing', clo ? `${garmentNames(a.clo)}<small><b class="num">${cloOf(a.clo).toFixed(2)}</b> clo</small>` : open, 'is-wide is-clo') +
     tile('act', tic(act ? act.ic : 'walk'), 'Doing', act ? act.n : open) +
     tile('room', tic(room ? room.ic : 'door'), 'Room', room ? room.n : open) +
-    tile('air', tic(air ? air.ic : 'still'), 'Air', air ? (air.id==='still' ? 'Still air' : air.n) : open) +
+    tile('air', tic(air ? air.ic : 'still'), 'Air', air ? (air.k || air.n) : open) +
     tile('sun', tic(sun ? sun.ic : 'sun'), 'Sun', sun ? sun.n : open) +
-    tile('actions', tic('refresh'), 'Last 30 minutes', chips(ACTIONS, a.actions, 'Nothing changed'), 'is-wide') +
-    tile('notes', tic('info'), 'Worth noting', chips(NOTES, a.notes, 'Nothing to note'), 'is-wide') +
+    tile('actions', tic('refresh'), 'You did, last 30 minutes', chips(ACTIONS, a.actions, 'None of these'), 'is-wide') +
+    tile('notes', tic('info'), 'You had or felt, last 30 minutes', chips(NOTES, a.notes, 'None of these'), 'is-wide') +
     `</ul>`;
 }
 /* ---- the home profile in the participant's units ---- */
@@ -650,11 +652,14 @@ const SCREENS = {
     const list = votes(), l = list[0];
     const s = l && sense(l.tsv);
     const ctaSub = l ? `Last one <span data-ago="${esc(l.ts)}">${agoWord(l.ts)}</span>${s ? ' &middot; ' + s.word : ''}` : 'Takes under a minute';
+    const open = nextOpen(); lockShown = !!open;
+    const cta = open ? `<button class="cta-card is-wait" data-act="start"><span class="cta-text"><span class="cta-title">Next check-in at ${clock(open)}</span><span class="cta-sub">They open an hour after the last one &middot; ${ctaSub}</span></span><span class="cta-arrow">${ic('clock')}</span></button>`
+      : `<button class="cta-card" data-act="start"><span class="cta-text"><span class="cta-title">Check in now</span><span class="cta-sub">${ctaSub}</span></span><span class="cta-arrow">${ic('arrow-right')}</span></button>`;
     const n7 = lastDays(list, 7).length, notif = !['on','unconfigured'].includes(PUSH.status());
     return `<header class="today-head"><div class="screen-head"><span class="eyebrow">${DAYS[new Date().getDay()]}, ${MONTHS_LONG[new Date().getMonth()]} ${new Date().getDate()}</span><h1 class="screen-title" tabindex="-1">${greeting()}</h1></div>${initials() ? `<span class="avatar" aria-hidden="true">${esc(initials())}</span>` : ''}</header>
       ${notif ? notifCard() : ''}
       ${goalCard(list)}
-      <button class="cta-card" data-act="start"><span class="cta-text"><span class="cta-title">Check in now</span><span class="cta-sub">${ctaSub}</span></span><span class="cta-arrow">${ic('arrow-right')}</span></button>
+      ${cta}
       ${notif ? '' : statusCard()}
       <section class="card chart-card week-card"><div class="card-head"><div><h2 class="card-title">Your last 7 days</h2><p class="card-sub">${weekSummary(list)}</p></div><span class="caption nowrap">${n7} check-in${n7===1?'':'s'}</span></div>
         ${weekDots(list)}<div class="chart-legend">${legend()}</div></section>
@@ -706,17 +711,6 @@ const SCREENS = {
         ${opt('manual', 'pin', 'I&rsquo;ll tell you when I&rsquo;m back', `Or in ${MANUAL_PAUSE_H} hours at the latest`)}
       </div>`;
   },
-  /* the quick check: the last check-in's answers, each with an Edit button; "Yes, still the same" saves
-   * them straight away. Answers the last check-in lacks are asked first. */
-  same: () => {
-    const l = lastVote(), d = new Date(l.ts);
-    const missing = FLOW_ALL.filter(q => !answered(S.a, q)).length, edited = quickEdited();
-    const main = missing ? `<button class="btn btn-primary btn-block btn-lg" data-act="fill">Answer ${missing === 1 ? 'the one question' : 'the ' + missing + ' questions'} still open ${ic('arrow-right')}</button>`
-      : `<button class="btn btn-primary btn-block btn-lg" data-act="same">${ic('check')} ${edited ? 'Save with my changes' : 'Yes, still the same'}</button>`;
-    return qhead('Quick check', 'Still the same as last time?', `Your last check-in, ${dayKey(d)===dayKey(new Date()) ? 'at ' + clock(d) : 'on ' + DAYS[d.getDay()] + ' at ' + clock(d)} (${agoWord(l.ts)}). Tap ${ic('edit','ic-xs')} to change just one.`) +
-      `<section class="quick stack stack-3"><div class="quick-top"><span class="pill${edited ? ' pill-violet' : ''}">${ic(edited ? 'edit' : 'clock')}${edited ? 'With your changes' : 'Last check-in'}</span></div>${answerTiles(S.a, () => true)}</section>
-      <div class="footbar">${main}<button class="btn btn-secondary btn-block" data-act="changed">Something has changed</button></div>`;
-  },
   q: () => Q[S.flow[S.i]](),
   review: () => {
     return qhead('Almost done', 'Here&rsquo;s what we&rsquo;ll save', `Tap ${ic('edit','ic-xs')} to change an answer.`) +
@@ -728,12 +722,14 @@ const SCREENS = {
     const list = votes(), l = list[0], t = todayCount(list), st = streakInfo(list);
     const ring = HCI.ring({ size:148, stroke:14, value:Math.min(1, t/GOAL), color:'grad', center:`<b class="ring-value num">${t}<small>/${GOAL}</small></b><span class="ring-label">today</span>`, label:`${t} of ${GOAL} check-ins today` });
     const title = t === GOAL ? 'That&rsquo;s today&rsquo;s goal!' : `Thank you${firstName() ? ', ' + esc(firstName()) : ''}!`;
-    const sub = t > GOAL ? 'Above and beyond today. Thank you for showing up.' : t === GOAL ? 'Thank you for showing up, every one counts.' : `${GOAL - t} more today reaches your goal.`;
+    const sub = t > GOAL ? `Above and beyond today, thank you! Up to ${GOAL} a day count toward your week.` : t === GOAL ? 'Thank you for showing up, every one counts.' : `${GOAL - t} more today reaches your goal.`;
+    const open = nextOpen();
     return `<div class="done stack stack-6">
       <section class="card-hero done-hero stack stack-4 center"><div class="done-ring">${ring}</div>
         <h1 class="screen-title" tabindex="-1">${title}</h1><p class="screen-sub">${sub}</p>
         ${st.cur ? `<span class="pill pill-glass pill-lg"><span class="icon-tile it-streak it-sm">${ic('streak')}</span>${st.cur}-day streak</span>` : ''}
-        ${l ? `<p class="caption">Saved at ${clock(new Date(l.ts))}${l.secs ? ` &middot; took ${secsWord(l.secs)}` : ''}</p>` : ''}</section>
+        ${l ? `<p class="caption">Saved at ${clock(new Date(l.ts))}${l.secs ? ` &middot; took ${secsWord(l.secs)}` : ''}</p>` : ''}
+        ${open ? `<p class="caption next-open">${ic('clock','ic-xs')} Your next check-in opens at <b>${clock(open)}</b></p>` : ''}</section>
       <div class="stack stack-3"><button class="btn btn-primary btn-block btn-lg" data-act="tab" data-to="today">Done</button><button class="btn btn-quiet" data-act="tab" data-to="comfort">See my comfort</button></div></div>`;
   },
   join: () => regScreen()
@@ -766,7 +762,7 @@ function updateChrome(){
 }
 
 /* ---------- render ---------- */
-let lastKey = '', firstRender = true;
+let lastKey = '', firstRender = true, lockShown = false;   // lockShown: Today shows "Next check-in at ..."
 const screenKey = () => S.screen + ':' + (S.screen==='q' ? S.i + (S.edit ? 'e' : '') : S.screen==='join' ? REG.step : '');
 /* the element to give focus back to after the screen is redrawn in place */
 function focusKey(el){
@@ -828,7 +824,7 @@ function onHome(v){
   if(v==='long' || v==='recent'){
     store.paused=null; store.pausedWhy=''; save();
     schedChange({ paused_until:null, settled_at:null });
-    lastVote() ? quickCheck() : beginQuestions();
+    beginQuestions();
   } else { go('away'); }
 }
 /* "No, I'm out": no reminders until the chosen time. "I'll tell you when I'm back" is open-ended in the
@@ -1727,7 +1723,7 @@ document.addEventListener('click', async e => {
     case 'tab': if(S.screen === d.to){ window.scrollTo({ top:0, behavior: reduceMotion() ? 'auto' : 'smooth' }); break; } go(d.to); break;
     case 'back': back(); break;
     case 'close': go('today'); break;
-    case 'start': if(needsNotif()){ notifSheet(b); break; } startSession('self'); break;
+    case 'start': if(!nextOpen() && needsNotif()){ notifSheet(b); break; } startSession('self', b); break;
     case 'start-anyway': closeSheet(); startSession('self'); break;
     /* one tap: permission, this phone registered, the hours saved so far (or 7 AM-10 PM) */
     case 'notif-on': {
@@ -1746,16 +1742,12 @@ document.addEventListener('click', async e => {
     case 'home': onHome(d.v); break;
     case 'pause': setPause(d.v); break;
     case 'nothome': go('away'); break;
-    case 'same': S.same = !quickEdited(); submit(); break;                       // the quick check: saved as shown, nothing more to ask
-    case 'fill': S.flow = FLOW_ALL.filter(q => !answered(S.a, q)); S.same = false; S.i = 0; go('q'); break;
-    case 'changed': beginQuestions(); break;
     case 'pick': pick(d.q, d.v); break;
     case 'toggle': toggle(d.q, d.v); break;
     case 'none': S.a[d.q] = []; rerender(); break;
     case 'lastclo': S.a.clo = [...((lastVote() || {}).garments || [])].filter(id => byId(GARMENTS, id)); rerender(); break;
     case 'next': next(); break;
     case 'edit': {
-      if(S.screen==='same') S.flow = [...FLOW_ALL];
       const i = S.flow.indexOf(d.q);
       if(i>=0){ const v = S.a[d.q]; S.editPrev = { q:d.q, v: Array.isArray(v) ? [...v] : v }; S.i=i; S.edit=true; S.editFrom=S.screen; S.hist.push(S.screen); S.screen='q'; render(); }
       break; }
@@ -1883,12 +1875,13 @@ setInterval(() => {
   if(document.hidden) return;
   if(S.screen==='pending') recheck(true);
   if(S.screen==='away' && !S.lock) rerender();              // keeps the end times of the pauses current
+  if(S.screen==='today' && !!nextOpen() !== lockShown && !sheetUp()) rerender();   // the next check-in has opened
   $$('[data-ago]').forEach(el => { el.textContent = agoWord(el.dataset.ago); });
 }, 60000);
 document.addEventListener('visibilitychange', () => {
   if(document.hidden){ endHolds(); return; }                // locked or switched away: a held check-in goes out now
   if(S.screen==='pending') recheck(true);
-  else { if(S.screen==='away' && !S.lock) rerender(); quiet(syncReminders()); quiet(flushPending()); quiet(pullHistory()); }   // the pause end times are current again; anything waiting goes out; check-ins from other devices come in
+  else { if((S.screen==='away' && !S.lock) || (S.screen==='today' && !!nextOpen() !== lockShown && !sheetUp())) rerender(); quiet(syncReminders()); quiet(flushPending()); quiet(pullHistory()); }   // the pause end times are current again; anything waiting goes out; check-ins from other devices come in
   $$('[data-ago]').forEach(el => { el.textContent = agoWord(el.dataset.ago); });
 });
 

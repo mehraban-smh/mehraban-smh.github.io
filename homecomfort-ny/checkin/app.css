@@ -65,6 +65,19 @@ body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))
 .skip-line{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:0 2px;font-size:14.5px;color:var(--ink-2);text-align:center}
 .skip-line .btn-quiet{padding:0 8px;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px}
 
+/* the room question: bedroom and living room as two large buttons, the other rooms below */
+.room-main{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.room-big{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:148px;padding:18px 10px;border:2px solid var(--violet-200);border-radius:24px;background:linear-gradient(180deg,#fff 0%,var(--violet-50) 100%);color:var(--ink);font:inherit;text-align:center;cursor:pointer;box-shadow:var(--sh-1);transition:border-color var(--dur-2),background-color var(--dur-2),box-shadow var(--dur-2)}
+.room-big:hover{border-color:var(--violet-300)}
+.room-big:active{transform:scale(.985)}
+.room-big .icon-tile{--it-size:64px;border-radius:20px;background:#fff;box-shadow:0 0 0 1px var(--violet-100)}
+.room-big .icon-tile .ic{width:34px;height:34px}
+.room-big .option-title{font-size:19px}
+.room-big[aria-checked="true"]{border-color:var(--violet);background:var(--violet-50);box-shadow:var(--halo)}
+.room-big[aria-checked="true"] .icon-tile{background:var(--violet);color:#fff;box-shadow:none}
+.room-big>.tick{top:10px;right:10px}
+.room-more-h{margin:22px 2px 10px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+
 /* what changed / worth noting: related answers in boxes, each answer a tile with its own check */
 .aboxes{display:flex;flex-direction:column;gap:12px}
 .abox{display:flex;flex-direction:column;gap:10px;min-width:0;margin:0;padding:12px;border:1px solid var(--line);border-radius:var(--r-lg);background:#fff;box-shadow:var(--sh-1)}
@@ -105,9 +118,7 @@ body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))
 .garments .ptile[aria-pressed="true"] .ptile-art{color:var(--violet-700)}
 .garments .ptile-hint{font-size:11.5px}
 
-/* quick check and review */
-.quick{display:flex;flex-direction:column;gap:10px}
-.quick-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+/* review */
 .fig-sm{width:54px;height:94px;margin:-4px 0 -6px}
 .answers{display:flex;flex-direction:column;margin:0;padding:0;list-style:none}
 .ans{display:flex;align-items:center;gap:12px;min-height:52px;padding:4px 0}
@@ -120,7 +131,7 @@ body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))
 .ans-edit{flex:none;margin-right:-6px}
 .sense-inline{display:inline-flex;align-items:center;gap:8px}
 .screen-sub .ic-xs{width:15px;height:15px;vertical-align:-2px;color:var(--violet-700)}
-/* answer tiles (quick check, review): two columns, the feeling, the outfit and the lists across both */
+/* answer tiles (review): two columns, the feeling, the outfit and the lists across both */
 .atiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0;padding:0;list-style:none}
 .atile{position:relative;display:flex;align-items:center;gap:10px;min-width:0;min-height:68px;padding:10px 44px 10px 10px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:var(--sh-1)}
 .atile.is-wide{grid-column:1 / -1}
@@ -143,7 +154,6 @@ body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))
 .achips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
 .achip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px 4px 7px;border-radius:var(--r-pill);background:var(--violet-50);color:var(--violet-800);font-size:12.5px;font-weight:700;line-height:1.2}
 .achip .ic{width:15px;height:15px;color:var(--violet-700)}
-.quick-top .pill .ic{width:15px;height:15px}
 
 /* done */
 .done{padding-top:8px}
@@ -408,3 +418,20 @@ body.toast-open .footbar{padding-bottom:calc(90px + env(safe-area-inset-bottom))
 .pin-top{display:flex;align-items:flex-start;gap:12px}
 .pin-top .icon-tile{background:var(--violet);color:#fff}
 .pin-in{text-align:center;font-size:22px;letter-spacing:.45em;font-variant-numeric:tabular-nums}
+
+/* the hour between check-ins: Today's button while the next one is not open, the sheet, the done screen */
+.cta-card.is-wait{background:#fff;color:var(--ink);box-shadow:var(--sh-1);border:2px dashed var(--violet-200)}
+.cta-card.is-wait:hover{background:var(--violet-50);color:var(--ink)}
+.cta-card.is-wait .cta-sub{color:var(--ink-2)}
+.cta-card.is-wait .cta-arrow{background:var(--violet-50);color:var(--violet-700)}
+.wait-time{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:var(--r-lg);background:var(--violet-50);color:var(--violet-800)}
+.wait-time>.ic{width:30px;height:30px;flex:none;color:var(--violet-700)}
+.wait-time b{display:block;font-family:var(--font-display);font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.wait-time span{display:block;font-size:14px;font-weight:600;color:var(--ink-2)}
+.next-open{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r-pill);background:rgba(255,255,255,.7);color:var(--ink-2)}
+.next-open b{color:var(--ink)}
+/* very narrow phones (iPhone SE, 320 px): one answer tile per row on the review, so no word is split */
+@media (max-width:359px){
+  .atiles{grid-template-columns:minmax(0,1fr)}
+  .dress-side .btn{max-width:100%;white-space:normal;text-align:left}
+}
