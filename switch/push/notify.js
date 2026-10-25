@@ -1,13 +1,19 @@
-/* SWITCH comfort study - tells the research team about new registrations.
+/* HomePulse (the SWITCH home comfort study, Swansea) - tells the research team about new registrations.
  * Runs every hour from .github/workflows/push-reminders.yml, straight after send.js.
  *
  * Nobody can check in until the team has approved them on the dashboard (see the participants section
  * of switch/supabase-setup.sql). This script finds the participants nobody has been told about yet
  * (notified_at is null) and, if any of them are still waiting, opens ONE issue in this repository with
- * the gh CLI listing their codes and registration times, assigned to the repository owner so GitHub
- * emails them. It stamps notified_at only for the rows the issue covers, and only once the issue
- * exists, so a run that could not open it tries again next hour; participants who were approved
- * before the run only get the stamp. At most 25 rows are handled per run, the rest wait for the next.
+ * the gh CLI ("HomePulse: 2 new participants waiting for approval") listing their codes and registration
+ * times, assigned to the repository owner so GitHub emails them. It stamps notified_at only for the rows
+ * the issue covers, and only once the issue exists, so a run that could not open it tries again next
+ * hour; participants who were approved before the run only get the stamp. At most 25 rows are handled
+ * per run, the rest wait for the next. An approval issue closes itself (with a comment) once everyone it
+ * lists has been approved or removed on the dashboard, so an open issue always means someone is waiting.
+ *
+ * Only issues whose title starts with "HomePulse:" and that this workflow opened (github-actions) are ever
+ * read or closed: the same repository holds other studies' approval issues, and anyone can open an issue
+ * in a public repository.
  *
  * The repository is public, so the issue carries only the participant codes, the registration times
  * and the dashboard link: never the name or the email. The script does not even read those columns.
@@ -38,6 +44,10 @@ const GH_TOKEN = (process.env.GH_TOKEN || '').trim();
 const GH_REPO = (process.env.GH_REPO || '').trim();
 const DRY = process.env.DRY_RUN === '1';
 const DASHBOARD = 'https://mehraban.uk/switch/dashboard/';
+// Every issue title starts with this. A fixed word rather than config.js appName: it is what the next runs
+// search for, so renaming the app must not orphan the issues already open.
+const STUDY = 'HomePulse';
+const CODE = /\bP\d{2,}\b/g;   // P01 ... P99, P100, ...
 const LIMIT = 25;   // rows handled per run; anything beyond waits for the next hour
 
 function fail(msg) { console.error('ERROR: ' + msg); process.exit(1); }
@@ -61,24 +71,34 @@ const rest = q => `${URL_}/rest/v1/participants${q}`;
 /* ---- the GitHub side: one issue per run listing everyone waiting, through the gh CLI on the runner ---- */
 const gh = args => execFileSync('gh', args, { env: { ...process.env, GH_TOKEN, GH_REPO }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const codes = list => list.map(p => p.code).join(', ');
-const title = n => `${n} new participant${n === 1 ? '' : 's'} waiting for approval`;
+const title = n => `${STUDY}: ${n} new participant${n === 1 ? '' : 's'} waiting for approval`;
 const when = iso => { const d = new Date(iso || ''); return isNaN(d) ? 'unknown time' : d.toISOString().slice(0, 16).replace('T', ' ') + ' UTC'; };
 const issueBody = list => [
   'Waiting for approval:',
   '',
   ...list.map(p => `- ${p.code}, registered ${when(p.created_at)}`),
   '',
-  `Open the dashboard at ${DASHBOARD}, check who they are, and click Approve so they can start checking in (or Remove for anyone you do not recognise), then close this issue.`
+  `Open the dashboard at ${DASHBOARD}, check who they are, and click Approve so they can start checking in (or Remove for anyone you do not recognise). This issue closes itself once everyone listed has been approved or removed.`
 ].join('\n');
-// Guards against a second email if a previous run opened the issue but could not record it: the
-// codes already mentioned in an approval issue (open or closed) are not listed again.
+// This study's approval issues, opened by this workflow: the title starts with "HomePulse:" and the author is
+// exactly the GitHub Actions app (the gh CLI names it "app/github-actions"; the REST API "github-actions[bot]").
+// The search asks GitHub for those only; the two checks here decide.
+const BOT = new Set(['app/github-actions', 'github-actions[bot]']);
+const ours = issue => String(issue.title || '').startsWith(STUDY + ':') && !!issue.author && BOT.has(String(issue.author.login || ''));
+const listIssues = (state, fields, limit) =>
+  JSON.parse(gh(['issue', 'list', '--repo', GH_REPO, '--state', state, '--search', `"${STUDY}" "waiting for approval" in:title author:app/github-actions`, '--json', fields + ',title,author', '--limit', String(limit)]) || '[]').filter(ours);
+// Guards against a second email if a previous run opened the issue but could not record it: a code
+// already mentioned in an approval issue (open or closed) is not listed again, but only when that issue
+// was opened after the participant registered.
 function codesAlreadyListed() {
-  const seen = new Set();
+  const seen = new Map();            // code -> when the latest issue mentioning it was opened (ms)
   try {
-    const out = gh(['issue', 'list', '--repo', GH_REPO, '--state', 'all', '--search', '"waiting for approval" in:title', '--json', 'body', '--limit', '100']);
-    for (const issue of JSON.parse(out || '[]')) for (const c of String(issue.body || '').match(/\bP\d{2,3}\b/g) || []) seen.add(c);
+    for (const issue of listIssues('all', 'body,createdAt', 100)) {
+      const t = Date.parse(issue.createdAt) || 0;
+      for (const c of String(issue.body || '').match(CODE) || []) seen.set(c, Math.max(seen.get(c) || 0, t));
+    }
   } catch (e) { /* treated as "none found": at worst one extra email */ }
-  return seen;
+  return { has: p => seen.has(p.code) && (seen.get(p.code) || 0) >= (Date.parse(p.created_at) || 0) };
 }
 function openIssue(list) {
   const args = ['issue', 'create', '--repo', GH_REPO, '--title', title(list.length), '--body', issueBody(list)];
@@ -88,6 +108,28 @@ function openIssue(list) {
   catch (e) { return gh(args); }
 }
 const ghError = e => (e && e.code === 'ENOENT') ? 'the gh CLI is not installed on this runner' : String((e && (e.stderr || e.message)) || e).trim();
+/* Closes each open approval issue of this study once nobody it lists is still waiting (a removed code
+ * counts as settled). Problems are logged, never fatal. */
+async function closeSettledIssues() {
+  let issues = [];
+  try { issues = listIssues('open', 'number,body', 50); }
+  catch (e) { console.error(`could not list the open approval issues: ${ghError(e)}`); return 0; }
+  let closed = 0;
+  for (const issue of issues) {
+    const listed = [...new Set(String(issue.body || '').match(CODE) || [])];
+    if (!listed.length) continue;
+    const r = await fetch(rest(`?select=code,approved&code=in.(${listed.join(',')})`), { headers });
+    if (!r.ok) { console.error(`issue #${issue.number}: could not read ${listed.join(', ')} (${r.status})`); continue; }
+    const rows = await r.json();
+    if (rows.some(p => !p.approved)) continue;              // someone it lists is still waiting
+    if (DRY) { console.log(`[dry run] would close issue #${issue.number}: ${listed.join(', ')} approved or removed`); continue; }
+    try {
+      gh(['issue', 'close', String(issue.number), '--repo', GH_REPO, '--comment', 'Everyone listed here has been approved or removed on the dashboard, so this issue was closed automatically.']);
+      closed++; console.log(`closed issue #${issue.number}: ${listed.join(', ')} approved or removed`);
+    } catch (e) { console.error(`could not close issue #${issue.number}: ${ghError(e)}`); }
+  }
+  return closed;
+}
 
 async function main() {
   const now = new Date();
@@ -117,7 +159,7 @@ async function main() {
       console.log(`[dry run] would open one issue "${title(waiting.length)}" listing ${waiting.map(p => `${p.code} (registered ${when(p.created_at)})`).join(', ')} and mark them as notified`);
     } else {
       const seen = codesAlreadyListed();
-      const listed = waiting.filter(p => seen.has(p.code)), fresh = waiting.filter(p => !seen.has(p.code));
+      const listed = waiting.filter(p => seen.has(p)), fresh = waiting.filter(p => !seen.has(p));
       if (listed.length) { console.log(`${codes(listed)}: already listed in an issue, not opening another`); toMark.push(...listed); }
       if (fresh.length) {
         try { const url = openIssue(fresh); opened++; console.log(`opened ${url || 'an issue'} for ${codes(fresh)}`); toMark.push(...fresh); }
@@ -135,7 +177,8 @@ async function main() {
     if (u.ok) marked++;
     else { failed++; console.error(`${p.code}: could not record the notification (${u.status}): ${await u.text()}`); }
   }
-  console.log(`${now.toISOString()} - ${all.length} participant(s) not yet notified, opened ${opened} issue(s), marked ${marked} as notified${failed ? `, ${failed} failed` : ''}`);
+  const closed = await closeSettledIssues();
+  console.log(`${now.toISOString()} - ${all.length} participant(s) not yet notified, opened ${opened} issue(s), marked ${marked} as notified, closed ${closed} settled issue(s)${failed ? `, ${failed} failed` : ''}`);
   if (failed) process.exitCode = 1;
 }
 main().catch(err => fail(err.message));

@@ -1,12 +1,19 @@
-/* SWITCH comfort study - reminder sender.
+/* HomePulse (the SWITCH home comfort study, Swansea) - reminder sender.
  * Runs every hour from the GitHub Actions workflow in .github/workflows/push-reminders.yml, which the
  * Supabase clock (switch/supabase-reminder-clock.sql) starts at the top of the hour; GitHub's own
  * schedule starts it too, as a backup. For every registered phone it decides whether a check-in
  * reminder is due right now, and sends a web push if so. All the "smart" rules live in decide() below.
  * A phone is sent to when:
+ *   - the study has not ended (studyEnd in config.js, when set: no reminders after that day, UK time),
+ *   - its participant is still registered and approved (a participant removed in the Supabase table
+ *     editor, or set back to waiting, gets no more reminders even if a phone row was left behind),
  *   - reminders are on and not paused (the participant has not said they are out),
  *   - at least an hour has passed since they said they had just got in (settled_at),
- *   - at least 30 minutes have passed since their last check-in (last_vote_at),
+ *   - at least checkinGapMin (config.js, 45) minutes have passed since their last check-in on ANY of their
+ *     devices (last_vote_at; the database moves it on all their phones with every check-in). The app opens
+ *     the next check-in after the same gap, so a reminder never asks for one that is still closed. 45 and
+ *     not 60: the clock runs on the hour, and with a 60-minute gap anyone who checked in a few minutes
+ *     after a reminder would always miss the next one,
  *   - it has not had a reminder yet in this clock hour, nor in the last 45 minutes (last_prompt_at), so
  *     the clock and the backup runs at :07 and :37 never double up, and a late run followed by an early
  *     one does not send two in a row,
@@ -24,8 +31,9 @@
  * Secrets (GitHub repository secrets, see switch/README.md):
  *   SUPABASE_SERVICE_ROLE_KEY  a Supabase secret key (sb_secret_...)
  *   VAPID_PRIVATE_KEY          the 43-character private key that pairs with vapidPublicKey in config.js
- * The project URL, the VAPID public key, the reminder interval (reminderIntervalMin) and the study's
- * time zone (timeZone) are public and are read from ../config.js.
+ * The project URL, the VAPID public key, the reminder interval (reminderIntervalMin), the check-in gap
+ * (checkinGapMin), the study's time zone (timeZone), its last day (studyEnd) and the app's name (appName,
+ * in the notification title) are public and are read from ../config.js.
  * Optional:
  *   FORCE_PARTICIPANT  send to this code right now, ignoring every rule (manual test run). A forced
  *                      reminder is not recorded, so it never holds back a scheduled one.
@@ -84,15 +92,25 @@ function insideHomeHours(sub, clock) {
 }
 
 /* Returns 'send' or the reason for skipping. opts.force is FORCE_PARTICIPANT (a code, or empty),
- * opts.interval the reminder interval in minutes from config.js (null: the phone's own interval_min)
- * and opts.zone the time zone for phones that have not reported theirs (timeZone in config.js). */
+ * opts.interval the reminder interval in minutes from config.js (null: the phone's own interval_min),
+ * opts.gap checkinGapMin from config.js (minutes after a check-in before the next one opens; 45 when
+ * missing), opts.zone the time zone for phones that have not reported theirs (timeZone in config.js),
+ * opts.endsAt the moment the study ends (from studyEnd; null: no end), and opts.people a Map from each
+ * registered participant code to whether it is approved (missing: not checked). */
+const DEFAULT_GAP = 45;
 function decide(sub, now, opts) {
   const force = (opts && opts.force) || '';
   if (force) return sub.participant === force ? 'send' : 'not the test participant';
+  if (opts && opts.endsAt && now >= opts.endsAt) return 'the study has ended';
+  if (opts && opts.people) {
+    if (!opts.people.has(sub.participant)) return 'no longer registered';
+    if (opts.people.get(sub.participant) !== true) return 'not approved';
+  }
   if (!sub.enabled) return 'reminders off';
   if (sub.paused_until && new Date(sub.paused_until) > now) return 'paused (away)';
   if (sub.settled_at && now - new Date(sub.settled_at) < 60 * MIN) return 'settling in after arriving home';
-  if (sub.last_vote_at && now - new Date(sub.last_vote_at) < 30 * MIN) return 'checked in recently';
+  const gap = (opts && opts.gap) || DEFAULT_GAP;
+  if (sub.last_vote_at && now - new Date(sub.last_vote_at) < gap * MIN) return 'checked in recently';
   const interval = (opts && opts.interval) || sub.interval_min || 60;
   if (sub.last_prompt_at) {
     const last = new Date(sub.last_prompt_at);
@@ -106,6 +124,25 @@ function decide(sub, now, opts) {
   if (!insideHomeHours(sub, localClock(at, sub.tz, opts && opts.zone))) return 'outside home hours';
   return 'send';
 }
+
+/* The moment a study day ends in a time zone: midnight at the start of the following day, as a Date.
+ * studyEnd "2026-11-30" in London is 2026-12-01 00:00 GMT; "2026-09-30" is 2026-09-30 23:00 UTC (BST).
+ * Null for an empty or unreadable date. */
+function dayEndsAt(ymd, zone) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || '').trim());
+  if (!m || !clockFor(zone)) return null;
+  const guess = Date.UTC(+m[1], +m[2] - 1, +m[3] + 1, 0, 0);            // that midnight, read as if it were UTC
+  const p = {}; for (const x of new Intl.DateTimeFormat('en-US', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date(guess))) p[x.type] = x.value;
+  const shown = Date.UTC(+p.year, +p.month - 1, +p.day, (+p.hour) % 24, +p.minute);
+  return new Date(guess - (shown - guess));                               // shift by the zone's offset at that moment
+}
+
+/* ---- the public settings in ../config.js (read as text: values must stay "double-quoted" and numbers plain) ---- */
+const config = fs.readFileSync(path.join(__dirname, '..', 'config.js'), 'utf8');
+const cfgVal = k => (config.match(new RegExp(k + ':\\s*"([^"]*)"')) || [])[1] || '';
+const cfgNum = k => { const m = config.match(new RegExp(k + ':\\s*(\\d+)')); return m ? +m[1] : null; };
+const GAP = cfgNum('checkinGapMin') || DEFAULT_GAP;   // minutes after a check-in before the app opens the next one
+const APP_NAME = cfgVal('appName') || 'HomePulse';         // in the notification title
 
 /* ---- self-check of the rules:  SELFTEST=1 node send.js  ---- */
 function selfTest() {
@@ -179,6 +216,32 @@ function selfTest() {
     ['pause over', { ...one, paused_until: iso(weekday('17:59')) }, weekday('18:00'), 'send'],
     ['settling in', { ...one, settled_at: iso(weekday('17:30')) }, weekday('18:00'), 'settling in after arriving home'],
     ['checked in recently', { ...one, last_vote_at: iso(weekday('17:45')) }, weekday('18:00'), 'checked in recently'],
+    // the check-in gap: checkinGapMin from config.js (45), the same gap after which the app opens the next check-in
+    [`config.js checkinGapMin is read (${GAP} min)`, { ...one, last_vote_at: iso(new Date(+weekday('18:00') - GAP * MIN)) }, weekday('18:00'), 'send', { gap: GAP }],
+    [`checked in ${GAP - 1} min ago (one less than checkinGapMin)`, { ...one, last_vote_at: iso(new Date(+weekday('18:00') - (GAP - 1) * MIN)) }, weekday('18:00'), 'checked in recently', { gap: GAP }],
+    ['gap 45: checked in 44 min ago', { ...one, last_vote_at: iso(weekday('17:16')) }, weekday('18:00'), 'checked in recently', { gap: 45 }],
+    ['gap 45: checked in 45 min ago', { ...one, last_vote_at: iso(weekday('17:15')) }, weekday('18:00'), 'send', { gap: 45 }],
+    ['gap 45: checked in at 17:03 after the 17:00 reminder, 18:00 reminder still comes', { ...one, last_vote_at: iso(weekday('17:03')), last_prompt_at: iso(weekday('17:00')) }, weekday('18:00'), 'send', { gap: 45 }],
+    ['gap 45: checked in at 17:20, the 18:00 run skips (40 min)', { ...one, last_vote_at: iso(weekday('17:20')), last_prompt_at: iso(weekday('17:00')) }, weekday('18:00'), 'checked in recently', { gap: 45 }],
+    ['no gap given: 45 minutes', { ...one, last_vote_at: iso(weekday('17:20')) }, weekday('18:00'), 'checked in recently'],
+    ['no gap given: 45 minutes, 17:14 is long enough', { ...one, last_vote_at: iso(weekday('17:14')) }, weekday('18:00'), 'send'],
+    ['gap 45: a check-in on another device counts (last_vote_at is per participant)', { ...one, participant: 'P07', last_vote_at: iso(weekday('17:40')) }, weekday('18:00'), 'checked in recently', { gap: 45 }],
+    // only registered, approved participants
+    ['approved participant', one, weekday('18:00'), 'send', { people: new Map([['P01', true]]) }],
+    ['participant waiting for approval (or set back to waiting)', one, weekday('18:00'), 'not approved', { people: new Map([['P01', false]]) }],
+    ['participant no longer registered (removed in the table editor, phone row left behind)', one, weekday('18:00'), 'no longer registered', { people: new Map([['P02', true]]) }],
+    ['no participants at all', one, weekday('18:00'), 'no longer registered', { people: new Map() }],
+    ['a forced test reminder ignores approval', one, weekday('18:00'), 'send', { force: 'P01', people: new Map() }],
+    // the end of the study (studyEnd in config.js, the last day on the UK clock)
+    ['studyEnd 30 Nov 2026 ends at 1 Dec 00:00 GMT', { ...london }, new Date('2026-12-01T00:00:00Z'), 'the study has ended', { endsAt: dayEndsAt('2026-11-30', 'Europe/London') }],
+    ['last evening of the study, 30 Nov 21:00', { ...london }, new Date('2026-11-30T21:00:00Z'), 'send', { endsAt: dayEndsAt('2026-11-30', 'Europe/London') }],
+    ['studyEnd in summer time: 30 Sep ends at 23:00 UTC', { ...london }, new Date('2026-09-30T23:00:00Z'), 'the study has ended', { endsAt: dayEndsAt('2026-09-30', 'Europe/London') }],
+    ['studyEnd in summer time: 30 Sep 22:00 BST (21:00Z) is still on', { ...london }, new Date('2026-09-30T21:00:00Z'), 'send', { endsAt: dayEndsAt('2026-09-30', 'Europe/London') }],
+    ['studyEnd: the day after', { ...london }, new Date('2026-12-05T18:00:00Z'), 'the study has ended', { endsAt: dayEndsAt('2026-11-30', 'Europe/London') }],
+    ['no studyEnd (null in config.js): no end', { ...london }, new Date('2027-06-01T17:00:00Z'), 'send', { endsAt: dayEndsAt('', 'Europe/London') }],
+    ['an unreadable studyEnd is no end', { ...london }, new Date('2027-06-01T17:00:00Z'), 'send', { endsAt: dayEndsAt('30/11/2026', 'Europe/London') }],
+    ['study end is ignored for a forced test', { ...one }, new Date('2026-12-05T18:00:00Z'), 'send', { force: 'P01', endsAt: dayEndsAt('2026-11-30', 'Europe/London') }],
+    ['the study end comes before approval and every other rule', { ...one, enabled: false }, new Date('2026-12-05T18:00:00Z'), 'the study has ended', { endsAt: dayEndsAt('2026-11-30', 'Europe/London'), people: new Map() }],
     ['reminded recently', { ...one, last_prompt_at: iso(weekday('17:45')) }, weekday('18:00'), 'reminded recently'],
     ['reminded 30 minutes ago, in the previous hour', { ...one, last_prompt_at: iso(weekday('17:30')) }, weekday('18:00'), 'reminded recently'],
     ['reminded at 17:01, backup run at 17:37', { ...one, last_prompt_at: iso(weekday('17:01')) }, weekday('17:37'), 'reminded recently'],
@@ -206,13 +269,11 @@ if (process.env.SELFTEST) selfTest();
 /* ---- the real run: configuration, secrets, and the phones in the database ---- */
 const webpush = require('web-push');   // after the self-test, which needs neither the package nor any secret
 
-const config = fs.readFileSync(path.join(__dirname, '..', 'config.js'), 'utf8');
-const cfgVal = k => (config.match(new RegExp(k + ':\\s*"([^"]*)"')) || [])[1] || '';
-const cfgNum = k => { const m = config.match(new RegExp(k + ':\\s*(\\d+)')); return m ? +m[1] : null; };
 const PUB = cfgVal('vapidPublicKey');
 const TABLE = cfgVal('pushTable') || 'push_subscriptions';
 const INTERVAL = cfgNum('reminderIntervalMin');   // minutes between reminders; the same value the app shows
 const ZONE = cfgVal('timeZone') || STUDY_ZONE;     // home hours of phones that have not reported a time zone
+const ENDS_AT = dayEndsAt(cfgVal('studyEnd'), clockFor(ZONE) ? ZONE : STUDY_ZONE);   // no reminders once the last study day is over
 const cleanUrl = u => (u || '').trim().replace(/\/+$/, '').replace(/\/(rest|auth)\/v1$/, '');
 const looksLikeProject = u => /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(u);
 const envUrl = cleanUrl(process.env.SUPABASE_URL);
@@ -233,7 +294,9 @@ console.log(`Supabase URL: ${URL_ || '(empty)'}`);
 console.log(`Secret key:   ${mask(KEY)}`);
 console.log(`VAPID key:    ${PRIV ? PRIV.length + ' chars' : '(empty)'}${DRY ? ' (dry run)' : ''}`);
 console.log(`Interval:     ${INTERVAL ? INTERVAL + ' min (config.js)' : 'not in config.js, using each phone\'s interval_min'}`);
+console.log(`After a check-in: no reminder for ${GAP} min${cfgNum('checkinGapMin') ? '' : ' (no checkinGapMin in config.js)'}`);
 console.log(`Time zone:    ${ZONE}${clockFor(ZONE) ? '' : ' (unknown, using ' + STUDY_ZONE + ')'} for phones that have not reported one`);
+console.log(`Study ends:   ${ENDS_AT ? ENDS_AT.toISOString() + ' (end of ' + cfgVal('studyEnd') + ' in ' + ZONE + ')' : 'no studyEnd in config.js'}`);
 if (!URL_) fail('supabaseUrl is empty in switch/config.js');
 if (!looksLikeProject(URL_)) fail(`supabaseUrl in switch/config.js does not look like a project URL: "${URL_}"`);
 if (!KEY) fail('SUPABASE_SERVICE_ROLE_KEY secret is empty. Create a secret key under Settings > API Keys > Secret keys');
@@ -256,35 +319,43 @@ if (!DRY) {
 const headers = KEY.startsWith('sb_secret_')
   ? { apikey: KEY, 'Content-Type': 'application/json' }
   : { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' };
-const rest = q => `${URL_}/rest/v1/${TABLE}${q}`;
+const restOf = table => q => `${URL_}/rest/v1/${table}${q}`;
+const rest = restOf(TABLE);
+
+// Page by page: Supabase returns at most "max rows" (1000 by default) per request, and a short read must
+// never leave the participants at the end of the list without reminders.
+async function readAll(table, query, what) {
+  const out = [];
+  for (let from = 0; ;) {
+    const r = await fetch(restOf(table)(`?${query}&limit=1000&offset=${from}`), { headers });
+    if (r.status === 401 || r.status === 403) fail(`Supabase refused the secret key (${r.status}). Check the SUPABASE_SERVICE_ROLE_KEY secret: ${await r.text()}`);
+    if (r.status === 404) fail(`table ${table} was not found. Run supabase-setup.sql again in the SQL editor: ${await r.text()}`);
+    if (!r.ok) fail(`could not read ${what} (${r.status}): ${await r.text()}`);
+    const page = await r.json();
+    if (!page.length) break;
+    out.push(...page);
+    from += page.length;
+  }
+  return out;
+}
 
 async function main() {
   const now = new Date();
-  // Page by page: Supabase returns at most "max rows" (1000 by default) per request, and a short read must
-  // never leave the participants at the end of the list without reminders.
-  const subs = [];
-  for (let from = 0; ;) {
-    const r = await fetch(rest(`?select=*&order=participant,endpoint&limit=1000&offset=${from}`), { headers });
-    if (r.status === 401 || r.status === 403) fail(`Supabase refused the secret key (${r.status}). Check the SUPABASE_SERVICE_ROLE_KEY secret: ${await r.text()}`);
-    if (r.status === 404) fail(`table ${TABLE} was not found. Run supabase-setup.sql again in the SQL editor: ${await r.text()}`);
-    if (!r.ok) fail(`could not read subscriptions (${r.status}): ${await r.text()}`);
-    const page = await r.json();
-    if (!page.length) break;
-    subs.push(...page);
-    from += page.length;
-  }
+  const subs = await readAll(TABLE, 'select=*&order=participant,endpoint', 'subscriptions');
+  // Who may still be reminded: registered participants and whether they are approved (never a name or email).
+  const people = new Map((await readAll('participants', 'select=code,approved&order=code', 'participants')).map(p => [p.code, p.approved === true]));
   const summary = {};
   let sent = 0, removed = 0;
   for (const sub of subs) {
     let verdict;
     if (!PUSH_SERVICE.test(sub.endpoint || '')) verdict = 'not a push service endpoint';
-    else try { verdict = decide(sub, now, { force: FORCE, interval: INTERVAL, zone: ZONE }); }
+    else try { verdict = decide(sub, now, { force: FORCE, interval: INTERVAL, gap: GAP, zone: ZONE, endsAt: ENDS_AT, people }); }
     catch (e) { verdict = 'could not decide'; console.error(`could not decide for ${sub.participant}: ${e.message}`); }   // one odd row never stops the rest
     summary[verdict] = (summary[verdict] || 0) + 1;
     if (verdict !== 'send') continue;
     const payload = JSON.stringify({
-      title: 'How does your home feel?',
-      body: 'A quick comfort check-in, under twenty seconds.',
+      title: `${APP_NAME}: how does your home feel?`,
+      body: 'A quick comfort check-in, about a minute.',
       url: './?from=push',
       participant: sub.participant,
       tag: 'switch-checkin',

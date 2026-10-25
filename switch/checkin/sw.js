@@ -1,23 +1,49 @@
-/* SWITCH comfort check-in - service worker.
- * Shows the hourly reminder when a push arrives and opens the app when it is tapped.
- * On Android the notification also has a "Not home" button, which pauses reminders for two hours
- * without opening the app (the app shows the pause next time it is opened). iPhone shows the
- * notification without buttons.
- */
+/* HomePulse (SWITCH home comfort study) - check-in app service worker (scope /switch/checkin/).
+ * Shows the hourly reminder when a push arrives and opens the app when it is tapped. On Android the
+ * notification also has a "Not home" button, which pauses reminders for two hours without opening the
+ * app (the app shows the pause next time it is opened). iPhone shows the notification without buttons.
+ * It also keeps a copy of the app's own files, network first, so the app still opens without a connection
+ * (check-ins made offline wait in the app's queue). Network-first caching as in the sister study's worker. */
 importScripts('../config.js');
 const CFG = self.SWITCH_CONFIG || {};
+const APP = CFG.appName || 'HomePulse';
+const CACHE = 'switch-checkin-v10';
+const BASE = new URL('../', self.registration.scope).pathname;   // /switch/
 
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+self.addEventListener('activate', e => e.waitUntil((async () => {
+  const keys = await caches.keys();
+  await Promise.all(keys.filter(k => k.startsWith('switch-checkin-') && k !== CACHE).map(k => caches.delete(k)));
+  await self.clients.claim();
+})()));
+
+/* Network first for this study's own files (always the newest when online), the saved copy when offline.
+ * Fonts and the study database are never touched here, nor the dashboard. */
+self.addEventListener('fetch', e => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin || !url.pathname.startsWith(BASE) || url.pathname.startsWith(BASE + 'dashboard/')) return;
+  e.respondWith((async () => {
+    try {
+      const res = await fetch(req);
+      if (res && res.ok && res.type === 'basic') { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {}); }
+      return res;
+    } catch (err) {
+      const hit = await caches.match(req) || (req.mode === 'navigate' ? await caches.match(self.registration.scope, { ignoreSearch: true }) : null);
+      return hit || Response.error();
+    }
+  })());
+});
 
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (err) { d = { body: e.data ? e.data.text() : '' }; }
   const options = {
-    body: d.body || 'A quick comfort check-in, under twenty seconds.',
+    body: d.body || 'A quick comfort check-in, about a minute.',
     icon: 'icon-192.png',
     badge: 'icon-192.png',
-    tag: d.tag || 'switch-checkin',
+    tag: /^switch/.test(d.tag || '') ? d.tag : 'switch-checkin',   // never another study's tag: both apps live on one site
     renotify: true,
     data: { url: d.url || './?from=push', participant: d.participant || '', sentAt: d.sentAt || '' },
     actions: [
@@ -25,7 +51,7 @@ self.addEventListener('push', e => {
       { action: 'away', title: 'Not home' }
     ]
   };
-  e.waitUntil(self.registration.showNotification(d.title || 'How does your home feel?', options));
+  e.waitUntil(self.registration.showNotification(d.title || `${APP}: how does your home feel?`, options));
 });
 
 self.addEventListener('notificationclick', e => {

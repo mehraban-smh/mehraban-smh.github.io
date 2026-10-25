@@ -4,102 +4,1191 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>SWITCH personal comfort study | Mohammad H. Mehraban</title>
-<meta name="description" content="Participant page for the SWITCH personal thermal comfort study at Swansea University: what the study does, what taking part involves, and how your data is handled.">
+<title>HomePulse · SWITCH home comfort study, Swansea University</title>
+<meta name="description" content="HomePulse is the SWITCH home comfort study at Swansea University. Tell us how warm or cool you feel at home in a few taps on your phone. How it works, who can take part and how your data is handled.">
 <meta name="author" content="Mohammad H. Mehraban">
-<link rel="icon" type="image/png" sizes="64x64" href="../favicon.png">
-<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta name="theme-color" content="#FFFFFF">
+<meta property="og:type" content="website">
+<meta property="og:title" content="HomePulse · SWITCH home comfort study, Swansea University">
+<meta property="og:description" content="How warm or cool do you feel at home? A Swansea University study you take part in from your phone.">
+<meta property="og:image" content="https://mehraban.uk/switch/checkin/icon-512.png">
+<meta name="twitter:card" content="summary">
+<link rel="icon" type="image/png" sizes="192x192" href="checkin/icon-192.png">
+<link rel="apple-touch-icon" href="checkin/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+/* ---------------------------------------------------------------------------------------------------------------
+   The app's name: set it here only. It fills every <span class="appname">, the page title and the meta tags
+   (the same name in English and Welsh). The static "HomePulse" in the HTML is only the fallback without script.
+   --------------------------------------------------------------------------------------------------------------- */
+var APP_NAME = 'HomePulse';
+
+/* English / Cymraeg. Every piece of text is written twice, as siblings with lang="en" and lang="cy"; CSS hides the
+   language that <html lang> is not (see "language" at the top of the style sheet). Words quoted in the other
+   language that must show in both carry data-keep. aria-labels that differ by language sit in data-a-en / data-a-cy.
+   The choice is remembered in localStorage 'switch_page_lang'. An address with ?lang=cy / ?lang=en or #cy / #en
+   wins; otherwise the remembered choice; otherwise Welsh when the browser's first language is Welsh; else English.
+   This runs in <head> so the page is drawn in the right language straight away. */
+(function () {
+  'use strict';
+  var KEY = 'switch_page_lang';
+  var META = {
+    en: {
+      title: APP_NAME + ' · SWITCH home comfort study, Swansea University',
+      desc: APP_NAME + ' is the SWITCH home comfort study at Swansea University. Tell us how warm or cool you feel at home in a few taps on your phone. How it works, who can take part and how your data is handled.',
+      og: 'How warm or cool do you feel at home? A Swansea University study you take part in from your phone.'
+    },
+    cy: {
+      title: APP_NAME + ' · Astudiaeth SWITCH ar gysur yn y cartref, Prifysgol Abertawe',
+      desc: APP_NAME + ' yw astudiaeth SWITCH Prifysgol Abertawe ar gysur yn y cartref. Dywedwch wrthon ni pa mor gynnes neu oer rydych chi’n teimlo gartref, gydag ychydig o dapiau ar eich ffôn. Sut mae’n gweithio, pwy all gymryd rhan a sut rydyn ni’n trin eich data.',
+      og: 'Pa mor gynnes neu oer rydych chi’n teimlo gartref? Astudiaeth gan Brifysgol Abertawe y gallwch chi gymryd rhan ynddi o’ch ffôn.'
+    }
+  };
+  var root = document.documentElement;
+  function ok(l) { return l === 'en' || l === 'cy' ? l : null; }
+  function fromAddress() {
+    var m = /[?&]lang=(en|cy)(?:&|$)/i.exec(location.search || '');
+    if (m) return m[1].toLowerCase();
+    return ok((location.hash || '').slice(1).toLowerCase());
+  }
+  function remembered() { try { return ok(localStorage.getItem(KEY)); } catch (e) { return null; } }
+  function fromBrowser() {
+    var l = (navigator.languages && navigator.languages[0]) || navigator.language || '';
+    return /^cy\b/i.test(l) ? 'cy' : null;
+  }
+  function meta(sel, text) { var m = document.querySelector(sel); if (m) m.setAttribute('content', text); }
+  function apply(l) {
+    var t = META[l];
+    root.lang = l;
+    document.title = t.title;
+    meta('meta[name="description"]', t.desc);
+    meta('meta[property="og:title"]', t.title);
+    meta('meta[property="og:description"]', t.og);
+    if (!document.body) return;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-set]'), function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-set') === l ? 'true' : 'false');
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-a-' + l + ']'), function (el) {
+      el.setAttribute('aria-label', el.getAttribute('data-a-' + l));
+    });
+    var ev; try { ev = new CustomEvent('pagelang', { detail: l }); } catch (e) { ev = document.createEvent('CustomEvent'); ev.initCustomEvent('pagelang', false, false, l); }
+    document.dispatchEvent(ev);
+  }
+  function setLang(l, save) {
+    l = ok(l); if (!l) return;
+    apply(l);
+    if (save) { try { localStorage.setItem(KEY, l); } catch (e) {} }
+  }
+  window.SWITCH_PAGE = { setLang: setLang, lang: function () { return root.lang; } };
+  apply(fromAddress() || remembered() || fromBrowser() || 'en');
+
+  document.addEventListener('DOMContentLoaded', function () {
+    Array.prototype.forEach.call(document.querySelectorAll('.appname'), function (el) { el.textContent = APP_NAME; });
+    document.addEventListener('click', function (e) {
+      var b = e.target && e.target.closest ? e.target.closest('[data-set]') : null;
+      if (b) setLang(b.getAttribute('data-set'), true);
+    });
+    apply(root.lang);
+  });
+  // a link to #cy or #en switches language too
+  window.addEventListener('hashchange', function () { var l = ok((location.hash || '').slice(1).toLowerCase()); if (l) setLang(l, true); });
+})();
+</script>
+<!--
+  HomePulse (the SWITCH home comfort study): the participant information page, https://mehraban.uk/switch/
+  Shared by link only (noindex). English and Welsh (see the script above). Source Serif 4 for prose and headings,
+  Inter only for the navigation, buttons and small labels; navy accent, teal buttons, white page. No libraries.
+  The app itself is English only for now: the Welsh text says so and quotes the app's button labels in English.
+  Facts on this page must agree with the app (switch/checkin) and config.js: 45-minute gap, daily goal 4,
+  points 10 / +20 / +50, 15 counted check-ins a day, default reminder hours weekdays 17:00-22:30 and weekends
+  09:00-22:30. Study dates are not given anywhere on purpose (not set yet).
+-->
 <style>
   :root{
     --paper:#FFFFFF; --panel:#F5F7F9; --ink:#1C2A35; --ink-soft:#5A6B77; --line:#E5EAEE;
-    --accent:#1F4E79; --accent-dark:#163A5B; --teal:#0E7B72;
+    --accent:#1F4E79; --accent-dark:#163A5B; --accent-soft:#EDF2F7;
+    --teal:#0E7B72; --teal-dark:#0B6259; --teal-soft:#E3F2EF;
     --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
     --sans:"Inter",-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
-    --maxw:760px;
+    --maxw:1040px; --measure:44rem;
+    /* the app's sensation colours (switch/checkin/app.css), for the faces */
+    --c-3:#1E5CC8; --c-2:#3D8CE6; --c-1:#8BC5EE; --c0:#5CB68B; --c1:#F2BB52; --c2:#EE8A3E; --c3:#D64530;
+    --face-ink:#132033; --face-ink-light:#F6FAFF;
   }
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:var(--serif);background:var(--paper);color:var(--ink);line-height:1.7;font-size:17px;-webkit-font-smoothing:antialiased}
+  /* language: text in the language the page is not in is hidden; [data-keep] = quoted words shown in both */
+  html[lang="cy"] [lang="en"]:not([data-keep]),html:not([lang="cy"]) [lang="cy"]:not([data-keep]){display:none !important}
+  html{scroll-padding-top:124px;-webkit-text-size-adjust:100%}
+  @media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+  body{font-family:var(--serif);background:var(--paper);color:var(--ink);line-height:1.65;font-size:17px;-webkit-font-smoothing:antialiased}
   a{color:var(--accent);text-decoration:none}
   a:hover{color:var(--accent-dark);text-decoration:underline;text-underline-offset:3px}
-  a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
-  .bar{font-family:var(--sans);display:flex;justify-content:space-between;align-items:center;gap:16px 28px;flex-wrap:wrap;padding:14px 24px;font-size:.9rem;border-bottom:1px solid var(--line);background:rgba(255,255,255,.92);position:sticky;top:0;backdrop-filter:blur(8px)}
-  .bar b{font-weight:600}
-  .bar .dim{color:var(--ink-soft)}
-  .wrap{max-width:var(--maxw);margin:0 auto;padding:56px 24px 80px}
-  .eyebrow{font-family:var(--sans);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;margin-bottom:14px}
-  h1{font-weight:700;font-size:clamp(1.9rem,4.5vw,2.6rem);line-height:1.18;text-wrap:balance;letter-spacing:-.01em;margin-bottom:18px}
-  .lede{font-size:1.15rem;color:var(--ink);margin-bottom:12px}
-  p{margin-bottom:16px}
-  h2{font-weight:600;font-size:1.35rem;margin:44px 0 12px;letter-spacing:-.005em}
-  ol.steps{list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:14px;margin:8px 0 8px}
-  ol.steps li{counter-increment:s;display:grid;grid-template-columns:38px 1fr;gap:14px;align-items:start}
-  ol.steps li::before{content:counter(s);font-family:var(--sans);font-weight:600;font-size:.9rem;width:32px;height:32px;border-radius:50%;background:var(--panel);color:var(--accent);display:grid;place-items:center;margin-top:4px}
-  ol.steps b{font-weight:600}
-  .cta{background:var(--panel);border-radius:14px;padding:22px 24px;margin:20px 0 8px;display:flex;flex-direction:column;gap:14px}
-  .btn{font-family:var(--sans);display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:13px 20px;border-radius:10px;background:var(--teal);color:#fff;font-weight:600;font-size:1rem;width:max-content;max-width:100%}
-  .btn:hover{background:#0B6259;color:#fff;text-decoration:none}
-  .btn svg{width:20px;height:20px}
-  .cta p{margin:0;font-size:.98rem;color:var(--ink-soft)}
-  .install{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
-  .install div{border:1px solid var(--line);border-radius:12px;padding:16px 18px;font-size:.95rem}
-  .install b{font-family:var(--sans);font-weight:600;font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);display:block;margin-bottom:6px}
-  .install ol{padding-left:18px;margin:0}
-  .install li{margin-bottom:4px}
-  @media (max-width:600px){.install{grid-template-columns:1fr}}
-  ul.plain{padding-left:20px;margin-bottom:16px}
-  ul.plain li{margin-bottom:6px}
-  .partners{font-family:var(--sans);font-size:.9rem;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:18px;margin-top:44px}
-  footer{font-family:var(--sans);font-size:.85rem;color:var(--ink-soft);border-top:1px solid var(--line);padding:20px 24px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+  p{margin-bottom:14px}
+  b,strong{font-weight:600}
+  .ic{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding-left:24px;padding-right:24px}
+  .skip{position:absolute;left:16px;top:-80px;z-index:50;font-family:var(--sans);font-size:.9rem;font-weight:600;background:var(--accent);color:#fff;padding:10px 16px;border-radius:8px}
+  .skip:focus{top:12px;color:#fff}
+
+  /* ------------------------------------------------------------ site strip and navigation */
+  .site{font-family:var(--sans);font-size:.85rem;border-bottom:1px solid var(--line)}
+  .site .wrap{display:flex;justify-content:space-between;align-items:center;gap:6px 24px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}
+  .site b{font-weight:600}
+  .site .dim{color:var(--ink-soft)}
+  @media (max-width:520px){.site .long{display:none}}
+  .nav{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.95);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  /* phones: brand + language on the first row, the section links + Sign in on the second;
+     600 px and up: brand, language and Sign in on the first row, the links under them */
+  .nav .wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand lang" "nav signin";align-items:center;gap:4px 12px;padding-top:8px;padding-bottom:6px}
+  .brand{grid-area:brand;display:flex;align-items:center;gap:10px;color:var(--ink);min-height:44px;min-width:0;justify-self:start;max-width:100%}
+  .brand:hover{text-decoration:none;color:var(--ink)}
+  .brand img{width:34px;height:34px;border-radius:9px;display:block;flex:none}
+  .brand>span{min-width:0}
+  .brand b{display:block;font-family:var(--serif);font-size:1.25rem;font-weight:700;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand small{display:block;font-family:var(--sans);font-size:.72rem;font-weight:500;color:var(--ink-soft);letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .langsw{grid-area:lang;justify-self:end;display:inline-flex;padding:2px;border:1px solid #C9D6E2;border-radius:999px;background:#fff;font-family:var(--sans)}
+  .langsw button{font:inherit;font-size:.8rem;font-weight:500;line-height:1;color:var(--ink-soft);background:none;border:0;border-radius:999px;padding:9px 11px;min-height:32px;cursor:pointer;white-space:nowrap}
+  .langsw button:hover{color:var(--ink);background:var(--panel)}
+  .langsw button[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:600}
+  .langsw button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .pagenav{grid-area:nav;min-width:0}
+  .nav-links{position:relative;display:flex;gap:2px;list-style:none;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;margin:0 -4px;padding:0 4px}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-links{--fl:0px;--fr:0px;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 var(--fl),#000 calc(100% - var(--fr)),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 var(--fl),#000 calc(100% - var(--fr)),transparent 100%)}
+  .nav-links a{display:block;white-space:nowrap;font-family:var(--sans);font-size:.875rem;font-weight:500;color:var(--ink-soft);padding:9px 9px;border-radius:8px}
+  .nav-links a:hover{color:var(--ink);background:var(--panel);text-decoration:none}
+  .nav-links a[aria-current]{color:var(--accent);background:var(--accent-soft)}
+  .nav-links a:focus-visible{outline-offset:-2px}
+  .nav .signin{grid-area:signin;justify-self:end;white-space:nowrap}
+  @media (max-width:479px){.brand small{display:none}}
+  @media (max-width:400px){.nav .wrap{column-gap:10px}.brand{gap:8px}.nav .signin{padding:8px 12px}.nav .signin .ic{display:none}}
+  @media (max-width:340px){.brand img{display:none}.langsw button{padding:9px 8px}}
+  @media (min-width:600px){.nav .wrap{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"brand lang signin" "nav nav nav";column-gap:14px}}
+  @media (min-width:1100px){.nav-links{margin:0;padding:0;overflow:visible;-webkit-mask-image:none;mask-image:none}}
+
+  /* ------------------------------------------------------------ buttons */
+  .btn{font-family:var(--sans);display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:12px 20px;border-radius:10px;background:var(--teal);color:#fff;font-weight:600;font-size:1rem;line-height:1.2;border:1.5px solid var(--teal);max-width:100%}
+  .btn:hover{background:var(--teal-dark);border-color:var(--teal-dark);color:#fff;text-decoration:none}
+  .btn:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+  .btn.ghost{background:#fff;color:var(--accent);border-color:#C9D6E2}
+  .btn.ghost:hover{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent)}
+  .btn.sm{min-height:40px;padding:8px 14px;font-size:.92rem;gap:8px}
+  .btn .ic{width:19px;height:19px}
+  .ctas{display:flex;flex-wrap:wrap;gap:12px}
+  @media (max-width:420px){.hero .ctas .btn{flex:1 1 100%}}
+
+  /* ------------------------------------------------------------ hero */
+  .hero{display:grid;gap:12px 48px;padding-top:40px}
+  .eyebrow{font-family:var(--sans);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;margin-bottom:12px}
+  .hero h1{font-weight:700;margin-bottom:10px}
+  .hero h1 .name{display:block;font-size:clamp(3.4rem,14vw,5.8rem);line-height:.95;letter-spacing:-.025em}
+  .name-note{font-size:clamp(1.3rem,4.4vw,1.75rem);font-weight:600;line-height:1.3;letter-spacing:-.005em;margin:0 0 20px;max-width:24em;text-wrap:balance}
+  /* the app is English only for now: Welsh readers are told so where they are sent to it */
+  ul.notes li.appnote-li{color:var(--ink)}
+  .appnote{display:flex;gap:10px;align-items:flex-start;max-width:var(--measure);margin:0 0 18px;padding:12px 16px;border-radius:12px;background:var(--accent-soft);font-size:.98rem;line-height:1.5}
+  .appnote .ic{width:18px;height:18px;margin-top:3px;color:var(--accent)}
+  .lede{font-size:1.18rem;line-height:1.6;margin-bottom:24px;max-width:34em}
+  ul.notes{list-style:none;display:flex;flex-direction:column;gap:8px;margin:20px 0 0}
+  ul.notes li{display:flex;gap:10px;align-items:flex-start;font-size:.98rem;line-height:1.5;color:var(--ink-soft)}
+  ul.notes .ic{width:18px;height:18px;margin-top:3px;color:var(--teal)}
+  ul.facts{list-style:none;display:flex;flex-wrap:wrap;gap:10px;margin:24px 0 0}
+  ul.facts li{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border:1px solid var(--line);border-radius:12px;min-width:0}
+  .tile-ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex:none;background:var(--teal-soft);color:var(--teal)}
+  .tile-ic .ic{width:19px;height:19px}
+  ul.facts b{display:block;font-family:var(--sans);font-size:.9rem;font-weight:600;line-height:1.25}
+  ul.facts small{display:block;font-family:var(--sans);font-size:.78rem;color:var(--ink-soft);line-height:1.3}
+  .hero-art{justify-self:center;width:100%;max-width:460px;margin-top:20px}
+  .hero-art svg{display:block;width:100%;height:auto}
+  @media (min-width:900px){
+    .hero{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);align-items:center;padding-top:64px}
+    .hero-art{margin-top:0}
+  }
+
+  /* ------------------------------------------------------------ sections */
+  .sec{padding-top:88px}
+  .sec-head{max-width:var(--measure);margin-bottom:28px}
+  h2{font-weight:700;font-size:clamp(1.65rem,4.6vw,2.2rem);line-height:1.2;letter-spacing:-.01em;text-wrap:balance;margin-bottom:12px}
+  h3{font-weight:600;font-size:1.2rem;line-height:1.3;letter-spacing:-.005em}
+  .sub{font-size:1.08rem;color:var(--ink-soft);margin:0}
+  .prose{max-width:var(--measure)}
+  .card{border:1px solid var(--line);border-radius:16px;padding:22px;background:#fff}
+  .label{display:block;font-family:var(--sans);font-size:.74rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--teal)}
+
+  /* how it works: a numbered path, and an "at a glance" card */
+  .how{display:grid;gap:28px}
+  ol.steps{list-style:none;counter-reset:s}
+  ol.steps>li{counter-increment:s;position:relative;display:grid;grid-template-columns:44px minmax(0,1fr);gap:16px;padding-bottom:28px}
+  ol.steps>li::before{content:counter(s);font-family:var(--sans);font-weight:600;font-size:.95rem;width:44px;height:44px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+  ol.steps>li:not(:last-child)::after{content:"";position:absolute;left:21px;top:52px;bottom:6px;width:2px;border-radius:1px;background:var(--line)}
+  ol.steps h3{margin:4px 0 6px}
+  ol.steps p{margin:0;max-width:36em}
+  .glance{background:var(--panel);border:0;align-self:start}
+  .glance h3{font-size:1.05rem;margin-bottom:14px}
+  .glance dl{display:grid;gap:12px}
+  .glance dt{font-family:var(--sans);font-size:.78rem;font-weight:600;color:var(--ink-soft);letter-spacing:.02em}
+  .glance dd{font-size:1rem;line-height:1.45}
+  @media (max-width:599px){
+    ol.steps>li{grid-template-columns:36px minmax(0,1fr);gap:14px}
+    ol.steps>li::before{width:36px;height:36px;font-size:.9rem}
+    ol.steps>li:not(:last-child)::after{left:17px;top:44px}
+    .glance dl>div{display:grid;grid-template-columns:7.2rem minmax(0,1fr);gap:12px;align-items:baseline}
+  }
+  @media (min-width:900px){.how{grid-template-columns:minmax(0,1fr) 300px;gap:48px}.glance{position:sticky;top:100px}}
+
+  /* what a check-in asks */
+  .qgroups{display:grid;gap:18px;counter-reset:q}
+  .qgroup{border:1px solid var(--line);border-radius:16px;padding:22px 22px 6px}
+  .qgroup>h3{margin-bottom:4px}
+  .qgroup>.gsub{color:var(--ink-soft);font-size:.98rem;margin-bottom:6px}
+  ol.qs{list-style:none;display:grid;gap:0 40px;overflow:hidden}
+  li.q{counter-increment:q;display:grid;grid-template-columns:32px minmax(0,1fr);gap:14px;padding:16px 0;border-top:1px solid var(--line);margin-top:-1px}
+  li.q::before{content:counter(q);font-family:var(--sans);font-weight:600;font-size:.85rem;width:30px;height:30px;border-radius:50%;background:var(--teal-soft);color:var(--teal);display:grid;place-items:center;margin-top:2px}
+  li.q h4{font-weight:600;font-size:1.06rem;line-height:1.4;margin-bottom:4px}
+  li.q h4 small{display:block;font-weight:400;font-size:.95rem;color:var(--ink-soft);margin-top:2px}
+  li.q .opts{font-size:.96rem;color:var(--ink-soft);margin-bottom:8px;line-height:1.55}
+  li.q .why{font-size:.98rem;line-height:1.55;margin:0}
+  li.q .why .label{margin-bottom:2px}
+  @media (max-width:599px){
+    .qgroup{padding:18px 18px 4px}
+    li.q{display:block}
+    li.q::before{float:left;margin:0 12px 4px 0}
+    li.q h4{min-height:30px;padding-top:3px}
+    li.q .opts{clear:left}
+  }
+  @media (min-width:900px){
+    ol.qs{grid-template-columns:repeat(2,minmax(0,1fr))}
+    ol.qs>li.wide{grid-column:1 / -1}
+  }
+  /* the seven answers to "How do you feel right now?" (the app's faces) */
+  ul.scale{list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(4,auto);grid-auto-flow:column;gap:8px;margin:10px 0 14px}
+  ul.scale li{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border:1px solid var(--line);border-radius:999px;font-family:var(--sans);font-size:.85rem;font-weight:600;line-height:1.2;min-width:0}
+  ul.scale svg{width:30px;height:30px;display:block;flex:none}
+  ul.scale .n{display:block;color:var(--ink-soft);font-weight:500;font-size:.8rem}
+  @media (min-width:640px){
+    ul.scale{grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:auto;grid-auto-flow:row;gap:6px}
+    ul.scale li{flex-direction:column;gap:6px;padding:0;border:0;border-radius:0;text-align:center}
+    ul.scale svg{width:46px;height:46px}
+    ul.scale .n{display:block}
+  }
+  .after{margin-top:18px;display:flex;gap:14px;align-items:flex-start;background:var(--panel);border-radius:14px;padding:18px 20px}
+  .after p{margin:0}
+  .after .tile-ic{background:#fff}
+
+  /* points, the Bay Race and badges */
+  .pts{list-style:none;display:grid;gap:12px;margin-bottom:14px}
+  .pts li{border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;align-items:baseline;gap:14px}
+  .pts b{font-family:var(--serif);font-size:2rem;font-weight:700;color:var(--teal);line-height:1;min-width:2.6em}
+  .pts span{font-size:1rem;line-height:1.4}
+  .pts small{display:block;color:var(--ink-soft);font-size:.92rem}
+  @media (min-width:700px){.pts{grid-template-columns:repeat(3,minmax(0,1fr))}.pts li{display:block}.pts b{display:block;margin-bottom:8px}}
+  .fine{font-size:.95rem;color:var(--ink-soft);max-width:var(--measure)}
+  .sub-h{margin:44px 0 10px;font-size:1.35rem}
+  .race{display:grid;border:1px solid var(--line);border-radius:16px;overflow:hidden;margin:18px 0 14px}
+  .race svg{display:block;width:100%;height:auto;background:#E4EEF4}
+  .board{padding:18px 20px 20px}
+  .board .label{color:var(--ink-soft);margin-bottom:10px}
+  ol.runners{list-style:none;display:grid;gap:6px}
+  ol.runners li{display:grid;grid-template-columns:28px 28px minmax(0,1fr) auto;align-items:center;gap:10px;padding:6px 10px 6px 6px;border-radius:10px;font-family:var(--sans);font-size:.92rem}
+  ol.runners .rk{font-weight:600;color:var(--ink-soft);text-align:center;font-size:.85rem}
+  ol.runners .tok{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:.66rem;font-weight:700;letter-spacing:.02em}
+  ol.runners .pt{font-weight:600;font-variant-numeric:tabular-nums}
+  ol.runners li.me{background:var(--teal-soft)}
+  ol.runners li.me .who{font-weight:600}
+  .board .status{font-family:var(--sans);font-size:.88rem;color:var(--ink);margin:12px 0 0;line-height:1.45}
+  @media (max-width:639px){
+    .race .pl{font-size:20px}
+    .race .pl-l{font-size:16px}
+    .race .pl-s{font-size:15px}
+    .race .bay{font-size:26px}
+    .race .tk{transform:scale(1.55)}
+  }
+  @media (min-width:900px){.race{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}.board{border-left:1px solid var(--line);align-self:center;padding:14px 18px 16px}ol.runners{gap:2px}ol.runners li{padding:4px 10px 4px 6px}}
+  ul.badges{list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
+  ul.badges li{border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0}
+  ul.badges .tile-ic{width:40px;height:40px;border-radius:50%;margin-bottom:10px;background:var(--accent-soft);color:var(--accent)}
+  ul.badges .num{font-family:var(--sans);font-size:.8rem;font-weight:700}
+  ul.badges b{display:block;font-size:1rem;line-height:1.3}
+  ul.badges b small{font-family:var(--sans);font-size:.72rem;font-weight:500;color:var(--ink-soft);white-space:nowrap}
+  ul.badges .bh{display:block;font-size:.9rem;line-height:1.4;color:var(--ink-soft);margin-top:2px}
+  @media (max-width:559px){
+    ul.badges{grid-template-columns:1fr;gap:8px}
+    ul.badges li{display:grid;grid-template-columns:40px minmax(0,1fr);column-gap:14px;align-items:center;padding:12px 14px}
+    ul.badges .tile-ic{grid-row:span 2;margin:0}
+  }
+  @media (min-width:700px){ul.badges{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media (min-width:980px){ul.badges{grid-template-columns:repeat(5,minmax(0,1fr))}}
+
+  /* who can take part */
+  .who-grid{display:grid;gap:18px}
+  ul.checks{list-style:none;margin-top:6px}
+  ul.checks li{display:flex;gap:14px;align-items:flex-start;padding:14px 0}
+  ul.checks li+li{border-top:1px solid var(--line)}
+  ul.checks b{display:block;font-size:1.05rem;line-height:1.35}
+  ul.checks .t .s{display:block;font-size:.96rem;color:var(--ink-soft);line-height:1.5;margin-top:2px}
+  ul.homes{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 14px}
+  ul.homes li{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px 10px;border-radius:12px;background:var(--panel);font-family:var(--sans);font-size:.78rem;font-weight:600;line-height:1.25;text-align:center;color:var(--ink)}
+  ul.homes svg{width:52px;height:39px;display:block}
+  .card>h3{font-size:1.1rem;margin-bottom:2px}
+  .card .note{font-size:.96rem;color:var(--ink-soft);margin:0}
+  @media (min-width:900px){.who-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}}
+
+  /* get the app */
+  ol.apps{list-style:none;display:grid;gap:14px}
+  ol.apps>li{border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+  .app-h{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .app-h .step{font-family:var(--sans);font-size:.74rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft);display:block}
+  .app-h h3{font-size:1.12rem}
+  ol.apps ol{padding-left:20px;font-size:.98rem;line-height:1.55}
+  ol.apps ol li+li{margin-top:6px}
+  ol.apps ol .ic{width:17px;height:17px;vertical-align:-3px;color:var(--accent)}
+  @media (min-width:820px){ol.apps{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  .callout{display:flex;gap:14px;align-items:flex-start;margin-top:14px;padding:18px 20px;border-radius:14px;background:var(--accent-soft)}
+  .callout p{margin:0;max-width:44em}
+  .callout p+p{margin-top:8px}
+  .callout .tile-ic{background:#fff;color:var(--accent)}
+  .app-cta{margin-top:20px}
+  @media (max-width:559px){.callout>.tile-ic,.after>.tile-ic{display:none}}
+
+  /* your data */
+  .data{display:grid;gap:16px}
+  .code-card{background:var(--accent);color:#fff;border-radius:16px;padding:26px 24px}
+  .code-card .eyebrow{color:rgba(255,255,255,.75);margin-bottom:6px}
+  .code-card .code{display:block;font-size:3rem;font-weight:700;line-height:1;letter-spacing:-.01em;margin-bottom:14px}
+  .code-card p{font-size:.98rem;line-height:1.55;color:rgba(255,255,255,.92)}
+  .dc{border-top:1px solid rgba(255,255,255,.2);margin-top:18px;padding-top:16px;display:grid;gap:16px}
+  .dc h3{display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:.9rem;font-weight:600;color:#fff;margin-bottom:6px}
+  .dc h3 .ic{width:22px;height:22px;padding:3px;border-radius:50%;background:#BFE6DF;color:#0B3B35;stroke-width:2.4}
+  .dc h3.no .ic{background:#F4C9C2;color:#5E1A12}
+  .dc ul{list-style:none;padding-left:30px;display:grid;gap:5px}
+  .dc li{font-size:.95rem;line-height:1.45;color:rgba(255,255,255,.9)}
+  ul.dtiles{list-style:none;display:grid;gap:12px}
+  ul.dtiles li{border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;grid-template-columns:36px minmax(0,1fr);gap:8px 12px;align-items:center}
+  ul.dtiles h3{font-size:1.04rem}
+  ul.dtiles p{grid-column:1 / -1;font-size:.95rem;line-height:1.5;color:var(--ink-soft);margin:0}
+  @media (min-width:640px){ul.dtiles{grid-template-columns:repeat(2,minmax(0,1fr))}ul.dtiles li{display:block}ul.dtiles .tile-ic{margin-bottom:12px}ul.dtiles h3{margin-bottom:4px}}
+  @media (min-width:980px){.data{grid-template-columns:minmax(330px,380px) minmax(0,1fr);gap:18px}}
+
+  /* FAQ */
+  .faq{display:grid;gap:10px;max-width:50rem}
+  .faq details{border:1px solid var(--line);border-radius:14px;background:#fff}
+  .faq details[open]{border-color:#C9D6E2}
+  .faq summary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:60px;padding:10px 12px 10px 20px;font-weight:600;font-size:1.06rem;line-height:1.35;cursor:pointer;list-style:none;border-radius:14px}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::marker{content:""}
+  .chev{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--panel);color:var(--ink-soft)}
+  .chev .ic{width:18px;height:18px}
+  .faq summary:hover .chev{background:var(--accent-soft);color:var(--accent)}
+  .faq details[open] .chev{transform:rotate(180deg);background:var(--accent-soft);color:var(--accent)}
+  @media (prefers-reduced-motion:no-preference){.chev{transition:transform .2s ease,background-color .2s}}
+  .faq-a{padding:0 20px 18px;font-size:1rem}
+  .faq-a p{margin-bottom:10px}
+  .faq-a p:last-child{margin-bottom:0}
+
+  /* contact, about, closing band, footer */
+  .contact{display:flex;gap:16px;align-items:center;max-width:40rem}
+  .contact .tile-ic{width:54px;height:54px;border-radius:14px;background:var(--accent);color:#fff}
+  .contact .tile-ic .ic{width:26px;height:26px}
+  .contact .k{display:block;font-family:var(--sans);font-size:.74rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft)}
+  .contact .nm{display:block;font-size:1.3rem;font-weight:700;line-height:1.3}
+  .contact a{font-weight:600;font-size:1.05rem;overflow-wrap:anywhere}
+  .contact p{margin:4px 0 0;font-size:.96rem;color:var(--ink-soft)}
+  .about p{max-width:var(--measure)}
+  .about .lede{font-size:1.12rem;margin-bottom:14px;max-width:var(--measure)}
+  .partners{font-family:var(--sans);font-size:.9rem;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:18px;margin-top:28px;max-width:var(--measure)}
+  .final{margin-top:88px;background:var(--panel);border-radius:18px;padding:28px 24px;display:flex;flex-direction:column;gap:18px}
+  .final h2{font-size:clamp(1.5rem,4.4vw,1.9rem);margin-bottom:6px}
+  .final p{margin:0;color:var(--ink-soft);max-width:36em}
+  @media (min-width:860px){.final{flex-direction:row;align-items:center;justify-content:space-between;gap:32px;padding:34px 38px}.final .ctas{flex-wrap:nowrap;flex:none}}
+  footer{margin-top:48px;border-top:1px solid var(--line);font-family:var(--sans);font-size:.85rem;color:var(--ink-soft)}
+  footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:8px 24px;flex-wrap:wrap;padding-top:20px;padding-bottom:28px}
   footer a{color:var(--ink-soft)}
+  footer a:hover{color:var(--accent)}
+  .foot-links{display:flex;gap:6px 20px;flex-wrap:wrap}
 </style>
 </head>
 <body>
-<nav class="bar" aria-label="Site links">
-  <a href="https://mehraban.uk/">&larr; <b>Mohammad H. Mehraban</b> <span class="dim">&middot; mehraban.uk</span></a>
-  <a href="mailto:info@mehraban.uk">Questions about the study? <b>Email the team &rarr;</b></a>
-</nav>
+<a class="skip" href="#main"><span lang="en">Skip to main content</span><span lang="cy">Neidio i’r prif gynnwys</span></a>
 
-<main class="wrap">
-  <div class="eyebrow">Swansea University &middot; EPSRC SWITCH to Net Zero Buildings</div>
-  <h1>AI-integrated building management for personalised thermal comfort</h1>
-  <p class="lede">Developing an AI-integrated building management framework that predicts individual occupants&rsquo; thermal comfort and translates those predictions into personalised building control recommendations for net-zero buildings across Swansea Bay and South Wales.</p>
-  <p>The research combines real-world monitoring in occupied buildings, explainable AI, and transfer learning to develop comfort models that can learn from occupant and environmental data, explain the factors driving individual comfort responses, and adapt to new buildings and populations where labelled comfort data are limited.</p>
-  <p>Working with regional partners towards more occupant-responsive building operation that balances personal comfort, energy performance, and net-zero objectives.</p>
+<!-- line icons (the app's style) and the app's seven sensation faces, used through <use> -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-signin" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3.5M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".9"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-7 8-7s8 3 8 7"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11.5a7 7 0 0 0-14 0C5 14.5 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/></symbol>
+    <symbol id="i-thermo" viewBox="0 0 24 24"><path d="M10 14.6V5a2 2 0 0 1 4 0v9.6a4 4 0 1 1-4 0z"/><path d="M12 9.5v7"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></symbol>
+    <symbol id="i-exit" viewBox="0 0 24 24"><path d="M14 4H6.5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1H14"/><path d="M16 8l4 4-4 4M20 12H10"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.5 12.5V4.5a1 1 0 0 1 1-1h8l8 8-9 9z"/><circle cx="8.5" cy="8.5" r="1.5"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3.5v11M8 7.5l4-4 4 4"/><path d="M8.5 11H6.5a1 1 0 0 0-1 1v7.5a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V12a1 1 0 0 0-1-1h-2"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="18.5" r="1.3" fill="currentColor"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3.5"/><path d="M12 8.5v7M8.5 12h7"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.8l2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.6-5 2.6.9-5.6-4-3.9 5.6-.8z"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="15" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3.5c3.4 3.3 6 6.3 6 10a6 6 0 0 1-12 0c0-2.4 1.2-4.1 2.6-5.5.3 1.8 1.1 3 2.3 3.4-.4-3 .1-5.5 1.1-7.9z"/></symbol>
+    <symbol id="i-sunrise" viewBox="0 0 24 24"><path d="M3.5 18.5h17M7 18.5a5 5 0 0 1 10 0"/><path d="M12 5.5v3M5.4 10.4l2 1.6M18.6 10.4l-2 1.6"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19 14.5A7.5 7.5 0 1 1 9.5 5a6 6 0 0 0 9.5 9.5z"/></symbol>
+    <symbol id="i-umbrella" viewBox="0 0 24 24"><path d="M3.5 12.5a8.5 8.5 0 0 1 17 0z"/><path d="M12 12.5v5.5a2 2 0 0 0 4 0"/><path d="M12 4v-.5"/></symbol>
+    <symbol id="i-wall" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M3.5 9.7h17M3.5 14.3h17M9 5v4.7M15 9.7v4.6M9 14.3V19"/></symbol>
+    <symbol id="i-review" viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/></symbol>
 
-  <h2>How the study works</h2>
-  <ol class="steps">
-    <li><div><b>A small sensor in your home.</b> A temperature and humidity sensor takes readings in your main living space every few minutes. It has an e-ink display, needs no attention, and is collected at the end of the study.</div></li>
-    <li><div><b>Short comfort check-ins on your phone.</b> While you are at home, the check-in app asks once an hour how you feel: warm or cool, what you are wearing, what you have been doing. Most check-ins take under twenty seconds, and one tap confirms everything when nothing has changed.</div></li>
-    <li><div><b>A comfort model that learns you.</b> Your answers are matched with the sensor readings to learn the conditions in which you feel comfortable, so heating and ventilation can be steered around people rather than around a fixed setpoint.</div></li>
-  </ol>
+    <symbol id="f-3" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="var(--c-3)"/><g fill="var(--face-ink-light)" stroke="var(--face-ink-light)" stroke-width="2.2" stroke-linecap="round"><circle cx="18" cy="22.5" r="2.2" stroke="none"/><circle cx="30" cy="22.5" r="2.2" stroke="none"/><g fill="none"><path d="M16 32l2.5-2 2.5 2 2.5-2 2.5 2 2.5-2 2.5 2"/><path d="M15 16.5l6 1.5M33 16.5l-6 1.5"/></g></g><path d="M6 12l-3 1M7 20H3M6 28l-3-1" stroke="var(--c-2)" stroke-width="2" stroke-linecap="round"/><path d="M42 12l3 1M41 20h4M42 28l3-1" stroke="var(--c-2)" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="f-2" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="var(--c-2)"/><g fill="var(--face-ink-light)" stroke="var(--face-ink-light)" stroke-width="2.2" stroke-linecap="round"><circle cx="18" cy="22.5" r="2.2" stroke="none"/><circle cx="30" cy="22.5" r="2.2" stroke="none"/><g fill="none"><path d="M17 33.5Q24 27.5 31 33.5"/><path d="M15 16.5l6 1.5M33 16.5l-6 1.5"/></g></g></symbol>
+    <symbol id="f-1" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="var(--c-1)"/><g fill="var(--face-ink)" stroke="var(--face-ink)" stroke-width="2.2" stroke-linecap="round"><circle cx="18" cy="22.5" r="2.2" stroke="none"/><circle cx="30" cy="22.5" r="2.2" stroke="none"/><g fill="none"><path d="M17.5 32Q24 29.5 30.5 32"/></g></g></symbol>
+    <symbol id="f0" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="var(--c0)"/><g fill="var(--face-ink)" stroke="var(--face-ink)" stroke-width="2.2" stroke-linecap="round"><circle cx="18" cy="22.5" r="2.2" stroke="none"/><circle cx="30" cy="22.5" r="2.2" stroke="none"/><g fill="none"><path d="M17 30Q24 36.5 31 30"/></g></g></symbol>
+    <symbol id="f1" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="var(--c1)"/><g fill="var(--face-ink)" stroke="var(--face-ink)" stroke-width="2.2" stroke-linecap="round"><circle cx="18" cy="22.5" r="2.2" stroke="none"/><circle cx="30" cy="22.5" r="2.2" stroke="none"/><g fill="none"><path d="M17.5 32Q24 29.5 30.5 32"/></g></g></symbol>
+    <symbol id="f2" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="var(--c2)"/><g fill="var(--face-ink-light)" stroke="var(--face-ink-light)" stroke-width="2.2" stroke-linecap="round"><circle cx="18" cy="22.5" r="2.2" stroke="none"/><circle cx="30" cy="22.5" r="2.2" stroke="none"/><g fill="none"><path d="M17 33.5Q24 27.5 31 33.5"/><path d="M15 18l6-1.5M33 18l-6-1.5"/></g></g></symbol>
+    <symbol id="f3" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="var(--c3)"/><g fill="var(--face-ink-light)" stroke="var(--face-ink-light)" stroke-width="2.2" stroke-linecap="round"><circle cx="18" cy="22.5" r="2.2" stroke="none"/><circle cx="30" cy="22.5" r="2.2" stroke="none"/><g fill="none"><ellipse cx="24" cy="32.5" rx="5" ry="4" fill="var(--face-ink-light)" stroke="none"/><path d="M15 18l6-1.5M33 18l-6-1.5"/></g></g><path d="M41 8s4 4.5 4 7.5a4 4 0 0 1-8 0c0-3 4-7.5 4-7.5z" fill="var(--c-1)" stroke="none"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  </defs>
+</svg>
 
-  <h2>Taking part</h2>
-  <div class="cta">
-    <a class="btn" href="checkin/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg>Open the comfort check-in</a>
-    <p>Click the green button above to open the check-in. The first time, create your profile: name, email and a few details such as height and weight, which take about a minute and are asked once. The research team then confirms your registration, usually within a day, and the app lets you know when you can start. The app remembers you after that. Add it to your home screen so it opens like an app:</p>
-    <div class="install">
-      <div><b>iPhone</b><ol><li>Open the link in Safari.</li><li>Tap the Share button.</li><li>Choose <em>Add to Home Screen</em>, then <em>Add</em>.</li><li>Open it from the home screen and allow notifications when asked.</li></ol></div>
-      <div><b>Android</b><ol><li>Open the link in Chrome.</li><li>Tap the three-dot menu.</li><li>Choose <em>Add to Home screen</em> or <em>Install app</em>.</li><li>Open it from the home screen and allow notifications when asked.</li></ol></div>
-    </div>
+<div class="site">
+  <div class="wrap">
+    <a href="https://mehraban.uk/">&larr; <b>Mohammad H. Mehraban</b> <span class="dim">&middot; mehraban.uk</span></a>
+    <a href="mailto:info@mehraban.uk"><span lang="en"><span class="long">Questions about the study? </span><b>Email the team &rarr;</b></span><span lang="cy"><span class="long">Cwestiynau am yr astudiaeth? </span><b>E-bostiwch y tîm &rarr;</b></span></a>
   </div>
+</div>
 
-  <h2>Your data</h2>
-  <ul class="plain">
-    <li>You are identified only by a participant code. Your name and address are never stored with your answers.</li>
-    <li>The app asks whether you are at home before each check-in. It does not track your location.</li>
-    <li>Check-ins are stored on a secure database in the UK and are used only for this research.</li>
-    <li>You can pause check-ins from the app at any time, and you can withdraw from the study without giving a reason by contacting the team.</li>
-  </ul>
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="checkin/icon-192.png" alt="" width="34" height="34"><span><b class="appname">HomePulse</b><small><span lang="en">SWITCH &middot; Swansea University</span><span lang="cy">SWITCH &middot; Prifysgol Abertawe</span></small></span></a>
+    <div class="langsw" role="group" aria-label="Language · Iaith">
+      <button type="button" lang="en" data-keep data-set="en" aria-pressed="true">English</button><button type="button" lang="cy" data-keep data-set="cy" aria-pressed="false">Cymraeg</button>
+    </div>
+    <nav class="pagenav" aria-label="On this page" data-a-en="On this page" data-a-cy="Ar y dudalen hon">
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#how"><span lang="en">How it works</span><span lang="cy">Sut mae’n gweithio</span></a></li>
+        <li><a href="#checkin"><span lang="en">Check-ins</span><span lang="cy">Y cwestiynau</span></a></li>
+        <li><a href="#race"><span lang="en">Bay Race</span><span lang="cy">Ras y Bae</span></a></li>
+        <li><a href="#who"><span lang="en">Who can join</span><span lang="cy">Pwy all ymuno</span></a></li>
+        <li><a href="#app"><span lang="en">Get the app</span><span lang="cy">Cael yr ap</span></a></li>
+        <li><a href="#data"><span lang="en">Your data</span><span lang="cy">Eich data</span></a></li>
+        <li><a href="#faq"><span lang="en">FAQ</span><span lang="cy">Holi ac ateb</span></a></li>
+        <li><a href="#contact"><span lang="en">Contact</span><span lang="cy">Cysylltu</span></a></li>
+      </ul>
+    </nav>
+    <a class="btn ghost sm signin" href="checkin/?start=signin"><svg class="ic"><use href="#i-signin"/></svg><span lang="en">Sign in</span><span lang="cy">Mewngofnodi</span></a>
+  </div>
+</header>
 
-  <p class="partners">Swansea University &middot; EPSRC SWITCH to Net Zero Buildings &middot; Energy Carbon &middot; Contact: Mohammad H. Mehraban, <a href="mailto:info@mehraban.uk">info@mehraban.uk</a></p>
+<main id="main" tabindex="-1">
+<div class="wrap">
+
+  <!-- ============================================================ hero -->
+  <section class="hero" id="top" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <h1 id="hero-title"><span class="name appname">HomePulse</span></h1>
+      <p class="name-note" lang="en">The SWITCH home comfort study · Swansea University</p><p class="name-note" lang="cy">Astudiaeth SWITCH ar gysur yn y cartref · Prifysgol Abertawe</p>
+      <p class="lede"><span lang="en">Tell us how warm or cool you feel at home, in a few taps on your phone, and help homes across Wales be heated around the people who live in them.</span><span lang="cy">Dywedwch wrthon ni pa mor gynnes neu oer rydych chi’n teimlo gartref, gydag ychydig o dapiau ar eich ffôn, a helpwch ni i wresogi cartrefi ledled Cymru mewn ffordd sy’n gweddu i’r bobl sy’n byw ynddyn nhw.</span></p>
+      <div class="ctas">
+        <a class="btn" href="checkin/?start=join"><span lang="en">Join the study</span><span lang="cy">Ymuno â’r astudiaeth</span><svg class="ic"><use href="#i-arrow"/></svg></a>
+        <a class="btn ghost" href="checkin/?start=signin"><svg class="ic"><use href="#i-signin"/></svg><span lang="en">Sign in</span><span lang="cy">Mewngofnodi</span></a>
+      </div>
+      <ul class="notes">
+        <li class="appnote-li" lang="cy"><svg class="ic"><use href="#i-info"/></svg><span>Mae’r ap ei hun yn Saesneg ar hyn o bryd, felly bydd y cwestiynau a’r botymau yn yr ap yn Saesneg.</span></li>
+        <li><svg class="ic"><use href="#i-signin"/></svg><span lang="en">Already taking part? <a href="checkin/?start=signin">Sign in</a> with your email and PIN.</span><span lang="cy">Eisoes yn cymryd rhan? <a href="checkin/?start=signin">Mewngofnodwch</a> gyda’ch e-bost a’ch rhif PIN.</span></li>
+        <li><svg class="ic"><use href="#i-phone"/></svg><span lang="en">On an iPhone? Add the app to your Home Screen first, then join from there. <a href="#app">How to get the app</a></span><span lang="cy">Ar iPhone? Ychwanegwch yr ap at eich sgrin gartref yn gyntaf, ac ymunwch o’r fan honno. <a href="#app">Sut mae cael yr ap</a></span></li>
+        <li><svg class="ic"><use href="#i-star"/></svg><span lang="en">Took part with the earlier check-in app? <a href="#faq-before">Here&rsquo;s what changes</a></span><span lang="cy">Wedi cymryd rhan gyda’r ap blaenorol? <a href="#faq-before">Dyma beth sy’n newid</a></span></li>
+      </ul>
+      <ul class="facts">
+        <li><span class="tile-ic"><svg class="ic"><use href="#i-clock"/></svg></span><span lang="en"><b>A minute or two</b><small>per check-in</small></span><span lang="cy"><b>Munud neu ddwy</b><small>i bob cofnod</small></span></li>
+        <li><span class="tile-ic"><svg class="ic"><use href="#i-target"/></svg></span><span lang="en"><b>4 a day</b><small>the daily goal</small></span><span lang="cy"><b>4 y dydd</b><small>y nod dyddiol</small></span></li>
+        <li><span class="tile-ic"><svg class="ic"><use href="#i-phone"/></svg></span><span lang="en"><b>Your phone</b><small>nothing to download</small></span><span lang="cy"><b>Eich ffôn</b><small>dim byd i’w lawrlwytho</small></span></li>
+      </ul>
+    </div>
+
+    <div class="hero-art" aria-hidden="true">
+      <!-- a South Wales terrace with slate roofs, the middle home warm and lit; a phone with the first question -->
+      <svg viewBox="0 0 440 322" width="440" height="322" focusable="false">
+        <g font-family="Inter,-apple-system,'Segoe UI',Arial,sans-serif">
+          <!-- the living-room sensor (e-ink) -->
+          <g transform="translate(18 26)">
+            <text lang="en" x="2" y="0" font-size="9" font-weight="600" fill="#5A6B77" letter-spacing=".06em">LIVING ROOM</text><text lang="cy" x="2" y="0" font-size="9" font-weight="600" fill="#5A6B77" letter-spacing=".06em">YSTAFELL FYW</text>
+            <rect x="0" y="8" width="104" height="44" rx="7" fill="#fff" stroke="#1C2A35" stroke-width="1.6"/>
+            <rect x="6" y="14" width="92" height="32" rx="3" fill="#E7EAE3"/>
+            <text x="13" y="37" font-family="'Source Serif 4',Georgia,serif" font-size="18" font-weight="700" fill="#1C2A35">19.5&#176;</text>
+            <text x="62" y="36.5" font-size="9.5" font-weight="600" fill="#3E4B55">58% RH</text>
+          </g>
+          <!-- chimney smoke from the warm home -->
+          <path d="M204 80c-6-7 6-12 0-19s6-12 0-19" stroke="#B9C8D3" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <!-- chimneys -->
+          <rect x="104" y="88" width="16" height="26" fill="#C9B9A6" stroke="#1C2A35" stroke-width="1.6"/>
+          <rect x="196" y="88" width="16" height="26" fill="#C9B9A6" stroke="#1C2A35" stroke-width="1.6"/>
+          <path d="M106 88v-6h5v6M113 88v-6h5v6M198 88v-6h5v6M205 88v-6h5v6" fill="#B5473A" stroke="#1C2A35" stroke-width="1.4" stroke-linejoin="round"/>
+          <!-- slate roof -->
+          <path d="M12 152 26 112H290l14 40z" fill="#62717E" stroke="#1C2A35" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M20 130h276M16 141h284" stroke="#7D8C98" stroke-width="1"/>
+          <!-- three homes -->
+          <rect x="20" y="152" width="92" height="148" fill="#EEF2F5" stroke="#1C2A35" stroke-width="1.6"/>
+          <rect x="112" y="152" width="92" height="148" fill="#E3F2EF" stroke="#1C2A35" stroke-width="1.6"/>
+          <rect x="204" y="152" width="92" height="148" fill="#F5EEE3" stroke="#1C2A35" stroke-width="1.6"/>
+          <!-- upstairs windows -->
+          <g stroke="#1C2A35" stroke-width="1.5">
+            <rect x="36" y="174" width="60" height="38" rx="2" fill="#E1EAF1"/><path d="M66 174v38M36 188h60"/>
+            <rect x="128" y="174" width="60" height="38" rx="2" fill="#F7D98E"/><path d="M158 174v38M128 188h60"/>
+            <rect x="220" y="174" width="60" height="38" rx="2" fill="#E1EAF1"/><path d="M250 174v38M220 188h60"/>
+            <path d="M32 215h68M124 215h68M216 215h68" stroke-width="2.4" stroke-linecap="round"/>
+          </g>
+          <!-- doors and front windows -->
+          <g stroke="#1C2A35" stroke-width="1.5">
+            <path d="M30 300v-50a12 12 0 0 1 24 0v50z" fill="#1F4E79"/>
+            <path d="M122 300v-50a12 12 0 0 1 24 0v50z" fill="#0E7B72"/>
+            <path d="M214 300v-50a12 12 0 0 1 24 0v50z" fill="#B5473A"/>
+            <rect x="64" y="242" width="38" height="40" rx="2" fill="#E1EAF1"/><path d="M83 242v40"/>
+            <rect x="156" y="242" width="38" height="40" rx="2" fill="#F7D98E"/><path d="M175 242v40"/>
+            <rect x="248" y="242" width="38" height="40" rx="2" fill="#E1EAF1"/><path d="M267 242v40"/>
+            <path d="M60 285h46M152 285h46M244 285h46" stroke-width="2.4" stroke-linecap="round"/>
+          </g>
+          <circle cx="49" cy="276" r="1.8" fill="#fff"/><circle cx="141" cy="276" r="1.8" fill="#fff"/><circle cx="233" cy="276" r="1.8" fill="#fff"/>
+          <path d="M6 300H306" stroke="#1C2A35" stroke-width="1.8" stroke-linecap="round"/>
+          <!-- the phone -->
+          <g transform="translate(318 78)">
+            <rect width="112" height="230" rx="20" fill="#1C2A35"/>
+            <rect x="5" y="5" width="102" height="220" rx="16" fill="#fff"/>
+            <rect x="41" y="11" width="30" height="6" rx="3" fill="#1C2A35"/>
+            <text x="13" y="36" font-size="7.5" font-weight="600" fill="#5A6B77" letter-spacing=".08em">RIGHT NOW</text>
+            <text x="13" y="51" font-family="'Source Serif 4',Georgia,serif" font-size="10.8" font-weight="700" fill="#1C2A35">How do you feel?</text>
+            <g font-size="8.5" font-weight="600" fill="#1C2A35">
+              <rect x="10" y="60" width="92" height="20" rx="6" fill="#F3F5F8"/><use href="#f3" x="14" y="63" width="14" height="14"/><text x="33" y="73">Hot</text>
+              <rect x="10" y="83" width="92" height="20" rx="6" fill="#F3F5F8"/><use href="#f2" x="14" y="86" width="14" height="14"/><text x="33" y="96">Warm</text>
+              <rect x="10" y="106" width="92" height="20" rx="6" fill="#F3F5F8"/><use href="#f1" x="14" y="109" width="14" height="14"/><text x="33" y="119">Slightly warm</text>
+              <rect x="10" y="129" width="92" height="20" rx="6" fill="#F3F5F8"/><use href="#f0" x="14" y="132" width="14" height="14"/><text x="33" y="142">Neutral</text>
+              <rect x="10" y="152" width="92" height="20" rx="6" fill="#D6EFEB" stroke="#0E7B72" stroke-width="1.4"/><use href="#f-1" x="14" y="155" width="14" height="14"/><text x="33" y="165">Slightly cool</text>
+              <circle cx="92" cy="162" r="5.5" fill="#0E7B72"/><path d="M89.4 162.2l1.8 1.8 3.4-3.6" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="10" y="175" width="92" height="20" rx="6" fill="#F3F5F8"/><use href="#f-2" x="14" y="178" width="14" height="14"/><text x="33" y="188">Cool</text>
+              <rect x="10" y="198" width="92" height="20" rx="6" fill="#F3F5F8"/><use href="#f-3" x="14" y="201" width="14" height="14"/><text x="33" y="211">Cold</text>
+            </g>
+          </g>
+          <!-- points chip -->
+          <g transform="translate(256 40)">
+            <rect width="104" height="30" rx="15" fill="#fff" stroke="#D5DEE5" stroke-width="1.2"/>
+            <g transform="translate(9 6) scale(.75)" fill="none" stroke="#0E7B72" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3.8l2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.6-5 2.6.9-5.6-4-3.9 5.6-.8z"/></g>
+            <text lang="en" x="34" y="19.5" font-size="11" font-weight="700" fill="#1C2A35">+10 points</text><text lang="cy" x="34" y="19.5" font-size="11" font-weight="700" fill="#1C2A35">+10 pwynt</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ============================================================ how it works -->
+  <section class="sec" id="how" aria-labelledby="how-title">
+    <div class="sec-head">
+      <p class="eyebrow"><span lang="en">How it works</span><span lang="cy">Sut mae’n gweithio</span></p>
+      <h2 id="how-title"><span lang="en">Five steps, a few minutes a day</span><span lang="cy">Pum cam, ychydig funudau’r dydd</span></h2>
+      <p class="sub"><span lang="en">There is no diary to keep. You answer a few quick questions on your phone while you are at home, and a small sensor records the room.</span><span lang="cy">Does dim dyddiadur i’w gadw. Rydych chi’n ateb ychydig o gwestiynau cyflym ar eich ffôn tra byddwch chi gartref, ac mae synhwyrydd bach yn cofnodi amodau’r ystafell.</span></p>
+    </div>
+    <div class="how">
+      <ol class="steps">
+        <li><div lang="en"><span class="label">Once &middot; a few minutes</span><h3>Join with a short home profile</h3><p>Tell us a little about yourself and your home: the kind of home, roughly how old it is, who lives there, how it is heated and controlled, its walls and windows, and which way your bedroom faces. Every question needs an answer, and most offer &ldquo;Not sure&rdquo;. You also choose a 4-digit PIN, so you can sign in on another phone later.</p></div><div lang="cy"><span class="label">Unwaith &middot; ychydig funudau</span><h3>Ymuno â phroffil byr o’ch cartref</h3><p>Dywedwch ychydig wrthon ni amdanoch chi a’ch cartref: pa fath o gartref yw e, tua pa mor hen yw e, pwy sy’n byw yno, sut mae’n cael ei wresogi a’i reoli, ei waliau a’i ffenestri, ac i ba gyfeiriad mae’ch ystafell wely’n wynebu. Mae angen ateb pob cwestiwn, ac mae modd ateb <span lang="en" data-keep>&ldquo;Not sure&rdquo;</span> (ddim yn siŵr) i’r rhan fwyaf ohonyn nhw. Byddwch chi hefyd yn dewis rhif PIN 4 digid, er mwyn i chi allu mewngofnodi ar ffôn arall yn nes ymlaen.</p></div></li>
+        <li><div lang="en"><span class="label">Usually within a day</span><h3>The team approves your sign-up</h3><p>The research team checks each sign-up and approves it, usually within a day. The app shows you when you can start.</p></div><div lang="cy"><span class="label">Fel arfer o fewn diwrnod</span><h3>Mae’r tîm yn cymeradwyo’ch cofrestriad</h3><p>Mae’r tîm ymchwil yn gwirio pob cofrestriad ac yn ei gymeradwyo, fel arfer o fewn diwrnod. Bydd yr ap yn dangos i chi pryd gallwch chi ddechrau.</p></div></li>
+        <li><div lang="en"><span class="label">For the whole study</span><h3>A small sensor in your home</h3><p>A temperature and humidity sensor goes in your main living space, where it takes a reading every few minutes. It has an e-ink display, needs no attention, and is collected at the end of the study.</p></div><div lang="cy"><span class="label">Drwy gydol yr astudiaeth</span><h3>Synhwyrydd bach yn eich cartref</h3><p>Bydd synhwyrydd tymheredd a lleithder yn cael ei osod yn eich prif ystafell fyw, lle bydd yn cymryd darlleniad bob ychydig funudau. Mae ganddo sgrin e-inc, does dim angen gwneud dim ag e, a chaiff ei gasglu ar ddiwedd yr astudiaeth.</p></div></li>
+        <li><div lang="en"><span class="label">A few times a day</span><h3>Short check-ins while you are at home</h3><p>Your phone reminds you during the hours you choose, at most about once an hour. Each check-in is a dozen or so short questions, mostly a single tap, about how you feel, what you are wearing and doing, and your room. The daily goal is 4 check-ins.</p></div><div lang="cy"><span class="label">Ychydig o weithiau’r dydd</span><h3>Cofnodion byr tra byddwch chi gartref</h3><p>Bydd eich ffôn yn eich atgoffa yn ystod yr oriau rydych chi’n eu dewis, tua unwaith yr awr ar y mwyaf. Mae pob cofnod yn cynnwys tua dwsin o gwestiynau byr, a’r rhan fwyaf yn un tap yn unig, am sut rydych chi’n teimlo, beth rydych chi’n ei wisgo a’i wneud, a’ch ystafell. Y nod dyddiol yw 4 cofnod.</p></div></li>
+        <li><div lang="en"><span class="label">Every week</span><h3>Points, badges and the Bay Race</h3><p>Every check-in earns points, and reaching your daily goal earns a bonus. Under an anonymous Welsh-wildlife name, you race the other participants along Swansea Bay, from the Marina to Mumbles lighthouse.</p></div><div lang="cy"><span class="label">Bob wythnos</span><h3>Pwyntiau, bathodynnau a Ras y Bae</h3><p>Mae pob cofnod yn ennill pwyntiau, ac mae cyrraedd eich nod dyddiol yn ennill pwyntiau ychwanegol. Dan ffugenw sy’n dod o fywyd gwyllt Cymru, byddwch chi’n rasio yn erbyn y cyfranogwyr eraill ar hyd Bae Abertawe, o’r Marina i oleudy’r Mwmbwls.</p></div></li>
+      </ol>
+      <aside class="card glance" aria-labelledby="glance-title">
+        <h3 id="glance-title"><span lang="en">At a glance</span><span lang="cy">Yn gryno</span></h3>
+        <dl>
+          <div><dt><span lang="en">Joining</span><span lang="cy">Ymuno</span></dt><dd><span lang="en">A few minutes, once</span><span lang="cy">Ychydig funudau, unwaith</span></dd></div>
+          <div><dt><span lang="en">Each check-in</span><span lang="cy">Pob cofnod</span></dt><dd><span lang="en">A minute or two, only while you are at home</span><span lang="cy">Munud neu ddwy, dim ond pan fyddwch chi gartref</span></dd></div>
+          <div><dt><span lang="en">Reminders</span><span lang="cy">Nodiadau atgoffa</span></dt><dd><span lang="en">In the hours you choose, never within 45 minutes of your last check-in</span><span lang="cy">Yn yr oriau rydych chi’n eu dewis, byth o fewn 45 munud i’ch cofnod diwethaf</span></dd></div>
+          <div><dt><span lang="en">At home</span><span lang="cy">Gartref</span></dt><dd><span lang="en">One small sensor in your living room</span><span lang="cy">Un synhwyrydd bach yn eich ystafell fyw</span></dd></div>
+          <div><dt><span lang="en">Taking a break</span><span lang="cy">Cymryd seibiant</span></dt><dd><span lang="en">Pause from the app any time</span><span lang="cy">Oedi o’r ap unrhyw bryd</span></dd></div>
+        </dl>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============================================================ what a check-in asks -->
+  <section class="sec" id="checkin" aria-labelledby="checkin-title">
+    <div class="sec-head">
+      <p class="eyebrow"><span lang="en">What a check-in asks</span><span lang="cy">Beth mae cofnod yn ei ofyn</span></p>
+      <h2 id="checkin-title"><span lang="en">Every question, and why it matters</span><span lang="cy">Pob cwestiwn, a pham mae’n bwysig</span></h2>
+      <p class="sub"><span lang="en">Each check-in asks the same questions in the same order. Most are a single tap, and there are no right or wrong answers: how you really feel is what counts.</span><span lang="cy">Mae pob cofnod yn gofyn yr un cwestiynau yn yr un drefn. Un tap yw’r rhan fwyaf, a does dim atebion cywir nac anghywir: sut rydych chi’n teimlo go iawn sy’n bwysig. Mae’r ap ei hun yn Saesneg ar hyn o bryd, felly bydd y cwestiynau’n ymddangos yn Saesneg yno.</span></p>
+    </div>
+
+    <div class="qgroups">
+      <div class="qgroup">
+        <h3><span lang="en">First, are you at home?</span><span lang="cy">Yn gyntaf, ydych chi gartref?</span></h3>
+        <ol class="qs">
+          <li class="q wide"><div>
+            <h4><span lang="en">Are you at home right now?</span><span lang="cy">Ydych chi gartref ar hyn o bryd?</span></h4>
+            <p class="opts"><span lang="en">&ldquo;Yes, for over an hour&rdquo;, &ldquo;Yes, I just got in&rdquo; or &ldquo;No, I&rsquo;m out&rdquo;. If you are out, the app pauses your reminders for 1, 3 or 5 hours, until 19:00, or until you are back.</span><span lang="cy">&ldquo;Ydw, ers dros awr&rdquo;, &ldquo;Ydw, newydd gyrraedd&rdquo; neu &ldquo;Nac ydw, dw i allan&rdquo;. Os ydych chi allan, bydd yr ap yn oedi’ch nodiadau atgoffa am 1, 3 neu 5 awr, tan 19:00, neu nes byddwch chi’n ôl.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">The study is about how your home feels, so check-ins only happen when you are in it. Someone who has just walked up the hill from the bus stop feels very different from someone who has been sitting by the fire all evening.</span><span lang="cy">Mae’r astudiaeth yn ymwneud â sut mae’ch cartref yn teimlo, felly dim ond pan fyddwch chi ynddo y byddwch chi’n cofnodi. Mae rhywun sydd newydd gerdded i fyny’r rhiw o’r safle bws yn teimlo’n wahanol iawn i rywun sydd wedi bod yn eistedd wrth y tân ers oriau.</span></p>
+          </div></li>
+        </ol>
+      </div>
+
+      <div class="qgroup">
+        <h3><span lang="en">How you feel</span><span lang="cy">Sut rydych chi’n teimlo</span></h3>
+        <ol class="qs">
+          <li class="q wide"><div>
+            <h4><span lang="en">How do you feel right now?</span><span lang="cy">Sut rydych chi’n teimlo ar hyn o bryd?</span></h4>
+            <p class="opts"><span lang="en">Seven steps from Cold to Hot, each with its own face in the app:</span><span lang="cy">Saith cam o Oer i Boeth, pob un â’i wyneb ei hun yn yr ap:</span></p>
+            <ul class="scale" aria-label="The seven answers, from cold to hot" data-a-en="The seven answers, from cold to hot" data-a-cy="Y saith ateb, o oer i boeth">
+              <li><svg aria-hidden="true"><use href="#f-3"/></svg><span><span lang="en">Cold</span><span lang="cy">Oer</span> <span class="n">&minus;3</span></span></li>
+              <li><svg aria-hidden="true"><use href="#f-2"/></svg><span><span lang="en">Cool</span><span lang="cy">Oeraidd</span> <span class="n">&minus;2</span></span></li>
+              <li><svg aria-hidden="true"><use href="#f-1"/></svg><span><span lang="en">Slightly cool</span><span lang="cy">Ychydig yn oeraidd</span> <span class="n">&minus;1</span></span></li>
+              <li><svg aria-hidden="true"><use href="#f0"/></svg><span><span lang="en">Neutral</span><span lang="cy">Niwtral</span> <span class="n">0</span></span></li>
+              <li><svg aria-hidden="true"><use href="#f1"/></svg><span><span lang="en">Slightly warm</span><span lang="cy">Ychydig yn gynnes</span> <span class="n">+1</span></span></li>
+              <li><svg aria-hidden="true"><use href="#f2"/></svg><span><span lang="en">Warm</span><span lang="cy">Cynnes</span> <span class="n">+2</span></span></li>
+              <li><svg aria-hidden="true"><use href="#f3"/></svg><span><span lang="en">Hot</span><span lang="cy">Poeth</span> <span class="n">+3</span></span></li>
+            </ul>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">This is the heart of the study. The same room can feel fine to one person and chilly to the next, and that difference is exactly what a heating system that knows its people could learn.</span><span lang="cy">Dyma galon yr astudiaeth. Gall yr un ystafell deimlo’n iawn i un person ac yn oer i’r nesaf, a dyna’n union y gwahaniaeth y gallai system wresogi sy’n adnabod ei phobl ei ddysgu.</span></p>
+          </div></li>
+          <li class="q"><div>
+            <h4><span lang="en">Would you like to be&hellip;</span><span lang="cy">Hoffech chi fod&hellip;</span></h4>
+            <p class="opts"><span lang="en">Cooler, warmer, or no change.</span><span lang="cy">Yn oerach, yn gynhesach, neu dim newid.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Feeling slightly cool is not the same as wanting to be warmer. Plenty of people are happy a little on the cool side.</span><span lang="cy">Dydy teimlo ychydig yn oeraidd ddim yr un peth â bod eisiau bod yn gynhesach. Mae digon o bobl yn hapus o fod ychydig ar yr ochr oer.</span></p>
+          </div></li>
+          <li class="q"><div>
+            <h4><span lang="en">Are these conditions acceptable to you?</span><span lang="cy">Ydy’r amodau hyn yn dderbyniol i chi?</span></h4>
+            <p class="opts"><span lang="en">Acceptable, or not acceptable.</span><span lang="cy">Derbyniol, neu ddim yn dderbyniol.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">It shows where &ldquo;comfortable enough&rdquo; ends and &ldquo;I need to change something&rdquo; begins.</span><span lang="cy">Mae’n dangos ble mae &ldquo;digon cyfforddus&rdquo; yn gorffen a ble mae &ldquo;mae angen i mi newid rhywbeth&rdquo; yn dechrau.</span></p>
+          </div></li>
+        </ol>
+      </div>
+
+      <div class="qgroup">
+        <h3><span lang="en">What you are wearing and doing</span><span lang="cy">Beth rydych chi’n ei wisgo a’i wneud</span></h3>
+        <ol class="qs">
+          <li class="q"><div>
+            <h4><span lang="en">What are you wearing?</span><span lang="cy">Beth rydych chi’n ei wisgo?</span><small><span lang="en">Tap everything you have on, blankets too.</span><span lang="cy">Tapiwch bopeth sydd amdanoch chi, blancedi hefyd.</span></small></h4>
+            <p class="opts"><span lang="en">T-shirt, long sleeves, a thick jumper, a hoodie or fleece, trousers, joggers, shorts, a skirt or dress, pyjamas, a light jacket or a winter coat, socks, slippers, a blanket or a duvet. &ldquo;Same as last time&rdquo; fills it in with one tap.</span><span lang="cy">Crys-T, llewys hir, siwmper drwchus, hwdi neu gnu, trowsus, trowsus loncian, siorts, sgert neu ffrog, pyjamas, siaced ysgafn neu got aeaf, sanau, sliperi, blanced neu gwilt. Mae <span lang="en" data-keep>&ldquo;Same as last time&rdquo;</span> yn llenwi’r cyfan ag un tap.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Clothes are insulation. A jumper, or a blanket on the sofa, changes how warm you feel at the same room temperature, and adding a layer is often what people do before they reach for the thermostat.</span><span lang="cy">Mae dillad yn inswleiddio. Mae siwmper, neu flanced ar y soffa, yn newid pa mor gynnes rydych chi’n teimlo ar yr un tymheredd ystafell, ac mae rhoi haen arall amdanoch yn aml yn rhywbeth mae pobl yn ei wneud cyn troi at y thermostat.</span></p>
+          </div></li>
+          <li class="q"><div>
+            <h4><span lang="en">What have you been doing for the last 15 minutes?</span><span lang="cy">Beth rydych chi wedi bod yn ei wneud dros y 15 munud diwethaf?</span></h4>
+            <p class="opts"><span lang="en">Sleeping, lying down, sitting relaxed, desk work, standing, cooking or housework, walking about, or exercising.</span><span lang="cy">Cysgu, gorwedd, eistedd yn hamddenol, gwaith desg, sefyll, coginio neu waith tŷ, cerdded o gwmpas, neu wneud ymarfer corff.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Moving about warms you up. Fifteen minutes of hoovering can make a cool room feel just right.</span><span lang="cy">Mae symud o gwmpas yn eich cynhesu. Gall chwarter awr o hwfro wneud i ystafell oeraidd deimlo’n berffaith.</span></p>
+          </div></li>
+          <li class="q wide"><div>
+            <h4><span lang="en">Which room are you in?</span><span lang="cy">Ym mha ystafell rydych chi?</span></h4>
+            <p class="opts"><span lang="en">The living room or a bedroom, the kitchen, a home office, the bathroom, or somewhere else.</span><span lang="cy">Yr ystafell fyw neu ystafell wely, y gegin, swyddfa gartref, yr ystafell ymolchi, neu rywle arall.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">The sensor is in your living room, so we need to know whether you are sitting next to it or in a colder bedroom upstairs.</span><span lang="cy">Mae’r synhwyrydd yn eich ystafell fyw, felly mae angen i ni wybod a ydych chi’n eistedd wrth ei ymyl neu mewn ystafell wely oerach i fyny’r grisiau.</span></p>
+          </div></li>
+        </ol>
+      </div>
+
+      <div class="qgroup">
+        <h3><span lang="en">Your room and your heating</span><span lang="cy">Eich ystafell a’ch gwres</span></h3>
+        <ol class="qs">
+          <li class="q"><div>
+            <h4><span lang="en">Can you feel air moving around you?</span><span lang="cy">Allwch chi deimlo aer yn symud o’ch cwmpas?</span></h4>
+            <p class="opts"><span lang="en">&ldquo;No, the air feels still&rdquo;, &ldquo;Yes, a little&rdquo; or &ldquo;Yes, clearly&rdquo;.</span><span lang="cy">&ldquo;Na, mae’r aer yn teimlo’n llonydd&rdquo;, &ldquo;Gallaf, ychydig&rdquo; neu &ldquo;Gallaf, yn glir&rdquo;.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Draughts from old windows, doors and floorboards make a room feel colder than the thermometer says.</span><span lang="cy">Mae drafftiau o hen ffenestri, drysau ac estyll llawr yn gwneud i ystafell deimlo’n oerach nag y mae’r thermomedr yn ei ddweud.</span></p>
+          </div></li>
+          <li class="q"><div>
+            <h4><span lang="en">Is the sun shining on you?</span><span lang="cy">Ydy’r haul yn tywynnu arnoch chi?</span></h4>
+            <p class="opts"><span lang="en">Yes, no, or it&rsquo;s dark.</span><span lang="cy">Ydy, nac ydy, neu mae’n dywyll.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Sun through a window can warm you even when the air is cool, which is why a south-facing room can feel so different from a north-facing one.</span><span lang="cy">Gall haul drwy ffenestr eich cynhesu hyd yn oed pan fydd yr aer yn oeraidd, a dyna pam y gall ystafell sy’n wynebu’r de deimlo mor wahanol i un sy’n wynebu’r gogledd.</span></p>
+          </div></li>
+          <li class="q"><div>
+            <h4><span lang="en">Is your heating on right now?</span><span lang="cy">Ydy’ch gwres ymlaen ar hyn o bryd?</span></h4>
+            <p class="opts"><span lang="en">Yes, no, or not sure. If it is on, the app asks which heating is on (from the heating you told us about when you joined) and how long it has been on, from &ldquo;less than 30 minutes&rdquo; to &ldquo;more than 4 hours&rdquo;.</span><span lang="cy">Ydy, nac ydy, neu ddim yn siŵr. Os yw’r gwres ymlaen, bydd yr ap yn gofyn pa wres sydd ymlaen (o’r gwres y sonioch chi amdano wrth ymuno) ac ers faint mae ymlaen, o lai na 30 munud i fwy na 4 awr.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">It shows how heating is really used at home. Older homes with thick stone or brick walls can take a long time to warm up, so how long the heating has been on matters as much as whether it is on.</span><span lang="cy">Mae’n dangos sut mae gwres yn cael ei ddefnyddio go iawn yn y cartref. Gall hen dai â waliau trwchus o gerrig neu frics gymryd amser hir i gynhesu, felly mae’r amser mae’r gwres wedi bod ymlaen yr un mor bwysig â’r ffaith ei fod ymlaen.</span></p>
+          </div></li>
+          <li class="q"><div>
+            <h4><span lang="en">What does your thermostat show?</span><span lang="cy">Beth mae’ch thermostat yn ei ddangos?</span></h4>
+            <p class="opts"><span lang="en">Only asked if your thermostat shows the room temperature on a screen. Read the room temperature, not the setting; if it shows two numbers, the room temperature is usually the bigger one. &ldquo;I can&rsquo;t see it right now&rdquo; is always fine.</span><span lang="cy">Dim ond os yw’ch thermostat yn dangos tymheredd yr ystafell ar sgrin y bydd hwn yn cael ei ofyn. Darllenwch dymheredd yr ystafell, nid y gosodiad; os oes dau rif, tymheredd yr ystafell yw’r rhif mwyaf fel arfer. Mae <span lang="en" data-keep>&ldquo;I can&rsquo;t see it right now&rdquo;</span> (alla i mo’i weld ar hyn o bryd) yn iawn bob amser.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">A thermostat is often in the hall, away from where you sit. Comparing its reading with the sensor and with how you feel shows whether the thermostat is &ldquo;feeling&rdquo; the same home that you are.</span><span lang="cy">Mae thermostat yn aml yn y cyntedd, i ffwrdd o ble rydych chi’n eistedd. Mae cymharu ei ddarlleniad â’r synhwyrydd ac â sut rydych chi’n teimlo yn dangos a yw’r thermostat yn &ldquo;teimlo&rdquo; yr un cartref â chi.</span></p>
+          </div></li>
+          <li class="q wide"><div>
+            <h4><span lang="en">Touch the nearest outside wall with the back of your hand. How does it feel?</span><span lang="cy">Cyffyrddwch â’r wal allanol agosaf â chefn eich llaw. Sut mae’n teimlo?</span><small><span lang="en">An outside wall has the outdoors on the other side.</span><span lang="cy">Wal allanol yw wal sydd â’r awyr agored yr ochr arall iddi.</span></small></h4>
+            <p class="opts"><span lang="en">Cold, cool, neither cold nor warm, warm, or &ldquo;I can&rsquo;t reach one&rdquo;.</span><span lang="cy">Oer, oeraidd, ddim yn oer nac yn gynnes, cynnes, neu <span lang="en" data-keep>&ldquo;I can&rsquo;t reach one&rdquo;</span> (alla i ddim cyrraedd un).</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Cold walls draw heat from your body even when the air is warm. Many homes in South Wales have solid stone or brick walls with no cavity to fill, and a cold wall can explain why a room feels chilly when the thermostat says it should not.</span><span lang="cy">Mae waliau oer yn tynnu gwres o’ch corff hyd yn oed pan fydd yr aer yn gynnes. Mae gan lawer o gartrefi yn Ne Cymru waliau solet o gerrig neu frics heb geudod i’w lenwi, a gall wal oer esbonio pam mae ystafell yn teimlo’n oer pan fydd y thermostat yn dweud na ddylai.</span></p>
+          </div></li>
+        </ol>
+      </div>
+
+      <div class="qgroup">
+        <h3><span lang="en">The last 30 minutes</span><span lang="cy">Y 30 munud diwethaf</span></h3>
+        <ol class="qs">
+          <li class="q"><div>
+            <h4><span lang="en">In the last 30 minutes, did you do any of these?</span><span lang="cy">Yn y 30 munud diwethaf, wnaethoch chi unrhyw un o’r rhain?</span><small><span lang="en">Only things you did, not how things are now.</span><span lang="cy">Dim ond pethau a wnaethoch chi, nid sut mae pethau nawr.</span></small></h4>
+            <p class="opts"><span lang="en">Opened or closed a window or a door, turned the heating up or down, put on or took off a layer, got a blanket, turned a fan on, drew the curtains or blinds, or moved to another room. Or none of these.</span><span lang="cy">Agor neu gau ffenestr neu ddrws, troi’r gwres i fyny neu i lawr, rhoi haen amdanoch neu dynnu haen, nôl blanced, troi ffan ymlaen, cau’r llenni neu’r bleindiau, neu symud i ystafell arall. Neu ddim un o’r rhain.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">What people do to get comfortable says as much as what they tell us. It is how a home could one day learn to do it for you.</span><span lang="cy">Mae’r hyn mae pobl yn ei wneud i fod yn gyfforddus yn dweud cymaint â’r hyn maen nhw’n ei ddweud wrthon ni. Dyma sut gallai cartref ddysgu un diwrnod i wneud hynny drosoch chi.</span></p>
+          </div></li>
+          <li class="q"><div>
+            <h4><span lang="en">In the last 30 minutes, did you have or feel any of these?</span><span lang="cy">Yn y 30 munud diwethaf, gawsoch chi neu deimloch chi unrhyw un o’r rhain?</span></h4>
+            <p class="opts"><span lang="en">A hot or cold drink, something to eat, feeling hungry, tired or unwell. Or none of these.</span><span lang="cy">Diod boeth neu oer, rhywbeth i’w fwyta, teimlo eisiau bwyd, wedi blino neu’n anhwylus. Neu ddim un o’r rhain.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">A cup of tea warms you for a while, and feeling tired or unwell can make you feel the cold more.</span><span lang="cy">Mae paned yn eich cynhesu am dipyn, a gall teimlo wedi blino neu’n anhwylus wneud i chi deimlo’r oerfel yn fwy.</span></p>
+          </div></li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="after">
+      <span class="tile-ic"><svg class="ic"><use href="#i-review"/></svg></span>
+      <p><span lang="en"><b>Then check and save.</b> A last screen shows all your answers, and you can change any of them before you save. Changed your mind straight after saving? Tap Undo within a few seconds.</span><span lang="cy"><b>Yna, gwiriwch a chadwch.</b> Mae sgrin olaf yn dangos eich holl atebion, a gallwch chi newid unrhyw un ohonyn nhw cyn cadw. Wedi newid eich meddwl yn syth ar ôl cadw? Tapiwch <span lang="en" data-keep>&ldquo;Undo&rdquo;</span> o fewn ychydig eiliadau.</span></p>
+    </div>
+  </section>
+
+  <!-- ============================================================ points, badges and the Bay Race -->
+  <section class="sec" id="race" aria-labelledby="race-title">
+    <div class="sec-head">
+      <p class="eyebrow"><span lang="en">Points, badges and the Bay Race</span><span lang="cy">Pwyntiau, bathodynnau a Ras y Bae</span></p>
+      <h2 id="race-title"><span lang="en">A little friendly competition</span><span lang="cy">Ychydig o gystadleuaeth gyfeillgar</span></h2>
+      <p class="sub"><span lang="en">Check-ins earn points, badges mark the milestones, and the Bay Race shows how your week is going, all under a name that is not yours.</span><span lang="cy">Mae cofnodion yn ennill pwyntiau, mae bathodynnau’n nodi’r cerrig milltir, ac mae Ras y Bae yn dangos sut mae’ch wythnos yn mynd, a hynny i gyd dan ffugenw.</span></p>
+    </div>
+
+    <ul class="pts">
+      <li><b>10</b><span><span lang="en">points for every check-in<small>that counts (see below)</small></span><span lang="cy">pwynt am bob cofnod<small>sy’n cyfrif (gweler isod)</small></span></span></li>
+      <li><b>+20</b><span><span lang="en">for each goal day<small>a day with 4 check-ins</small></span><span lang="cy">am bob diwrnod nod<small>diwrnod â 4 cofnod</small></span></span></li>
+      <li><b>+50</b><span><span lang="en">for a full week<small>7 goal days, Monday to Sunday</small></span><span lang="cy">am wythnos lawn<small>7 diwrnod nod, o ddydd Llun i ddydd Sul</small></span></span></li>
+    </ul>
+    <p class="fine"><span lang="en">A check-in counts when it is at least 45 minutes after your previous one, and the first 15 of each day count. The app shows your points for this week, this month and since you joined.</span><span lang="cy">Mae cofnod yn cyfrif os yw o leiaf 45 munud ar ôl eich un blaenorol, ac mae’r 15 cyntaf bob dydd yn cyfrif. Mae’r ap yn dangos eich pwyntiau ar gyfer yr wythnos hon, y mis hwn ac ers i chi ymuno.</span></p>
+
+    <h3 class="sub-h"><span lang="en">The Bay Race</span><span lang="cy">Ras y Bae</span></h3>
+    <div class="prose" lang="en">
+      <p>Everyone taking part gets an anonymous name from Welsh wildlife, such as Puffin, Red Kite, Grey Seal or Gower Pony. It is chosen at random and is never made from your name or your participant code.</p>
+      <p>In the app&rsquo;s Race tab, the runners travel along Swansea Bay, from Swansea Marina past Blackpill and Oystermouth to Mumbles lighthouse. Reach your goal every day and earn the full-week bonus, and you arrive at the lighthouse. There is a race for this week and one for this month.</p>
+    </div>
+    <div class="prose" lang="cy">
+      <p>Mae pawb sy’n cymryd rhan yn cael ffugenw o fyd natur Cymru, fel Pâl (<span lang="en" data-keep>Puffin</span>), Barcud Coch (<span lang="en" data-keep>Red Kite</span>), Morlo Llwyd (<span lang="en" data-keep>Grey Seal</span>) neu Ferlen Gŵyr (<span lang="en" data-keep>Gower Pony</span>). Caiff ei ddewis ar hap, a dydy e byth yn cael ei wneud o’ch enw na’ch cod cyfranogwr. Yn y ras ei hun, mae’r enwau’n ymddangos yn Saesneg.</p>
+      <p>Yn nhab <span lang="en" data-keep>&ldquo;Race&rdquo;</span> yr ap, mae’r rhedwyr yn teithio ar hyd Bae Abertawe, o Farina Abertawe heibio i Blackpill ac Ystumllwynarth i oleudy’r Mwmbwls. Cyrhaeddwch eich nod bob dydd ac enillwch fonws yr wythnos lawn, a byddwch chi’n cyrraedd y goleudy. Mae ras ar gyfer yr wythnos hon ac un ar gyfer y mis hwn.</p>
+    </div>
+    <figure class="race">
+      <svg viewBox="0 0 640 300" width="640" height="300" role="img" aria-label="The Bay Race, an example week. A drawing of Swansea Bay: the route runs along the shore from Swansea Marina, the start, past Blackpill and Oystermouth, to Mumbles lighthouse, the finish. Five runners are spread along it; you are second, behind Puffin." data-a-en="The Bay Race, an example week. A drawing of Swansea Bay: the route runs along the shore from Swansea Marina, the start, past Blackpill and Oystermouth, to Mumbles lighthouse, the finish. Five runners are spread along it; you are second, behind Puffin." data-a-cy="Ras y Bae, wythnos enghreifftiol. Llun o Fae Abertawe: mae’r llwybr yn dilyn y lan o Farina Abertawe, y dechrau, heibio i Blackpill ac Ystumllwynarth, i oleudy’r Mwmbwls, y diwedd. Mae pum rhedwr ar ei hyd; chi sy’n ail, y tu ôl i Puffin.">
+        <g font-family="Inter,-apple-system,'Segoe UI',Arial,sans-serif">
+          <rect width="640" height="300" fill="#E4EEF4"/>
+          <!-- land, north and west of the bay -->
+          <path d="M640 0V52L586 58C480 64 338 92 258 146C178 200 128 236 104 268L82 276L40 282L0 287V0Z" fill="#EDF2EA"/>
+          <path d="M640 52L586 58C480 64 338 92 258 146C178 200 128 236 104 268L82 276L40 282L0 287" fill="none" stroke="#9DB0BC" stroke-width="1.3"/>
+          <!-- a few waves -->
+          <g fill="none" stroke="#C3D6E3" stroke-width="1.6" stroke-linecap="round">
+            <path d="M468 140q6-5 12 0t12 0"/><path d="M540 206q6-5 12 0t12 0"/><path d="M356 238q6-5 12 0t12 0"/><path d="M230 274q6-5 12 0t12 0"/><path d="M590 120q6-5 12 0t12 0"/>
+          </g>
+          <text lang="en" class="bay" x="430" y="196" font-family="'Source Serif 4',Georgia,serif" font-style="italic" font-size="17" fill="#5F7F94">Swansea Bay</text><text lang="cy" class="bay" x="430" y="196" font-family="'Source Serif 4',Georgia,serif" font-style="italic" font-size="17" fill="#5F7F94">Bae Abertawe</text>
+          <!-- the route along the shore -->
+          <path d="M586 58C480 64 338 92 258 146C178 200 128 236 104 268" fill="none" stroke="#CDE8E3" stroke-width="10" stroke-linecap="round"/>
+          <path d="M586 58C480 64 338 92 258 146C178 200 128 236 104 268" fill="none" stroke="#0E7B72" stroke-width="1.6" stroke-dasharray="2 6" stroke-linecap="round"/>
+          <!-- places -->
+          <g fill="#1C2A35" font-weight="600">
+            <text lang="en" class="pl-s" x="574" y="19" text-anchor="end" font-size="9.5" fill="#0E7B72" letter-spacing=".08em">START</text><text lang="cy" class="pl-s" x="574" y="19" text-anchor="end" font-size="9.5" fill="#0E7B72" letter-spacing=".08em">DECHRAU</text>
+            <text lang="en" class="pl" x="574" y="38" text-anchor="end" font-size="12">Swansea Marina</text><text lang="cy" class="pl" x="574" y="38" text-anchor="end" font-size="12">Marina Abertawe</text>
+            <circle cx="292.8" cy="125.9" r="3" fill="#1C2A35"/><text class="pl" x="286" y="104" text-anchor="end" font-size="12">Blackpill</text>
+            <circle cx="158.5" cy="216.4" r="3" fill="#1C2A35"/><text lang="en" class="pl" x="148" y="200" text-anchor="end" font-size="12">Oystermouth</text><text lang="cy" class="pl pl-l" x="148" y="200" text-anchor="end" font-size="12">Ystumllwynarth</text>
+            <text lang="en" class="pl-s" x="124" y="254" font-size="9.5" fill="#0E7B72" letter-spacing=".08em">FINISH</text><text lang="cy" class="pl-s" x="124" y="254" font-size="9.5" fill="#0E7B72" letter-spacing=".08em">DIWEDD</text>
+            <text lang="en" class="pl" x="124" y="277" font-size="12">Mumbles lighthouse</text><text lang="cy" class="pl" x="124" y="277" font-size="12">Goleudy’r Mwmbwls</text>
+          </g>
+          <!-- start flag and the lighthouse -->
+          <path d="M586 58V36M586 37h12l-3 4 3 4h-12" fill="#0E7B72" stroke="#1C2A35" stroke-width="1.3" stroke-linejoin="round"/>
+          <ellipse cx="104" cy="270" rx="12" ry="4.5" fill="#EDF2EA" stroke="#9DB0BC" stroke-width="1.2"/>
+          <g transform="translate(104 268)" stroke="#1C2A35" stroke-width="1.3" stroke-linejoin="round">
+            <path d="M-4.5 0-3 -17H3L4.5 0Z" fill="#fff"/><rect x="-3.6" y="-23" width="7.2" height="6" fill="#F2BB52"/><path d="M-4.5-23 0-27.5 4.5-23Z" fill="#1C2A35"/>
+          </g>
+          <!-- runners (an example week, Thursday evening: target 470 points) -->
+          <g font-size="9.5" font-weight="700" fill="#fff" text-anchor="middle">
+            <g transform="translate(505.7 66.1)"><g class="tk"><circle r="13" fill="#6B5CA5" stroke="#fff" stroke-width="2"/><text y="3.4">DI</text></g></g>
+            <g transform="translate(448.7 75.8)"><g class="tk"><circle r="13" fill="#3D6FB6" stroke="#fff" stroke-width="2"/><text y="3.4">OT</text></g></g>
+            <g transform="translate(381.8 92.2)"><g class="tk"><circle r="13" fill="#B5473A" stroke="#fff" stroke-width="2"/><text y="3.4">RK</text></g></g>
+            <g transform="translate(328.1 110.3)"><g class="tk"><circle r="18" fill="#fff" stroke="#0E7B72" stroke-width="2.2"/><circle r="13" fill="#0E7B72"/><text y="3.4">GS</text><text lang="en" x="9" y="36" fill="#0E7B72" font-size="11.5">You</text><text lang="cy" x="9" y="36" fill="#0E7B72" font-size="11.5">Chi</text></g></g>
+            <g transform="translate(256.2 147.2)"><g class="tk"><circle r="13" fill="#C2852B" stroke="#fff" stroke-width="2"/><text y="3.4">PU</text></g></g>
+          </g>
+        </g>
+      </svg>
+      <figcaption class="board">
+        <span class="label"><span lang="en">Example &middot; this week</span><span lang="cy">Enghraifft &middot; yr wythnos hon</span></span>
+        <ol class="runners">
+          <li><span class="rk">1</span><span class="tok" style="background:#C2852B">PU</span><span class="who"><span lang="en" data-keep>Puffin</span></span><span class="pt">300</span></li>
+          <li class="me"><span class="rk">2</span><span class="tok" style="background:#0E7B72">GS</span><span class="who"><span lang="en" data-keep>Grey Seal</span> <span lang="en">(you)</span><span lang="cy">(chi)</span></span><span class="pt">230</span></li>
+          <li><span class="rk">3</span><span class="tok" style="background:#B5473A">RK</span><span class="who"><span lang="en" data-keep>Red Kite</span></span><span class="pt">180</span></li>
+          <li><span class="rk">4</span><span class="tok" style="background:#3D6FB6">OT</span><span class="who"><span lang="en" data-keep>Otter</span></span><span class="pt">120</span></li>
+          <li><span class="rk">5</span><span class="tok" style="background:#6B5CA5">DI</span><span class="who"><span lang="en" data-keep>Dipper</span></span><span class="pt">70</span></li>
+        </ol>
+        <p class="status"><span lang="en">You&rsquo;re 2nd of 5 this week &middot; 70 points behind Puffin</span><span lang="cy">Rydych chi’n 2il o 5 yr wythnos hon &middot; 70 pwynt y tu ôl i <span lang="en" data-keep>Puffin</span></span></p>
+      </figcaption>
+    </figure>
+    <p class="fine"><span lang="en"><b>Rather not be seen?</b> Turn off &ldquo;Show me in the Bay Race&rdquo; in the app&rsquo;s Settings. The other runners will no longer see you, and you can still follow the race and your own place in it.</span><span lang="cy"><b>Byddai’n well gennych chi beidio â chael eich gweld?</b> Diffoddwch <span lang="en" data-keep>&ldquo;Show me in the Bay Race&rdquo;</span> ar y dudalen <span lang="en" data-keep>&ldquo;Settings&rdquo;</span> yn yr ap. Fydd y rhedwyr eraill ddim yn eich gweld chi mwyach, a gallwch chi ddal i ddilyn y ras a’ch lle chi ynddi.</span></p>
+
+    <h3 class="sub-h"><span lang="en">Badges</span><span lang="cy">Bathodynnau</span></h3>
+    <p class="fine"><span lang="en">Badges mark the milestones along the way. They are just for you: nobody else sees them.</span><span lang="cy">Mae bathodynnau’n nodi’r cerrig milltir ar hyd y ffordd. Maen nhw i chi yn unig: does neb arall yn eu gweld nhw. Yn yr ap, mae eu henwau yn Saesneg.</span></p>
+    <ul class="badges">
+      <li><span class="tile-ic"><svg class="ic"><use href="#i-home"/></svg></span><b lang="cy" data-keep>Croeso!</b><span class="bh"><span lang="en">Your first check-in (<i lang="cy" data-keep>croeso</i> is Welsh for welcome)</span><span lang="cy">Eich cofnod cyntaf</span></span></li>
+      <li><span class="tile-ic"><svg class="ic"><use href="#i-target"/></svg></span><b><span lang="en">Daily goal</span><span lang="cy">Nod dyddiol <small lang="en" data-keep>(Daily goal)</small></span></b><span class="bh"><span lang="en">Your first day with 4 check-ins</span><span lang="cy">Eich diwrnod cyntaf â 4 cofnod</span></span></li>
+      <li><span class="tile-ic"><svg class="ic"><use href="#i-flame"/></svg></span><b><span lang="en">Three in a row</span><span lang="cy">Tri yn olynol <small lang="en" data-keep>(Three in a row)</small></span></b><span class="bh"><span lang="en">3 goal days running</span><span lang="cy">3 diwrnod nod yn olynol</span></span></li>
+      <li><span class="tile-ic"><svg class="ic"><use href="#i-cal"/></svg></span><b><span lang="en">Full week</span><span lang="cy">Wythnos lawn <small lang="en" data-keep>(Full week)</small></span></b><span class="bh"><span lang="en">7 goal days, Monday to Sunday</span><span lang="cy">7 diwrnod nod, o ddydd Llun i ddydd Sul</span></span></li>
+      <li><span class="tile-ic"><svg class="ic"><use href="#i-sunrise"/></svg></span><b><span lang="en">Early bird</span><span lang="cy">Aderyn cynnar <small lang="en" data-keep>(Early bird)</small></span></b><span class="bh"><span lang="en">A check-in before 08:00</span><span lang="cy">Cofnod cyn 08:00</span></span></li>
+      <li><span class="tile-ic"><svg class="ic"><use href="#i-moon"/></svg></span><b><span lang="en">Night owl</span><span lang="cy">Tylluan nos <small lang="en" data-keep>(Night owl)</small></span></b><span class="bh"><span lang="en">A check-in after 22:00</span><span lang="cy">Cofnod ar ôl 22:00</span></span></li>
+      <li><span class="tile-ic"><span class="num">50</span></span><b><span lang="en">Half century</span><span lang="cy">Hanner cant <small lang="en" data-keep>(Half century)</small></span></b><span class="bh"><span lang="en">50 check-ins</span><span lang="cy">50 cofnod</span></span></li>
+      <li><span class="tile-ic"><span class="num">100</span></span><b><span lang="en">Centurion</span><span lang="cy">Canwriad <small lang="en" data-keep>(Centurion)</small></span></b><span class="bh"><span lang="en">100 check-ins</span><span lang="cy">100 cofnod</span></span></li>
+      <li><span class="tile-ic"><svg class="ic"><use href="#i-umbrella"/></svg></span><b><span lang="en">Rain or shine</span><span lang="cy">Glaw neu hindda <small lang="en" data-keep>(Rain or shine)</small></span></b><span class="bh"><span lang="en">Check-ins on 10 different days</span><span lang="cy">Cofnodion ar 10 diwrnod gwahanol</span></span></li>
+      <li><span class="tile-ic"><svg class="ic"><use href="#i-wall"/></svg></span><b><span lang="en">Wall watcher</span><span lang="cy">Gwyliwr waliau <small lang="en" data-keep>(Wall watcher)</small></span></b><span class="bh"><span lang="en">10 answers about the outside wall</span><span lang="cy">10 ateb am y wal allanol</span></span></li>
+    </ul>
+  </section>
+
+  <!-- ============================================================ who can take part -->
+  <section class="sec" id="who" aria-labelledby="who-title">
+    <div class="sec-head">
+      <p class="eyebrow"><span lang="en">Who can take part</span><span lang="cy">Pwy all gymryd rhan</span></p>
+      <h2 id="who-title"><span lang="en">Adults in Wales with a smartphone</span><span lang="cy">Oedolion yng Nghymru sydd â ffôn clyfar</span></h2>
+      <p class="sub"><span lang="en">You do not need a new home, a smart thermostat or any technical know-how.</span><span lang="cy">Does dim angen cartref newydd, thermostat clyfar nac unrhyw wybodaeth dechnegol arnoch chi.</span></p>
+    </div>
+    <div class="who-grid">
+      <div class="card">
+        <h3 id="who-list"><span lang="en">You can take part if</span><span lang="cy">Gallwch chi gymryd rhan os</span></h3>
+        <ul class="checks" aria-labelledby="who-list">
+          <li><span class="tile-ic"><svg class="ic"><use href="#i-user"/></svg></span><span class="t"><b><span lang="en">You are 18 or over</span><span lang="cy">Rydych chi’n 18 oed neu’n hŷn</span></b></span></li>
+          <li><span class="tile-ic"><svg class="ic"><use href="#i-pin"/></svg></span><span class="t"><b><span lang="en">You live in a home in Wales</span><span lang="cy">Rydych chi’n byw mewn cartref yng Nghymru</span></b><span class="s"><span lang="en">Especially in Swansea Bay and South Wales.</span><span lang="cy">Yn enwedig ym Mae Abertawe a De Cymru.</span></span></span></li>
+          <li><span class="tile-ic"><svg class="ic"><use href="#i-phone"/></svg></span><span class="t"><b><span lang="en">You have a smartphone</span><span lang="cy">Mae gennych chi ffôn clyfar</span></b><span class="s"><span lang="en">An iPhone with iOS 16.4 or later, or an Android phone with Chrome.</span><span lang="cy">iPhone ag iOS 16.4 neu fersiwn mwy diweddar, neu ffôn Android sy’n defnyddio Chrome.</span></span></span></li>
+          <li><span class="tile-ic"><svg class="ic"><use href="#i-thermo"/></svg></span><span class="t"><b><span lang="en">You are happy to have a small sensor in your living room</span><span lang="cy">Rydych chi’n hapus i gael synhwyrydd bach yn eich ystafell fyw</span></b><span class="s"><span lang="en">It is lent for the study and collected at the end.</span><span lang="cy">Caiff ei fenthyg i chi ar gyfer yr astudiaeth a’i gasglu ar y diwedd.</span></span></span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span lang="en">All kinds of homes</span><span lang="cy">Pob math o gartrefi</span></h3>
+        <ul class="homes">
+          <li><svg viewBox="0 0 48 36" aria-hidden="true" focusable="false" fill="none" stroke="#1C2A35" stroke-width="1.5" stroke-linejoin="round"><path d="M14 17v15h20V17" fill="#BFE3DC"/><path d="M10 18 24 7l14 11"/><path d="M22 32v-7h4v7"/><path d="M4 32h40" stroke-linecap="round"/></svg><span lang="en">Detached</span><span lang="cy">Ar wahân</span></li>
+          <li><svg viewBox="0 0 48 36" aria-hidden="true" focusable="false" fill="none" stroke="#1C2A35" stroke-width="1.5" stroke-linejoin="round"><path d="M6 18h18v14H6z" fill="#BFE3DC"/><path d="M24 18h18v14H24z" fill="#fff"/><path d="M3 19 13 9h22l10 10"/><path d="M13 32v-6h4v6M31 32v-6h4v6"/><path d="M2 32h44" stroke-linecap="round"/></svg><span lang="en">Semi-detached</span><span lang="cy">Pâr</span></li>
+          <li><svg viewBox="0 0 48 36" aria-hidden="true" focusable="false" fill="none" stroke="#1C2A35" stroke-width="1.5" stroke-linejoin="round"><path d="M4 18h13.3v14H4zM17.3 18h13.4v14H17.3z" fill="#fff"/><path d="M30.7 18H44v14H30.7z" fill="#BFE3DC"/><path d="M2 19l4-9h36l4 9"/><path d="M9 32v-6h3.5v6M22.3 32v-6h3.5v6M35.6 32v-6h3.5v6"/><path d="M1 32h46" stroke-linecap="round"/></svg><span lang="en">End of terrace</span><span lang="cy">Pen teras</span></li>
+          <li><svg viewBox="0 0 48 36" aria-hidden="true" focusable="false" fill="none" stroke="#1C2A35" stroke-width="1.5" stroke-linejoin="round"><path d="M4 18h13.3v14H4zM30.7 18H44v14H30.7z" fill="#fff"/><path d="M17.3 18h13.4v14H17.3z" fill="#BFE3DC"/><path d="M2 19l4-9h36l4 9"/><path d="M9 32v-6h3.5v6M22.3 32v-6h3.5v6M35.6 32v-6h3.5v6"/><path d="M1 32h46" stroke-linecap="round"/></svg><span lang="en">Terraced</span><span lang="cy">Teras</span></li>
+          <li><svg viewBox="0 0 48 36" aria-hidden="true" focusable="false" fill="none" stroke="#1C2A35" stroke-width="1.5" stroke-linejoin="round"><path d="M7 21h34v11H7z" fill="#BFE3DC"/><path d="M3 22 15 12h18l12 10"/><path d="M22 32v-6h4v6M11 25h6v4h-6zM31 25h6v4h-6z"/><path d="M2 32h44" stroke-linecap="round"/></svg><span lang="en">Bungalow</span><span lang="cy">Byngalo</span></li>
+          <li><svg viewBox="0 0 48 36" aria-hidden="true" focusable="false" fill="none" stroke="#1C2A35" stroke-width="1.5" stroke-linejoin="round"><path d="M12 4h24v28H12z" fill="#fff"/><path d="M16 8h4v4h-4zM22 8h4v4h-4zM28 8h4v4h-4zM16 15h4v4h-4zM28 15h4v4h-4zM16 22h4v4h-4zM22 22h4v4h-4zM28 22h4v4h-4z"/><path d="M22 15h4v4h-4z" fill="#0E7B72" stroke="#0E7B72"/><path d="M4 32h40" stroke-linecap="round"/></svg><span lang="en">Flat or maisonette</span><span lang="cy">Fflat neu fflat deulawr</span></li>
+        </ul>
+        <p class="note"><span lang="en">Old or new, big or small. The app asks about your home in plain questions, and most have a &ldquo;Not sure&rdquo; answer.</span><span lang="cy">Hen neu newydd, mawr neu fach. Mae’r ap yn holi am eich cartref mewn cwestiynau syml, ac mae gan y rhan fwyaf ateb <span lang="en" data-keep>&ldquo;Not sure&rdquo;</span> (ddim yn siŵr).</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ get the app -->
+  <section class="sec" id="app" aria-labelledby="app-title">
+    <div class="sec-head">
+      <p class="eyebrow"><span lang="en">Get the app on your phone</span><span lang="cy">Cael yr ap ar eich ffôn</span></p>
+      <h2 id="app-title"><span lang="en">Put <span class="appname">HomePulse</span> on your Home Screen</span><span lang="cy">Rhowch <span class="appname">HomePulse</span> ar eich sgrin gartref</span></h2>
+      <p class="sub"><span lang="en"><span class="appname">HomePulse</span> runs in your phone&rsquo;s web browser, so there is nothing to download from an app store. Add it to your Home Screen once and it opens like any other app.</span><span lang="cy">Mae <span class="appname">HomePulse</span> yn gweithio ym mhorwr gwe eich ffôn, felly does dim byd i’w lawrlwytho o siop apiau. Ychwanegwch e at eich sgrin gartref unwaith, a bydd yn agor fel unrhyw ap arall.</span></p>
+    </div>
+    <p class="appnote" lang="cy"><svg class="ic"><use href="#i-info"/></svg><span><b>Mae’r ap ei hun yn Saesneg ar hyn o bryd.</b> Isod, rydyn ni’n dyfynnu geiriau’r botymau yn Saesneg, fel y byddwch chi’n eu gweld ar eich ffôn.</span></p>
+    <ol class="apps">
+      <li>
+        <div class="app-h"><span class="tile-ic"><svg class="ic"><use href="#i-phone"/></svg></span><div><span class="step"><span lang="en">Step 1 &middot; iPhone</span><span lang="cy">Cam 1 &middot; iPhone</span></span><h3><span lang="en">Add it in Safari</span><span lang="cy">Ychwanegu yn Safari</span></h3></div></div>
+        <ol>
+          <li><span lang="en">Open <a href="checkin/">the app</a> in Safari.</span><span lang="cy">Agorwch <a href="checkin/">yr ap</a> yn Safari.</span></li>
+          <li><span lang="en">Tap the Share button <svg class="ic" role="img" aria-label="(a square with an arrow pointing up)"><use href="#i-share"/></svg>, then <b>Add to Home Screen</b>, then <b>Add</b>.</span><span lang="cy">Tapiwch y botwm Rhannu (<span lang="en" data-keep>Share</span>) <svg class="ic" role="img" aria-label="(sgwâr â saeth yn pwyntio i fyny)"><use href="#i-share"/></svg>, yna <b lang="en" data-keep>Add to Home Screen</b>, yna <b lang="en" data-keep>Add</b>.</span></li>
+          <li><span lang="en">Open <span class="appname">HomePulse</span> from your Home Screen, and join or sign in there.</span><span lang="cy">Agorwch <span class="appname">HomePulse</span> o’ch sgrin gartref, ac ymunwch neu fewngofnodwch yno.</span></li>
+        </ol>
+      </li>
+      <li>
+        <div class="app-h"><span class="tile-ic"><svg class="ic"><use href="#i-phone"/></svg></span><div><span class="step"><span lang="en">Step 1 &middot; Android</span><span lang="cy">Cam 1 &middot; Android</span></span><h3><span lang="en">Install it from Chrome</span><span lang="cy">Ei osod o Chrome</span></h3></div></div>
+        <ol>
+          <li><span lang="en">Open <a href="checkin/">the app</a> in Chrome.</span><span lang="cy">Agorwch <a href="checkin/">yr ap</a> yn Chrome.</span></li>
+          <li><span lang="en">Tap the menu <svg class="ic" role="img" aria-label="(three dots)"><use href="#i-dots"/></svg>, then <b>Install app</b> (on some phones, <b>Add to Home screen</b>).</span><span lang="cy">Tapiwch y ddewislen <svg class="ic" role="img" aria-label="(tri dot)"><use href="#i-dots"/></svg>, yna <b lang="en" data-keep>Install app</b> (ar rai ffonau, <b lang="en" data-keep>Add to Home screen</b>). Os yw Chrome yn Gymraeg ar eich ffôn, bydd y geiriau hyn yn Gymraeg.</span></li>
+          <li><span lang="en">Open <span class="appname">HomePulse</span> from your Home Screen, and join or sign in there.</span><span lang="cy">Agorwch <span class="appname">HomePulse</span> o’ch sgrin gartref, ac ymunwch neu fewngofnodwch yno.</span></li>
+        </ol>
+      </li>
+      <li>
+        <div class="app-h"><span class="tile-ic"><svg class="ic"><use href="#i-bell"/></svg></span><div><span class="step"><span lang="en">Step 2 &middot; every phone</span><span lang="cy">Cam 2 &middot; pob ffôn</span></span><h3><span lang="en">Turn on reminders</span><span lang="cy">Troi’r nodiadau atgoffa ymlaen</span></h3></div></div>
+        <ol>
+          <li><span lang="en">In the app, tap the reminders card at the top of the Today screen.</span><span lang="cy">Yn yr ap, tapiwch y cerdyn nodiadau atgoffa ar frig y sgrin <b lang="en" data-keep>Today</b>.</span></li>
+          <li><span lang="en">Choose <b>Allow</b> when your phone asks about notifications.</span><span lang="cy">Dewiswch <b lang="en" data-keep>Allow</b> pan fydd eich ffôn yn holi am hysbysiadau.</span></li>
+          <li><span lang="en">That&rsquo;s it. Reminders only come in your hours, which you can change in Settings.</span><span lang="cy">Dyna ni. Dim ond yn eich oriau chi y daw nodiadau atgoffa, a gallwch chi newid y rheini yn <b lang="en" data-keep>Settings</b>.</span></li>
+        </ol>
+      </li>
+    </ol>
+    <div class="callout">
+      <span class="tile-ic"><svg class="ic"><use href="#i-phone"/></svg></span>
+      <div lang="en">
+        <p><b>On an iPhone, add the app to your Home Screen before you join.</b> The Home Screen app keeps its own sign-in, separate from Safari, and reminders only work there. Joined in Safari already? Open the Home Screen app, choose <b>Sign in</b> and enter your email and PIN: everything comes with you.</p>
+        <p>Reminders on an iPhone need iOS 16.4 or later.</p>
+      </div>
+      <div lang="cy">
+        <p><b>Ar iPhone, ychwanegwch yr ap at eich sgrin gartref cyn ymuno.</b> Mae’r ap ar y sgrin gartref yn cadw’i fewngofnod ei hun, ar wahân i Safari, a dim ond yno mae nodiadau atgoffa’n gweithio. Wedi ymuno yn Safari yn barod? Agorwch yr ap o’r sgrin gartref, dewiswch <b lang="en" data-keep>Sign in</b> a rhowch eich e-bost a’ch rhif PIN: bydd popeth yn dod gyda chi.</p>
+        <p>Ar iPhone, mae angen iOS 16.4 neu fersiwn mwy diweddar ar gyfer nodiadau atgoffa.</p>
+      </div>
+    </div>
+    <div class="ctas app-cta">
+      <a class="btn" href="checkin/"><span lang="en">Open the app</span><span lang="cy">Agor yr ap</span><svg class="ic"><use href="#i-arrow"/></svg></a>
+    </div>
+  </section>
+
+  <!-- ============================================================ your data -->
+  <section class="sec" id="data" aria-labelledby="data-title">
+    <div class="sec-head">
+      <p class="eyebrow"><span lang="en">Your data</span><span lang="cy">Eich data</span></p>
+      <h2 id="data-title"><span lang="en">What we collect, and what we don&rsquo;t</span><span lang="cy">Beth rydyn ni’n ei gasglu, a’r hyn nad ydyn ni’n ei gasglu</span></h2>
+      <p class="sub"><span lang="en">We ask only for what the research needs, and you can pause or stop at any time.</span><span lang="cy">Dim ond yr hyn sydd ei angen ar yr ymchwil rydyn ni’n ei ofyn, a gallwch chi oedi neu roi’r gorau iddi unrhyw bryd.</span></p>
+    </div>
+    <div class="data">
+      <div class="code-card">
+        <p class="eyebrow"><span lang="en">Your participant code</span><span lang="cy">Eich cod cyfranogwr</span></p>
+        <span class="code">P07</span>
+        <p><span lang="en">Your check-ins are filed under a code like this. Your name and email are kept separately, to sign you in and to contact you about the study, and are never stored with your answers.</span><span lang="cy">Caiff eich cofnodion eu cadw dan god fel hwn. Caiff eich enw a’ch e-bost eu cadw ar wahân, er mwyn eich mewngofnodi a chysylltu â chi am yr astudiaeth, a dydyn nhw byth yn cael eu storio gyda’ch atebion.</span></p>
+        <div class="dc">
+          <div lang="en">
+            <h3><svg class="ic"><use href="#i-check"/></svg>We collect</h3>
+            <ul>
+              <li>Your name and email</li>
+              <li>A few details about you: gender, year of birth, height, weight, and whether you feel the cold easily</li>
+              <li>A profile of your home: its type, age and size, who lives there, its heating and controls, walls, roof and windows, any damp, which way your bedroom faces, and the first half of your postcode</li>
+              <li>Your check-in answers</li>
+              <li>Temperature and humidity from the sensor in your living room</li>
+              <li>Basic technical details about your phone, used only to send reminders in your hours</li>
+            </ul>
+          </div>
+          <div lang="cy">
+            <h3><svg class="ic"><use href="#i-check"/></svg>Rydyn ni’n casglu</h3>
+            <ul>
+              <li>Eich enw a’ch e-bost</li>
+              <li>Ychydig o fanylion amdanoch chi: rhywedd, blwyddyn geni, taldra, pwysau, ac a ydych chi’n teimlo’r oerfel yn hawdd</li>
+              <li>Proffil o’ch cartref: ei fath, ei oed a’i faint, pwy sy’n byw yno, y gwres a’r rheolyddion, y waliau, y to a’r ffenestri, unrhyw damprwydd neu lwydni, i ba gyfeiriad mae’ch ystafell wely’n wynebu, a hanner cyntaf eich cod post</li>
+              <li>Eich atebion pan fyddwch chi’n cofnodi</li>
+              <li>Tymheredd a lleithder o’r synhwyrydd yn eich ystafell fyw</li>
+              <li>Manylion technegol sylfaenol am eich ffôn, sy’n cael eu defnyddio i anfon nodiadau atgoffa yn eich oriau chi yn unig</li>
+            </ul>
+          </div>
+          <div lang="en">
+            <h3 class="no"><svg class="ic"><use href="#i-x"/></svg>The app never asks for</h3>
+            <ul>
+              <li>Your full postcode or address</li>
+              <li>Your phone&rsquo;s location</li>
+              <li>Anything from your contacts, photos, camera, microphone or other apps</li>
+            </ul>
+          </div>
+          <div lang="cy">
+            <h3 class="no"><svg class="ic"><use href="#i-x"/></svg>Dydy’r ap byth yn gofyn am</h3>
+            <ul>
+              <li>Eich cod post llawn neu’ch cyfeiriad</li>
+              <li>Lleoliad eich ffôn</li>
+              <li>Unrhyw beth o’ch cysylltiadau, eich lluniau, eich camera, eich meicroffon neu’ch apiau eraill</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <ul class="dtiles">
+        <li><span class="tile-ic"><svg class="ic"><use href="#i-lock"/></svg></span><h3><span lang="en">Stored securely in the UK</span><span lang="cy">Wedi’u storio’n ddiogel yn y DU</span></h3><p><span lang="en">Check-ins travel over an encrypted connection to a secure database in the UK, and are used only for this research.</span><span lang="cy">Mae cofnodion yn teithio dros gysylltiad wedi’i amgryptio i gronfa ddata ddiogel yn y DU, ac yn cael eu defnyddio ar gyfer yr ymchwil hon yn unig.</span></p></li>
+        <li><span class="tile-ic"><svg class="ic"><use href="#i-pin"/></svg></span><h3><span lang="en">Only half your postcode</span><span lang="cy">Hanner eich cod post yn unig</span></h3><p><span lang="en">The first half, such as SA1 or CF10, which covers thousands of homes. The app does not track where you are: it simply asks whether you are at home.</span><span lang="cy">Yr hanner cyntaf, fel SA1 neu CF10, sy’n cynnwys miloedd o gartrefi. Dydy’r ap ddim yn olrhain ble rydych chi: mae’n gofyn a ydych chi gartref, a dyna’r cyfan.</span></p></li>
+        <li><span class="tile-ic"><svg class="ic"><use href="#i-tag"/></svg></span><h3><span lang="en">An anonymous name in the race</span><span lang="cy">Ffugenw yn y ras</span></h3><p><span lang="en">Your Bay Race name is picked at random from Welsh wildlife, never made from your name or code. Other participants only ever see that name and your race progress.</span><span lang="cy">Caiff eich enw yn Ras y Bae ei ddewis ar hap o fyd natur Cymru, a dydy e byth yn cael ei wneud o’ch enw na’ch cod. Dim ond yr enw hwnnw a’ch cynnydd yn y ras y mae cyfranogwyr eraill yn eu gweld.</span></p></li>
+        <li><span class="tile-ic"><svg class="ic"><use href="#i-eye"/></svg></span><h3><span lang="en">Seen by the research team</span><span lang="cy">Y tîm ymchwil sy’n eu gweld</span></h3><p><span lang="en">The research team sees your answers together with your profile, to run the study and to keep in touch with you.</span><span lang="cy">Mae’r tîm ymchwil yn gweld eich atebion ynghyd â’ch proffil, er mwyn cynnal yr astudiaeth a chadw mewn cysylltiad â chi.</span></p></li>
+        <li><span class="tile-ic"><svg class="ic"><use href="#i-pause"/></svg></span><h3><span lang="en">Pause any time</span><span lang="cy">Oedi unrhyw bryd</span></h3><p><span lang="en">Out, busy or away? Pause your reminders, or turn them off, from the app whenever you like.</span><span lang="cy">Allan, yn brysur neu i ffwrdd? Oedwch eich nodiadau atgoffa, neu ddiffoddwch nhw, o’r ap pryd bynnag y mynnwch.</span></p></li>
+        <li><span class="tile-ic"><svg class="ic"><use href="#i-exit"/></svg></span><h3><span lang="en">Withdraw any time</span><span lang="cy">Tynnu’n ôl unrhyw bryd</span></h3><p><span lang="en">You can withdraw from the study without giving a reason. Just <a href="#contact">contact the team</a>.</span><span lang="cy">Gallwch chi dynnu’n ôl o’r astudiaeth heb roi rheswm. Does dim ond angen <a href="#contact">cysylltu â’r tîm</a>.</span></p></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============================================================ FAQ -->
+  <section class="sec" id="faq" aria-labelledby="faq-title">
+    <div class="sec-head">
+      <p class="eyebrow"><span lang="en">FAQ</span><span lang="cy">Holi ac ateb</span></p>
+      <h2 id="faq-title"><span lang="en">Questions people ask</span><span lang="cy">Cwestiynau mae pobl yn eu gofyn</span></h2>
+      <p class="sub"><span lang="en">Something else? <a href="#contact">Get in touch with the team</a>.</span><span lang="cy">Rhywbeth arall? <a href="#contact">Cysylltwch â’r tîm</a>.</span></p>
+    </div>
+    <div class="faq">
+      <details id="faq-time">
+        <summary><span lang="en">How long does a check-in take?</span><span lang="cy">Faint o amser mae cofnod yn ei gymryd?</span><span class="chev"><svg class="ic"><use href="#i-chev"/></svg></span></summary>
+        <div class="faq-a">
+          <div lang="en"><p>About a minute or two. Most questions are a single tap, and &ldquo;Same as last time&rdquo; fills in your clothes in one go if you have not changed.</p><p>Joining takes a few minutes, once.</p></div>
+          <div lang="cy"><p>Tua munud neu ddwy. Un tap yw’r rhan fwyaf o’r cwestiynau, ac mae <span lang="en" data-keep>&ldquo;Same as last time&rdquo;</span> yn llenwi’ch dillad i gyd ar unwaith os nad ydych chi wedi newid.</p><p>Mae ymuno’n cymryd ychydig funudau, unwaith.</p></div>
+        </div>
+      </details>
+      <details id="faq-often">
+        <summary><span lang="en">How often will the app remind me?</span><span lang="cy">Pa mor aml bydd yr ap yn fy atgoffa?</span><span class="chev"><svg class="ic"><use href="#i-chev"/></svg></span></summary>
+        <div class="faq-a">
+          <div lang="en"><p>During the hours you choose, at most about once an hour, and never within 45 minutes of your last check-in on any of your phones.</p><p>The daily goal is 4 check-ins. More are welcome, and the first 15 of each day earn points. You can also check in without a reminder, from 45 minutes after your last check-in.</p></div>
+          <div lang="cy"><p>Yn ystod yr oriau rydych chi’n eu dewis, tua unwaith yr awr ar y mwyaf, a byth o fewn 45 munud i’ch cofnod diwethaf ar unrhyw un o’ch ffonau.</p><p>Y nod dyddiol yw 4 cofnod. Mae croeso i chi wneud mwy, ac mae’r 15 cyntaf bob dydd yn ennill pwyntiau. Gallwch chi hefyd gofnodi heb gael eich atgoffa, o 45 munud ar ôl eich cofnod diwethaf.</p></div>
+        </div>
+      </details>
+      <details id="faq-night">
+        <summary><span lang="en">Will it disturb me at night?</span><span lang="cy">Fydd e’n tarfu arna i yn y nos?</span><span class="chev"><svg class="ic"><use href="#i-chev"/></svg></span></summary>
+        <div class="faq-a">
+          <div lang="en"><p>No. Reminders only come in your hours. Unless you change them, those are 17:00 to 22:30 on weekdays and 09:00 to 22:30 at weekends. You can change them in the app&rsquo;s Settings, and add a second period, for example in the morning.</p></div>
+          <div lang="cy"><p>Na fydd. Dim ond yn eich oriau chi y daw nodiadau atgoffa. Oni bai eich bod chi’n eu newid, 17:00 i 22:30 yn ystod yr wythnos a 09:00 i 22:30 ar benwythnosau yw’r rheini. Gallwch chi eu newid yn <span lang="en" data-keep>&ldquo;Settings&rdquo;</span> yn yr ap, ac ychwanegu ail gyfnod, yn y bore er enghraifft.</p></div>
+        </div>
+      </details>
+      <details id="faq-away">
+        <summary><span lang="en">What if I&rsquo;m out, or away for a few days?</span><span lang="cy">Beth os ydw i allan, neu i ffwrdd am ychydig ddyddiau?</span><span class="chev"><svg class="ic"><use href="#i-chev"/></svg></span></summary>
+        <div class="faq-a">
+          <div lang="en"><p>Only check in while you are at home. If a reminder arrives while you are out, open the app and choose <b>No, I&rsquo;m out</b>: reminders pause for 1, 3 or 5 hours, until 19:00, or until you are back. On some phones the reminder itself has a <b>Not home</b> button, which pauses them for 2 hours.</p><p>Going away for longer? Turn reminders off in the app, and back on when you return.</p></div>
+          <div lang="cy"><p>Dim ond pan fyddwch chi gartref y dylech chi gofnodi. Os daw nodyn atgoffa pan fyddwch chi allan, agorwch yr ap a dewis <b lang="en" data-keep>No, I&rsquo;m out</b>: bydd y nodiadau atgoffa’n oedi am 1, 3 neu 5 awr, tan 19:00, neu nes byddwch chi’n ôl. Ar rai ffonau, mae botwm <b lang="en" data-keep>Not home</b> ar y nodyn atgoffa ei hun, sy’n eu hoedi am 2 awr.</p><p>Mynd i ffwrdd am fwy o amser? Diffoddwch y nodiadau atgoffa yn yr ap, a’u troi’n ôl ymlaen pan fyddwch chi’n dychwelyd.</p></div>
+        </div>
+      </details>
+      <details id="faq-devices">
+        <summary><span lang="en">Can I use more than one phone or tablet?</span><span lang="cy">Alla i ddefnyddio mwy nag un ffôn neu lechen?</span><span class="chev"><svg class="ic"><use href="#i-chev"/></svg></span></summary>
+        <div class="faq-a">
+          <div lang="en"><p>Yes. When you join you choose a 4-digit PIN. On any other phone or tablet, open the app, choose <b>Sign in</b> and enter your email and PIN. You stay one participant: your check-ins from every device appear together, and the 45-minute gap, your goal and your points count across all of them.</p></div>
+          <div lang="cy"><p>Gallwch. Wrth ymuno, byddwch chi’n dewis rhif PIN 4 digid. Ar unrhyw ffôn neu lechen arall, agorwch yr ap, dewiswch <b lang="en" data-keep>Sign in</b> a rhowch eich e-bost a’ch rhif PIN. Byddwch chi’n dal yn un cyfranogwr: mae’ch cofnodion o bob dyfais yn ymddangos gyda’i gilydd, ac mae’r bwlch 45 munud, eich nod a’ch pwyntiau’n cyfrif ar draws pob un ohonyn nhw.</p></div>
+        </div>
+      </details>
+      <details id="faq-pin">
+        <summary><span lang="en">I&rsquo;ve forgotten my PIN. What now?</span><span lang="cy">Dw i wedi anghofio fy rhif PIN. Beth nawr?</span><span class="chev"><svg class="ic"><use href="#i-chev"/></svg></span></summary>
+        <div class="faq-a">
+          <div lang="en"><p>Email the team at <a href="mailto:info@mehraban.uk">info@mehraban.uk</a>. We will reset it, and the next time you sign in you choose a new one.</p><p>After five wrong tries the app asks you to wait 15 minutes before trying again.</p></div>
+          <div lang="cy"><p>E-bostiwch y tîm yn <a href="mailto:info@mehraban.uk">info@mehraban.uk</a>. Byddwn ni’n ei ailosod, a’r tro nesaf y byddwch chi’n mewngofnodi byddwch chi’n dewis un newydd.</p><p>Ar ôl pum cynnig anghywir, bydd yr ap yn gofyn i chi aros 15 munud cyn rhoi cynnig arall arni.</p></div>
+        </div>
+      </details>
+      <details id="faq-before">
+        <summary><span lang="en">I took part with the earlier check-in app. What do I need to do?</span><span lang="cy">Cymerais i ran gyda’r ap blaenorol. Beth sydd angen i mi ei wneud?</span><span class="chev"><svg class="ic"><use href="#i-chev"/></svg></span></summary>
+        <div class="faq-a">
+          <div lang="en"><p>Open the app as usual, on the phone you used before. The first time, it asks for one more step: confirm your email and choose a 4-digit PIN. Then it asks about your home, which takes a few minutes, once. After that you check in as before, and your participant code stays the same.</p><p>Starting on a new phone instead? The app will also ask for your participant code (it starts with P, for example P07). It is shown at the bottom of the old app&rsquo;s start screen, or email <a href="mailto:info@mehraban.uk">info@mehraban.uk</a> and we will tell you.</p></div>
+          <div lang="cy"><p>Agorwch yr ap fel arfer, ar y ffôn roeddech chi’n ei ddefnyddio o’r blaen. Y tro cyntaf, bydd yn gofyn am un cam arall: cadarnhewch eich e-bost a dewis rhif PIN 4 digid. Yna bydd yn holi am eich cartref, sy’n cymryd ychydig funudau, unwaith. Ar ôl hynny, byddwch chi’n cofnodi fel o’r blaen, a bydd eich cod cyfranogwr yn aros yr un fath.</p><p>Dechrau ar ffôn newydd yn lle hynny? Bydd yr ap hefyd yn gofyn am eich cod cyfranogwr (mae’n dechrau gyda P, er enghraifft P07). Mae i’w weld ar waelod sgrin gychwyn yr hen ap, neu e-bostiwch <a href="mailto:info@mehraban.uk">info@mehraban.uk</a> a byddwn ni’n dweud wrthych chi.</p></div>
+        </div>
+      </details>
+      <details id="faq-thermostat">
+        <summary><span lang="en">We don&rsquo;t have a thermostat, or I can&rsquo;t read ours.</span><span lang="cy">Does gennym ni ddim thermostat, neu alla i ddim ei ddarllen.</span><span class="chev"><svg class="ic"><use href="#i-chev"/></svg></span></summary>
+        <div class="faq-a">
+          <div lang="en"><p>That is fine. When you join you tell us what heating controls you have, and the thermostat question only appears if yours shows the room temperature on a screen. If you cannot see it at the time, tap <b>I can&rsquo;t see it right now</b>.</p><p>No thermostat at all, or only dials on the radiators? That is useful to know too, and every other question works the same.</p></div>
+          <div lang="cy"><p>Mae hynny’n iawn. Wrth ymuno, byddwch chi’n dweud wrthon ni pa reolyddion gwres sydd gennych chi, a dim ond os yw’ch thermostat yn dangos tymheredd yr ystafell ar sgrin y bydd y cwestiwn am y thermostat yn ymddangos. Os na allwch chi ei weld ar y pryd, tapiwch <b lang="en" data-keep>I can&rsquo;t see it right now</b>.</p><p>Dim thermostat o gwbl, neu ddim ond deialau ar y rheiddiaduron? Mae’n ddefnyddiol gwybod hynny hefyd, ac mae pob cwestiwn arall yn gweithio yr un fath.</p></div>
+        </div>
+      </details>
+      <details id="faq-wall">
+        <summary><span lang="en">I can&rsquo;t reach an outside wall.</span><span lang="cy">Alla i ddim cyrraedd wal allanol.</span><span class="chev"><svg class="ic"><use href="#i-chev"/></svg></span></summary>
+        <div class="faq-a">
+          <div lang="en"><p>Choose <b>I can&rsquo;t reach one</b>. Please don&rsquo;t move furniture or stretch to reach one.</p><p>An outside wall is one with the outdoors on the other side. A wall between two rooms, or one you share with next door, does not count.</p></div>
+          <div lang="cy"><p>Dewiswch <b lang="en" data-keep>I can&rsquo;t reach one</b>. Peidiwch â symud dodrefn nac ymestyn i gyrraedd un, os gwelwch yn dda.</p><p>Wal allanol yw wal sydd â’r awyr agored yr ochr arall iddi. Dydy wal rhwng dwy ystafell, neu wal rydych chi’n ei rhannu â’r tŷ drws nesaf, ddim yn cyfrif.</p></div>
+        </div>
+      </details>
+      <details id="faq-sensor">
+        <summary><span lang="en">What does the sensor do?</span><span lang="cy">Beth mae’r synhwyrydd yn ei wneud?</span><span class="chev"><svg class="ic"><use href="#i-chev"/></svg></span></summary>
+        <div class="faq-a">
+          <div lang="en"><p>It measures the temperature and humidity of your main living space every few minutes and shows them on a small e-ink display. It needs no attention from you, and the team collects it at the end of the study.</p><p>The team will arrange with you how the sensor reaches you.</p></div>
+          <div lang="cy"><p>Mae’n mesur tymheredd a lleithder eich prif ystafell fyw bob ychydig funudau ac yn eu dangos ar sgrin e-inc fach. Does dim rhaid i chi wneud dim ag e, a bydd y tîm yn ei gasglu ar ddiwedd yr astudiaeth.</p><p>Bydd y tîm yn trefnu gyda chi sut bydd y synhwyrydd yn eich cyrraedd.</p></div>
+        </div>
+      </details>
+      <details id="faq-answers">
+        <summary><span lang="en">What happens to my answers?</span><span lang="cy">Beth sy’n digwydd i’m hatebion?</span><span class="chev"><svg class="ic"><use href="#i-chev"/></svg></span></summary>
+        <div class="faq-a">
+          <div lang="en"><p>They are filed under your participant code, never your name, and sent to a secure database in the UK, used only for this research. If your phone has no signal, the check-in is kept on the phone and sent as soon as it is back online.</p><p>More in <a href="#data">Your data</a>.</p></div>
+          <div lang="cy"><p>Cânt eu cadw dan eich cod cyfranogwr, byth dan eich enw, a’u hanfon i gronfa ddata ddiogel yn y DU, sy’n cael ei defnyddio ar gyfer yr ymchwil hon yn unig. Os nad oes signal gan eich ffôn, caiff y cofnod ei gadw ar y ffôn a’i anfon cyn gynted ag y bydd ar-lein eto.</p><p>Mwy yn <a href="#data">Eich data</a>.</p></div>
+        </div>
+      </details>
+      <details id="faq-leave">
+        <summary><span lang="en">How do I leave the study?</span><span lang="cy">Sut mae gadael yr astudiaeth?</span><span class="chev"><svg class="ic"><use href="#i-chev"/></svg></span></summary>
+        <div class="faq-a">
+          <div lang="en"><p>Email the team at <a href="mailto:info@mehraban.uk">info@mehraban.uk</a>. You do not need to give a reason, and we will arrange with you how to collect the sensor.</p><p>If you only need a break, pause or turn off reminders in the app instead.</p></div>
+          <div lang="cy"><p>E-bostiwch y tîm yn <a href="mailto:info@mehraban.uk">info@mehraban.uk</a>. Does dim angen i chi roi rheswm, a byddwn ni’n trefnu gyda chi sut i gasglu’r synhwyrydd.</p><p>Os mai dim ond seibiant sydd ei angen arnoch chi, oedwch neu ddiffoddwch y nodiadau atgoffa yn yr ap yn lle hynny.</p></div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============================================================ contact -->
+  <section class="sec" id="contact" aria-labelledby="contact-title">
+    <div class="sec-head">
+      <p class="eyebrow"><span lang="en">Contact</span><span lang="cy">Cysylltu</span></p>
+      <h2 id="contact-title"><span lang="en">Get in touch</span><span lang="cy">Cysylltwch â ni</span></h2>
+      <p class="sub"><span lang="en">Questions about taking part, the app, reminders or the sensor? Just ask.</span><span lang="cy">Cwestiynau am gymryd rhan, yr ap, nodiadau atgoffa neu’r synhwyrydd? Gofynnwch i ni.</span></p>
+    </div>
+    <div class="card contact">
+      <span class="tile-ic"><svg class="ic"><use href="#i-mail"/></svg></span>
+      <div>
+        <span class="k"><span lang="en">Study contact</span><span lang="cy">Cyswllt yr astudiaeth</span></span>
+        <span class="nm">Mohammad H. Mehraban</span>
+        <a href="mailto:info@mehraban.uk">info@mehraban.uk</a>
+        <p><span lang="en">For anything about taking part, or to stop taking part.</span><span lang="cy">Ar gyfer unrhyw beth am gymryd rhan, neu i roi’r gorau i gymryd rhan.</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ about the research -->
+  <section class="sec about" id="about" aria-labelledby="about-title">
+    <p class="eyebrow"><span lang="en">About the research &middot; Swansea University &middot; EPSRC SWITCH to Net Zero Buildings</span><span lang="cy">Am yr ymchwil &middot; Prifysgol Abertawe &middot; <span lang="en" data-keep>EPSRC SWITCH to Net Zero Buildings</span></span></p>
+    <h2 id="about-title"><span lang="en">AI-integrated building management for personalised thermal comfort</span><span lang="cy">Rheoli adeiladau gyda deallusrwydd artiffisial ar gyfer cysur thermol wedi’i bersonoli</span></h2>
+    <div lang="en">
+      <p class="lede">Developing an AI-integrated building management framework that predicts individual occupants&rsquo; thermal comfort and translates those predictions into personalised building control recommendations for net-zero buildings across Swansea Bay and South Wales.</p>
+      <p>The research combines real-world monitoring in occupied buildings, explainable AI, and transfer learning to develop comfort models that can learn from occupant and environmental data, explain the factors driving individual comfort responses, and adapt to new buildings and populations where labelled comfort data are limited.</p>
+      <p>Your check-ins are matched with the sensor readings to learn the conditions in which you feel comfortable, so heating and ventilation can be steered around people rather than around a fixed setpoint.</p>
+      <p>Working with regional partners towards more occupant-responsive building operation that balances personal comfort, energy performance, and net-zero objectives.</p>
+    </div>
+    <div lang="cy">
+      <p class="lede">Datblygu fframwaith rheoli adeiladau sy’n defnyddio deallusrwydd artiffisial (AI) i ragweld cysur thermol preswylwyr unigol, a throi’r rhagfynegiadau hynny’n argymhellion personol ar gyfer rheoli adeiladau sero net ledled Bae Abertawe a De Cymru.</p>
+      <p>Mae’r ymchwil yn cyfuno monitro yn y byd go iawn mewn adeiladau sy’n cael eu defnyddio, AI esboniadwy, a dysgu trosglwyddo (<span lang="en" data-keep>transfer learning</span>) i ddatblygu modelau cysur sy’n gallu dysgu o ddata am breswylwyr a’r amgylchedd, esbonio’r ffactorau sy’n llywio ymateb pob unigolyn, ac addasu i adeiladau a phoblogaethau newydd lle mae data cysur wedi’u labelu yn brin.</p>
+      <p>Caiff eich cofnodion eu paru â darlleniadau’r synhwyrydd i ddysgu ym mha amodau rydych chi’n teimlo’n gyfforddus, er mwyn gallu rheoli gwres ac awyru yn ôl anghenion pobl yn hytrach na tharged tymheredd sefydlog.</p>
+      <p>Gweithio gyda phartneriaid rhanbarthol tuag at ddull o redeg adeiladau sy’n ymateb yn well i’r bobl sydd ynddyn nhw, gan gydbwyso cysur personol, perfformiad ynni a nodau sero net.</p>
+    </div>
+    <p class="partners"><span lang="en">Swansea University &middot; EPSRC SWITCH to Net Zero Buildings &middot; Energy Carbon &middot; Contact: Mohammad H. Mehraban,</span><span lang="cy">Prifysgol Abertawe &middot; <span lang="en" data-keep>EPSRC SWITCH to Net Zero Buildings</span> &middot; Energy Carbon &middot; Cyswllt: Mohammad H. Mehraban,</span> <a href="mailto:info@mehraban.uk">info@mehraban.uk</a></p>
+  </section>
+
+  <!-- ============================================================ closing band -->
+  <section class="final" id="join" aria-labelledby="final-title">
+    <div>
+      <h2 id="final-title"><span lang="en">Ready to join?</span><span lang="cy">Barod i ymuno?</span></h2>
+      <p><span lang="en">Joining takes a few minutes. On an iPhone, add the app to your Home Screen first and join from there (<a href="#app">how</a>). Already taking part? Sign in to check in.</span><span lang="cy">Mae ymuno’n cymryd ychydig funudau. Ar iPhone, ychwanegwch yr ap at eich sgrin gartref yn gyntaf ac ymunwch o’r fan honno (<a href="#app">sut</a>). Eisoes yn cymryd rhan? Mewngofnodwch i gofnodi. Mae’r ap ei hun yn Saesneg ar hyn o bryd.</span></p>
+    </div>
+    <div class="ctas">
+      <a class="btn" href="checkin/?start=join"><span lang="en">Join the study</span><span lang="cy">Ymuno â’r astudiaeth</span><svg class="ic"><use href="#i-arrow"/></svg></a>
+      <a class="btn ghost" href="checkin/?start=signin"><svg class="ic"><use href="#i-signin"/></svg><span lang="en">Sign in</span><span lang="cy">Mewngofnodi</span></a>
+    </div>
+  </section>
+
+</div>
 </main>
 
 <footer>
-  <span>&copy; Mohammad H. Mehraban &middot; This page is shared by link only.</span>
-  <a href="dashboard/">Research team sign-in</a>
+  <div class="wrap">
+    <span><span lang="en">&copy; Mohammad H. Mehraban &middot; <span class="appname">HomePulse</span>, the SWITCH home comfort study &middot; This page is shared by link only.</span><span lang="cy">&copy; Mohammad H. Mehraban &middot; <span class="appname">HomePulse</span>, astudiaeth SWITCH ar gysur yn y cartref &middot; Dim ond drwy ddolen y caiff y dudalen hon ei rhannu.</span></span>
+    <span class="foot-links"><a href="https://mehraban.uk/">mehraban.uk</a><a href="dashboard/"><span lang="en">Research team sign-in</span><span lang="cy">Mewngofnodi’r tîm ymchwil</span></a></span>
+  </div>
 </footer>
+
+<script>
+/* Open a FAQ answer when the address names it (#faq-pin), and mark the section in view in the navigation. */
+(function () {
+  'use strict';
+  function openAnswer(id) {
+    var el = id && document.getElementById(id);
+    if (el && el.tagName === 'DETAILS') el.open = true;
+  }
+  function openFromHash() {
+    var id; try { id = decodeURIComponent((location.hash || '').slice(1)); } catch (e) { return; }
+    openAnswer(id);
+  }
+  openFromHash();
+  window.addEventListener('hashchange', openFromHash);
+  // a link to the answer the address already names fires no hashchange
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href^="#faq-"]') : null;
+    if (a) openAnswer(a.getAttribute('href').slice(1));
+  });
+
+  var strip = document.getElementById('navLinks');
+  if (!strip) return;
+  var links = Array.prototype.slice.call(strip.querySelectorAll('a[href^="#"]'));
+  // phones: the links scroll sideways; fade the edges while more are hidden there
+  function edge() {
+    var more = strip.scrollWidth - strip.clientWidth;
+    strip.style.setProperty('--fl', more > 4 && strip.scrollLeft > 4 ? '28px' : '0px');
+    strip.style.setProperty('--fr', more > 4 && more - strip.scrollLeft > 4 ? '44px' : '0px');
+  }
+  strip.addEventListener('scroll', edge, { passive: true });
+  window.addEventListener('resize', edge);
+  edge();
+  var byId = {}, current = null;
+  links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+  function centre(a) {
+    if (a && strip.scrollWidth > strip.clientWidth) {
+      var left = a.offsetLeft - (strip.clientWidth - a.offsetWidth) / 2;
+      // instant on purpose: a smooth scroll of the strip still running can swallow the page's jump to the next link (Chrome)
+      strip.scrollLeft = Math.max(0, left);
+    }
+  }
+  // the other language has other widths: measure again
+  document.addEventListener('pagelang', function () { edge(); centre(byId[current]); });
+  if (!('IntersectionObserver' in window)) return;
+  function mark(id) {
+    if (id === current) return;
+    current = id;
+    links.forEach(function (a) { if (a === byId[id]) a.setAttribute('aria-current', 'location'); else a.removeAttribute('aria-current'); });
+    centre(byId[id]);
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) { if (en.isIntersecting) mark(byId[en.target.id] ? en.target.id : null); });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+  ['top', 'how', 'checkin', 'race', 'who', 'app', 'data', 'faq', 'contact', 'about', 'join'].forEach(function (id) {
+    var s = document.getElementById(id); if (s) io.observe(s);
+  });
+})();
+</script>
 </body>
 </html>
