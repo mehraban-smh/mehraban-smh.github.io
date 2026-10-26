@@ -170,7 +170,7 @@ const Q = {
   },
   act: () => qhead('Activity', 'What have you been doing for the last 15 minutes?') +
     `<div class="tiles c2 fill" role="radiogroup" aria-label="Activity">${ACTS.map(o=>tile('act',o,S.a.act===o.id,`<small>${o.met.toFixed(1)} met</small>`)).join('')}</div>`,
-  room: () => qhead('Location', 'Which room are you in?', 'The sensor is in the living room, so this matters.') +
+  room: () => qhead('Location', 'Which room are you in?', 'The study&rsquo;s sensors are in your living room and, in some homes, your bedroom, so this matters.') +
     `<div class="room fill" role="radiogroup" aria-label="Room"><div class="tiles c2 big">${ROOMS.filter(o => o.main).map(o=>tile('room',o,S.a.room===o.id,'','big')).join('')}</div>
       <div class="tiles c2 small">${ROOMS.filter(o => !o.main).map(o=>tile('room',o,S.a.room===o.id,'','wide')).join('')}</div></div>`,
   air: () => qhead('Air movement', 'Can you feel air moving around you?', 'Like air from a window, a door, a vent or a fan. Not how warm or cool it is, only whether the air moves.') +
