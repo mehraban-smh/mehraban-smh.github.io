@@ -37,8 +37,9 @@
  *   pointsIn(score, from, to)         { checkins, counted, goal_days, full_weeks, points } for days from..to
  *                                     ('YYYY-MM-DD', either may be null = open); full weeks count in the
  *                                     period that holds their Sunday
- *   period(kind, now?)                kind 'week' | 'month' -> { period, from, to, target }
- *   myPointsLocal(rows, now?)         { all_time, week, month, checkins_counted, goal_days, streak }, the
+ *   period(kind, now?)                kind 'week' | 'last_week' (the Monday to Sunday before) | 'month'
+ *                                     -> { period, from, to, target }; anything else is 'week'
+ *   myPointsLocal(rows, now?)         { all_time, week, last_week, month, checkins_counted, goal_days, streak }, the
  *                                     same shape as myPoints() (streak: goal days in a row up to today, or
  *                                     up to yesterday while today has not reached the goal yet)
  *
@@ -72,8 +73,9 @@
  *                                     newest first, database row shape (all toRecord fields but participant,
  *                                     plus created_at), read 1000 at a time until a short page (the API's
  *                                     "max rows"), one row per client_id
- *   myPoints()                        my_points -> { all_time, week, month, checkins_counted, goal_days, streak }
- *   race(period)                      race('week' | 'month') -> { period, from, to, target, total,
+ *   myPoints()                        my_points -> { all_time, week, last_week, month, checkins_counted, goal_days,
+ *                                     streak }
+ *   race(period)                      race('week' | 'last_week' | 'month') -> { period, from, to, target, total,
  *                                     me: { alias, colour, points, rank, hidden },
  *                                     runners: [{ alias, colour, points, checkins, goal_days, rank, is_me }] }
  *                                     (not approved yet: runners [], total 0, me.rank null)
@@ -96,7 +98,9 @@
  *                                     auth, tz, tz_offset_min, the 8 hour fields, interval_min, user_agent.
  *                                     -> true | 'not_signed_in' (no key / key unknown) | 'refused' (not
  *                                     approved) | 'invalid' (not a push service, bad hours) | 'full' (10
- *                                     phones) | false (unreachable)
+ *                                     phones: only a database not yet updated for round 3 answers this; since
+ *                                     then an eleventh phone replaces the participant's least recently used
+ *                                     one and the answer is true) | false (unreachable)
  *   updateSchedule(endpoint, changes) update_push_schedule -> { found:true, enabled, paused_until,
  *                                     settled_at } | { found:false } | null (unreachable or refused)
  *
@@ -292,16 +296,16 @@
         for (let d = from; d <= to; d = addDays(d, 1)) { days++; if (isoDow(d) === 7) sundays++; }
         return { period: 'month', from, to, target: days * perDay + sundays * R.fullWeek };
       }
-      const from = mondayOf(today);
-      return { period: 'week', from, to: addDays(from, 6), target: 7 * perDay + R.fullWeek };
+      const from = addDays(mondayOf(today), kind === 'last_week' ? -7 : 0);
+      return { period: kind === 'last_week' ? 'last_week' : 'week', from, to: addDays(from, 6), target: 7 * perDay + R.fullWeek };
     },
     myPointsLocal(rows, now) {
-      const R = S.rules(), sc = S.score(rows, now), w = S.period('week', now), m = S.period('month', now);
+      const R = S.rules(), sc = S.score(rows, now), w = S.period('week', now), lw = S.period('last_week', now), m = S.period('month', now);
       const all = S.pointsIn(sc, null, null), today = dayOf(now ? new Date(now) : new Date(), R.zone);
       const goal = new Set(sc.goalDays);
       let d = goal.has(today) ? today : addDays(today, -1), streak = 0;
       while (goal.has(d)) { streak++; d = addDays(d, -1); }
-      return { all_time: all.points, week: S.pointsIn(sc, w.from, w.to).points, month: S.pointsIn(sc, m.from, m.to).points,
+      return { all_time: all.points, week: S.pointsIn(sc, w.from, w.to).points, last_week: S.pointsIn(sc, lw.from, lw.to).points, month: S.pointsIn(sc, m.from, m.to).points,
         checkins_counted: all.counted, goal_days: all.goal_days, streak };
     },
 
@@ -385,7 +389,7 @@
     async myProfile() { return first(await S.keyed('my_profile')); },
     async updateMyProfile(fields, home) { return first(await S.keyed('update_my_profile', { p_fields: fields || {}, p_home: home || null })); },
     async myPoints() { return first(await S.keyed('my_points')); },
-    async race(period) { return first(await S.keyed('race', { p_period: period === 'month' ? 'month' : 'week' })); },
+    async race(period) { return first(await S.keyed('race', { p_period: period === 'month' || period === 'last_week' ? period : 'week' })); },
     async setRaceHidden(hidden) { return !!(await S.keyed('set_race_hidden', { p_hidden: !!hidden })); },
     // Signing out on this device: its key stops working on the server too.
     async forgetDevice() { const key = S.key(); if (!live || !key) return; try { await fetch(rest('rpc/forget_device'), { method: 'POST', headers: headers(), body: JSON.stringify({ p_key: key }) }); } catch (e) {} },

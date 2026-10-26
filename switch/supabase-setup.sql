@@ -46,7 +46,9 @@ create extension if not exists pgcrypto;
 -- home holds the home profile from sign-up as one JSON object, always metric (floor area in m2,
 -- thermostat settings in degrees C). The keys are listed in switch/README.md ("The home profile").
 -- Only the first half of the postcode is ever stored (postcode_area, e.g. SA1). Participants who joined
--- before 1.0 have home = null until they fill it in.
+-- before 1.0 have home = null until they fill it in. The database requires no key and checks only
+-- postcode_area (when present): questions the app stops asking (payment, stat_display and bedroom_trv after
+-- 1.0) simply stop appearing in new profiles, and the answers already given stay.
 --
 -- alias is the participant's name in the Bay Race (e.g. "Puffin"): random, unique, never derived from
 -- the code, given by the trigger below. alias_colour (0-7) picks their colour in the race.
@@ -619,8 +621,8 @@ create table if not exists public.comfort_votes (
   sun            text,                          -- yes | no | dark
   heating_on     text,                          -- on | off | unsure
   heating_src    text[],                        -- which heating is on (ids from the home profile, or other); null unless on
-  heating_for    text,                          -- lt30 | 30_60 | 1_2h | 2_4h | gt4h | unsure; null unless on
-  stat_temp_c    numeric(3,1),                  -- what the thermostat's screen shows (room temperature), null when not seen
+  heating_for    text,                          -- 30_60 | 1_2h | 2_4h | gt4h | always | unsure (lt30 in older rows); null unless on
+  stat_temp_c    numeric(3,1),                  -- what the thermostat's screen showed (room temperature); asked by 1.0 only, null since
   wall           text,                          -- the nearest outside wall to the touch: cold | cool | neutral | warm | no_reach
   actions        text[],                        -- what they did in the last 30 minutes
   notes          text[],                        -- what they had or felt in the last 30 minutes
@@ -770,7 +772,7 @@ begin
     v_on,
     public.sw_picks(j, 'heating_src', array['gas_combi', 'gas_tank', 'oil', 'lpg', 'ashp', 'gshp', 'storage', 'electric', 'communal', 'solid',
                                             'plugin', 'gas_fire', 'electric_fire', 'stove', 'open_fire', 'electric_blanket', 'main', 'other', 'unsure']),
-    public.sw_pick(j, 'heating_for', array['lt30', '30_60', '1_2h', '2_4h', 'gt4h', 'unsure']),
+    public.sw_pick(j, 'heating_for', array['lt30', '30_60', '1_2h', '2_4h', 'gt4h', 'always', 'unsure']),   -- lt30: older app versions
     public.sw_num(j, 'stat_temp_c', 5, 35, 1),
     public.sw_pick(j, 'wall', array['cold', 'cool', 'neutral', 'warm', 'no_reach']),
     public.sw_picks(j, 'actions', array['win_open', 'win_close', 'door_open', 'door_close', 'heat_up', 'heat_down', 'layer_on', 'layer_off',
@@ -876,8 +878,9 @@ language sql stable set search_path = public as $$
 $$;
 revoke all on function public.sw_points(date, date, text) from public, anon, authenticated;
 
--- This week (Monday to Sunday) or this month on the UK calendar, and the race's finish line for it: a goal
--- day every day (4 x 10 + 20 = 60) plus every full-week bonus (50 for each Sunday in the period).
+-- This week (Monday to Sunday), last week (the Monday to Sunday before) or this month on the UK calendar, and
+-- the race's finish line for it: a goal day every day (4 x 10 + 20 = 60) plus every full-week bonus (50 for each
+-- Sunday in the period). Anything other than 'month' or 'last_week' means this week.
 create or replace function public.sw_period(p_period text)
 returns table(period text, day_from date, day_to date, target integer)
 language plpgsql stable set search_path = public as $$
@@ -887,28 +890,29 @@ begin
     v_from := date_trunc('month', v_today::timestamp)::date;
     v_to := (v_from + interval '1 month')::date - 1;
   else
-    v_from := v_today - extract(isodow from v_today)::integer + 1;
+    v_from := v_today - extract(isodow from v_today)::integer + 1 - case when p_period = 'last_week' then 7 else 0 end;
     v_to := v_from + 6;
   end if;
-  return query select case when p_period = 'month' then 'month' else 'week' end, v_from, v_to,
+  return query select case when p_period in ('month', 'last_week') then p_period else 'week' end, v_from, v_to,
     ((v_to - v_from + 1) * (4 * 10 + 20) + 50 * (select count(*) from generate_series(0, v_to - v_from) i where extract(isodow from v_from + i) = 7))::integer;
 end $$;
 revoke all on function public.sw_period(text) from public, anon, authenticated;
 
--- The participant's own points: all time, this week, this month, counted check-ins and goal days (all
--- time), and the streak: goal days in a row ending today, or ending yesterday while today has not
+-- The participant's own points: all time, this week, last week, this month, counted check-ins and goal days
+-- (all time), and the streak: goal days in a row ending today, or ending yesterday while today has not
 -- reached the goal yet.
 drop function if exists public.my_points(text);
 create or replace function public.my_points(p_key text)
-returns table(all_time integer, week integer, month integer, checkins_counted integer, goal_days integer, streak integer)
+returns table(all_time integer, week integer, last_week integer, month integer, checkins_counted integer, goal_days integer, streak integer)
 language plpgsql security definer set search_path = public as $$
 declare
   v_code text := public.sw_code_of(p_key);
   v_today date := (now() at time zone 'Europe/London')::date;
-  w record; m record; a record; v_goal date[]; v_start date; v_streak integer := 0;
+  w record; lw record; m record; a record; v_goal date[]; v_start date; v_streak integer := 0;
 begin
   if v_code is null then raise exception 'This device is not signed in' using errcode = '28000'; end if;
   select * into w from public.sw_period('week');
+  select * into lw from public.sw_period('last_week');
   select * into m from public.sw_period('month');
   select coalesce(sum(x.points), 0)::integer as points, coalesce(sum(x.counted), 0)::integer as counted, coalesce(sum(x.goal_days), 0)::integer as goal_days
     into a from public.sw_points(null, null, v_code) x;
@@ -917,13 +921,15 @@ begin
   while (v_start - v_streak) = any(v_goal) loop v_streak := v_streak + 1; end loop;
   return query select a.points,
     coalesce((select x.points from public.sw_points(w.day_from, w.day_to, v_code) x), 0),
+    coalesce((select x.points from public.sw_points(lw.day_from, lw.day_to, v_code) x), 0),
     coalesce((select x.points from public.sw_points(m.day_from, m.day_to, v_code) x), 0),
     a.counted, a.goal_days, v_streak;
 end $$;
 revoke all on function public.my_points(text) from public;
 grant execute on function public.my_points(text) to anon, authenticated;
 
--- The Bay Race for this week or this month. Approved participants only, by alias (never a code or a
+-- The Bay Race for this week, last week (p_period 'last_week': the Monday to Sunday before, target 470) or this
+-- month. Approved participants only, by alias (never a code or a
 -- name); those who switched "Show me in the Bay Race" off are left out for everyone else, but still see
 -- the race and their own place (me.hidden). Runners are ranked by points (equal points share a place).
 -- checkins = counted check-ins in the period. A caller who is not approved (yet) gets only their own
@@ -1116,7 +1122,8 @@ revoke all on function public.push_zone(text) from public, anon, authenticated;
 -- its keys, time zone and home hours and turns it back on. A phone that changes hands to another
 -- participant starts without the previous person's pause and check-in times. Refused with 28000 for a key
 -- that is not (or no longer) signed in, 42501 (which the API returns as 401) for a participant who is not
--- approved, 22023 for an endpoint outside the push services or unusable hours, P0001 beyond ten phones.
+-- approved, 22023 for an endpoint outside the push services or unusable hours. An eleventh phone replaces the
+-- participant's least recently used one (until round 3 it was refused with P0001, "too many phones").
 -- Until 1.0 this took the participant code (p_participant) instead of the key; that version has the same
 -- argument types, so the drop below removes it (and this one, which is then created again).
 drop function if exists public.save_push_subscription(text, text, text, text, text, integer, text, text, text, text, text, text, text, text, integer, text);
@@ -1152,12 +1159,19 @@ begin
     raise exception 'That is not a push subscription from a known push service' using errcode = '22023';
   end if;
   perform public.push_check_hours(ws, we, es, ee, ws2, we2, es2, ee2);
-  -- A phone that turned reminders off has dropped its subscription, so its row is of no further use. Then at
-  -- most ten phones per participant (the sender reads them all).
+  -- At most ten phones per participant (the sender reads them all), and never a participant stuck at "too many
+  -- phones": the app needs reminders on a phone or tablet before it checks in. A phone that turned reminders off
+  -- has dropped its subscription, so its row goes first. Then, when the other phones still number ten, the least
+  -- recently used go until this one fits: the oldest updated_at, i.e. the phone whose app (or notification
+  -- button) last talked to the database the longest ago. Only the participant's own signed-in device gets here
+  -- (the key above), so nobody else can push their phones out. The lock makes two phones registering at the same
+  -- moment take turns, so the count never passes ten.
+  perform pg_advisory_xact_lock(hashtext('switch phones ' || v_code));
   delete from public.push_subscriptions s where s.participant = v_code and s.enabled = false and s.endpoint <> p_endpoint;
-  if (select count(*) from public.push_subscriptions s where s.participant = v_code and s.endpoint <> p_endpoint) >= 10 then
-    raise exception 'This participant already has the most phones allowed' using errcode = 'P0001';
-  end if;
+  delete from public.push_subscriptions s
+   where s.participant = v_code and s.endpoint <> p_endpoint
+     and s.endpoint in (select x.endpoint from public.push_subscriptions x where x.participant = v_code and x.endpoint <> p_endpoint
+                        order by x.updated_at desc, x.created_at desc, x.endpoint desc offset 9);
   insert into public.push_subscriptions as s
     (endpoint, participant, p256dh, auth, tz, tz_offset_min,
      weekday_start, weekday_end, weekend_start, weekend_end, weekday2_start, weekday2_end, weekend2_start, weekend2_end,

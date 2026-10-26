@@ -20,7 +20,6 @@ const RACE_KEY = p => 'switch_race_' + p;                   // the last race pay
 const KEY_LOST_KEY = 'switch_key_lost';                     // '1': this phone was signed out by the server (sign in again)
 const POINTS_KEY = 'switch_points';                         // my_points as last read, { at, code, p }: the database's own figures
 const BACKFILL_KEY = 'switch_backfill';                     // the code whose older check-ins on this phone have been offered to the database once
-const INSTALL_SKIP_KEY = 'switch_install_skip';             // sessionStorage: "Continue in Safari anyway" was chosen in this tab
 const NOTIF_ASKED_KEY = 'switch_notif_asked';               // sessionStorage: "Check in now" has asked about notifications once
 const INTERVAL = CFG.reminderIntervalMin || 60;             // minutes between reminders, same as the sender
 const GOAL = Math.max(1, Math.round(Number(CFG.dailyGoal) || 4));
@@ -125,7 +124,7 @@ function seed(){
       rows.push({ id:'ex'+(i++), p:PARTICIPANT, ts:t.toISOString(), type: k % 2 ? 'scheduled' : 'self', home:'long', example:true, same:false,
         tsv, tp: tsv < 0 ? 'warmer' : tsv > 0 ? 'cooler' : 'same', ta: Math.abs(tsv) >= 2 ? 'unacceptable' : 'acceptable',
         garments:s[5], clo:cloOf(s[5]), act:s[4], met:byId(ACTS,s[4]).met, room:s[3], air: k===1 ? 'draughty' : k===3 ? 'slight' : 'still', sun:s[6],
-        heat:s[7], heat_src: on ? ['gas_combi'] : null, heat_for: on ? ['lt30','1_2h','2_4h'][k % 3] : null, stat: 18.5 + (k % 4) * 0.5 + drift,
+        heat:s[7], heat_src: on ? ['gas_combi'] : null, heat_for: on ? ['always','1_2h','2_4h'][k % 3] : null, stat: null,
         wall: tsv < 0 ? 'cold' : k % 2 ? 'cool' : 'neutral', actions: k===1 ? ['heat_up'] : k===4 ? ['layer_off'] : [], notes: k===4 ? ['hot_drink'] : [], secs: 24 + (i*7 % 30) });
     });
   }
@@ -135,8 +134,8 @@ function seed(){
   if(!meKnown()) LS.set(ME_KEY, JSON.stringify(Object.assign({ code:PARTICIPANT, name:NAME, gender:'prefer_not', birth_year:1985, height_cm:170, weight_kg:70, sensitivity:'average', alias:'Puffin', alias_colour:3 }, meProfile(), { code:PARTICIPANT })));
 }
 const EXAMPLE_HOME = { postcode_area:'SA2', home_type:'semi', tenure:'own', year_built:'1945_1964', floors:2, bedrooms:3, floor_area_m2:86, epc:'D',
-  adults:2, children:1, pets:0, bedroom_share:1, main_heating:'gas_combi', other_heaters:['electric_fire'], heating_pattern:'timer', payment:'bill',
-  controls:['room_stat','trvs'], stat_display:'yes', setpoint_c:20, bedroom_trv:'yes', wall_insulation:'cavity', loft:'yes', glazing:'double',
+  adults:2, children:1, pets:0, bedroom_share:1, main_heating:'gas_combi', other_heaters:['electric_fire'], heating_pattern:'timer',
+  controls:['room_stat','trvs'], setpoint_c:20, wall_insulation:'cavity', loft:'yes', glazing:'double',
   windows_open:'yes', damp:['bathroom'], bedroom_facing:'SW', bedroom_side:'S' };
 
 /* ---------- goals, the gap, the streak ---------- */
@@ -150,7 +149,7 @@ function gamePoints(list){
   if(!hasGame()) return null;
   const pts = GAME.points(list, new Date()), sv = readJSON(POINTS_KEY), l = list[0];
   if(sv && sv.p && sv.code === PARTICIPANT && (!l || sv.at >= l.ts) && GAME.ukDay(sv.at) === GAME.ukDay(new Date()))
-    ['all_time','week','month'].forEach(k => { if(typeof sv.p[k] === 'number') pts[k] = sv.p[k]; });
+    ['all_time','week','last_week','month'].forEach(k => { if(typeof sv.p[k] === 'number') pts[k] = sv.p[k]; });
   return pts;
 }
 async function refreshPoints(){
@@ -202,7 +201,7 @@ async function homeReady(opener){
 }
 /* A new check-in, unless the last one was less than GAP_MIN ago: then a sheet says when the next one opens
  * (from a reminder too, over Today). Nobody checks in before their home profile is complete. */
-async function startSession(mode, opener){
+async function startSession(mode, opener, anyway){
   if(needsKey()){ go('signin'); return; }
   if(!(await homeReady(opener))){ showToast({ title:'Your home profile has not loaded yet', sub:'Check the connection, then try again', kind:'error' }); return; }
   if(needsKey()){ go('signin'); return; }                   // reading the profile found the key no longer works
@@ -210,6 +209,7 @@ async function startSession(mode, opener){
   const from = TABS.includes(S.screen) ? S.screen : 'today';
   const open = nextOpen();
   if(open){ if(firstRender || !TABS.includes(S.screen)) go(from); waitSheet(open, opener); return; }
+  if(notifGate() && !(anyway && notifCanSkip())){ if(!TABS.includes(S.screen)) go(from); notifSheet(opener, mode); return; }   // phones and tablets: notifications first
   S = Object.assign(fresh(), { t0:Date.now(), mode, screen:from });
   go('athome');
 }
@@ -432,9 +432,9 @@ function statusCard(){
   else if(on){ title = `Next reminder ${whenWord(nextReminder())}`; sub = daysWord(hours()); }
   else if(st==='unconfigured'){ icon = 'clock'; title = `Next check-in window ${whenWord(nextReminder())}`; sub = 'Reminders start once the study database is connected'; }
   else if(st==='off'){ title = PUSH.lost() ? 'Reminders have stopped' : 'Turn on reminders'; sub = PUSH.lost() ? 'Tap to turn them on again' : 'A nudge once an hour while you&rsquo;re at home'; }
-  else if(st==='install'){ icon = 'download'; title = 'Add the app to your Home Screen'; sub = 'Reminders need it on your Home Screen'; }
+  else if(st==='install'){ icon = 'download'; title = PUSH.inApp ? 'Open this page in Safari' : 'Add the app to your Home Screen'; sub = 'Reminders need it on your Home Screen'; }
   else if(st==='blocked'){ icon = 'bellOff'; title = 'Reminders are blocked'; sub = 'Allow notifications to turn them on'; }
-  else { icon = 'bellOff'; title = 'Reminders aren&rsquo;t available here'; sub = 'Use Chrome on Android or Safari on iPhone'; }
+  else { icon = 'bellOff'; title = 'Reminders aren&rsquo;t available here'; sub = PUSH.iosOld ? 'They need iOS 16.4 or later' : 'Use Chrome on Android or Safari on iPhone'; }
   return `<button class="status" data-act="go-reminders">${ic(icon)}<div><b>${title}</b><span>${sub}</span></div>${ic('chev','go')}</button>`;
 }
 /* "Weekdays 17:00–22:30 · Weekends 09:00–22:30", or "Every day ..." when the two are the same */
@@ -445,33 +445,133 @@ function daysWord(h){
 /* Notifications are part of the study: without them nobody is reminded to check in. Until they are on,
  * Today leads with this card, and the first "Check in now" of a visit asks for them (notifSheet). Whatever
  * happens there, the check-in goes ahead: nobody is kept from checking in, and nothing asks twice in a row. */
-const needsNotif = () => ['off','blocked','install'].includes(PUSH.status());
+const needsNotif = () => ['off','blocked','install'].includes(PUSH.status()) || (HANDHELD && PUSH.status() === 'unsupported');
+/* Phones and tablets need notifications to check in: the study runs on its reminders. A phone or tablet is an
+ * iPhone, iPad (also an iPad that says it is a Mac) or Android by its user agent, or any device whose only
+ * pointer is a finger. A laptop or desktop may still check in without them. */
+const HANDHELD = (() => {
+  const ua = navigator.userAgent || '', ipados = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  let coarse = false; try{ coarse = matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches; }catch(e){}
+  return /iPhone|iPad|iPod|Android|Mobile|Tablet|Silk|Kindle/i.test(ua) || ipados || coarse;
+})();
+/* On a phone or tablet the check-in waits until notifications are on (local mode has none to turn on). */
+const notifGate = () => HANDHELD && !studyOver() && ['off','blocked','install','unsupported'].includes(PUSH.status());
+/* what the Today button says comes first on this phone, or '' (nothing possible to ask for: the check-in goes ahead) */
+function gateWord(){
+  if(!notifGate()) return '';
+  const st = PUSH.status();
+  if(st === 'install') return PUSH.inApp ? 'First, open this page in Safari' : `First, add ${APP} to your Home Screen`;
+  if(st === 'blocked') return 'First, allow notifications';
+  return st === 'off' && !notifTrouble ? 'First, turn on notifications' : '';
+}
+const TEAM_LINE = `Questions? Email the research team at ${TEAM}.`;
+/* the app's own address, to open in Safari (no query: the Home Screen app starts from the manifest anyway) */
+const APP_URL = location.origin + location.pathname;
+const copyLinkBox = () => `<div class="copylink"><input class="in" readonly value="${esc(APP_URL)}" aria-label="The link to ${APP}"><button class="btn secondary" type="button" data-act="copy-link">${ic('copy')} Copy link</button></div>`;
+/* iPhone or iPad, outside the Home Screen app: how to get there. Inside another app's browser (Gmail, WhatsApp,
+ * Facebook, Instagram, the Google app) or Chrome, Firefox or Edge there is no Add to Home Screen, so Safari first.
+ * signedIn: this person already uses the app here (they sign in again in the Home Screen app; nothing is carried
+ * over from Safari, and nothing sensitive is shown). */
+function installSteps(signedIn){
+  const last = signedIn ? `<li><div>Open <b>${APP}</b> from your Home Screen, choose <b>I have registered before</b> and sign in with your email and the PIN you use here. Your check-ins come with you.</div></li>`
+    : `<li><div>Open <b>${APP}</b> from your Home Screen and join there (or sign in, if you have joined before).</div></li>`;
+  const add = `<li><div>In Safari, tap the <b>Share</b> button ${ic('share','inl')}, then <b>Add to Home Screen</b> and <b>Add</b>.</div></li>`;
+  if(PUSH.inApp) return `<ol class="steps"><li><div>Open this page in <b>Safari</b>: tap <b>&middot;&middot;&middot;</b> or the share button and choose <b>Open in Safari</b> (or <b>Open in browser</b>). No such option? Copy the link below, open Safari and paste it into the address bar.</div></li>${add}${last}</ol>${copyLinkBox()}`;
+  return `<ol class="steps"><li><div>Tap the <b>Share</b> button ${ic('share','inl')} in Safari&rsquo;s toolbar.</div></li><li><div>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</div></li>${last}</ol>
+    <p class="note">No <b>Add to Home Screen</b>? This page may be open inside another app: copy the link and open it in Safari.</p>${copyLinkBox()}`;
+}
+/* Notifications could not be switched on in this visit for a technical reason, not by choice: the phone's push
+ * service failed (Android without Google services, for example), the service worker never started, the database
+ * or the connection failed, or the database refused the phone. A phone or tablet may then check in without them
+ * ("Check in this time"), and Today keeps offering to try again. In memory only: the next visit tries afresh. */
+let notifTrouble = '';
+const TROUBLE_TEXT = `Your phone couldn&rsquo;t switch on reminders. You can still check in this time. Please email ${TEAM} so we can help.`;
+/* this check-in may go ahead without notifications: always on a computer; on a phone or tablet only when they
+ * cannot be had (not supported here, or switching them on failed) */
+const notifCanSkip = () => !HANDHELD || PUSH.status() === 'unsupported' || (PUSH.status() === 'off' && !!notifTrouble);
 function notifHelp(st){
   if(st === 'blocked') return { icon:'bellOff', title:'Notifications are blocked',
-    html: PUSH.ios ? `<ol class="steps"><li><div>Open your iPhone&rsquo;s <b>Settings</b>, then <b>Notifications</b>.</div></li><li><div>Find <b>${APP}</b> and turn on <b>Allow Notifications</b>.</div></li><li><div>Come back here.</div></li></ol>`
-      : `<ol class="steps"><li><div>Touch and hold the <b>${APP}</b> icon, then tap <b>App info</b> (or &#9432;).</div></li><li><div>Tap <b>Notifications</b> and turn them on.</div></li><li><div>Come back here.</div></li></ol><p class="note">Using it in Chrome instead? Tap the icon to the left of the address, then <b>Permissions</b> &rsaquo; <b>Notifications</b> &rsaquo; <b>Allow</b>.</p>` };
-  if(st === 'install') return { icon:'download', title:'Add the app to your Home Screen',
-    html: `<p>On iPhone, notifications only work in the Home Screen app.</p><ol class="steps"><li><div>Tap the <b>Share</b> button ${ic('share','inl')} in Safari.</div></li><li><div>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</div></li><li><div>Open ${APP} from your Home Screen, choose <b>I have registered before</b> and sign in with your email and PIN.</div></li></ol>` };
-  if(st === 'unsupported') return { icon:'bellOff', title:'Notifications don&rsquo;t work in this browser',
-    html: `<p>On Android, open the app in Chrome. On iPhone, open it in Safari and add it to your Home Screen.</p>` };
+    html: (PUSH.ios ? `<p>${APP} is not allowed to send notifications on this ${/iPad/.test(navigator.userAgent) || navigator.platform === 'MacIntel' ? 'iPad' : 'iPhone'}.</p><ol class="steps"><li><div>Open <b>Settings</b>, then <b>Notifications</b>.</div></li><li><div>Find <b>${APP}</b> and turn on <b>Allow Notifications</b>.</div></li><li><div>Come back here and tap <b>I&rsquo;ve turned them on</b>.</div></li></ol>`
+      : `<p>${APP} is not allowed to send notifications on this phone.</p><ol class="steps"><li><div>Touch and hold the <b>${APP}</b> icon, then tap <b>App info</b> (or &#9432;).</div></li><li><div>Tap <b>Notifications</b> and turn them on.</div></li><li><div>Come back here and tap <b>I&rsquo;ve turned them on</b>.</div></li></ol><p class="note">Using it in Chrome instead? Tap the icon to the left of the address, then <b>Permissions</b> (or <b>Site settings</b>) &rsaquo; <b>Notifications</b> &rsaquo; <b>Allow</b>.</p>`),
+    btn: `<button class="btn primary" data-act="notif-recheck">${ic('refresh')} I&rsquo;ve turned them on</button>` };
+  if(st === 'install') return { icon:'download', title: PUSH.inApp ? 'Open this page in Safari' : 'Add the app to your Home Screen',
+    html: `<p>On ${PUSH.device()}, notifications only work in the Home Screen app.</p>${installSteps(!!PARTICIPANT)}` };
+  if(st === 'unsupported') return { icon:'bellOff', title:'Reminders don&rsquo;t work here',
+    html: HANDHELD ? (PUSH.iosOld ? `<p>Reminders from ${APP} need iOS&nbsp;16.4 or later, and this ${PUSH.device()} has an older version. You can still check in.</p>`
+        : `<p>This browser can&rsquo;t show reminders. You can still check in.</p><p class="note">On Android, opening this page in <b>Chrome</b> usually fixes it.</p>`) + `<p class="note">Please email ${TEAM} so we can help.</p>`
+      : `<p>On Android, open the app in Chrome. On iPhone, open it in Safari and add it to your Home Screen.</p>` };
   return { icon:'bell', title: PUSH.lost() ? 'Notifications have stopped' : 'Turn on notifications',
-    html: `<p>${APP} reminds you to check in, about once an hour while you&rsquo;re at home. The study needs them.</p><p class="note">${ic('clock','inl')} ${daysWord(hours())} to start with. You can change the hours in Settings.</p>` };
+    html: `<p>${APP} reminds you to check in, about once an hour while you&rsquo;re at home. The study needs them${HANDHELD ? ', so on a phone or tablet check-ins start once they are on' : ''}.</p><p class="note">${ic('clock','inl')} ${daysWord(hours())} to start with. You can change the hours in Settings.</p>`,
+    btn: `<button class="btn primary" data-act="notif-on">${ic('bell')} Turn on notifications</button>` };
 }
 function notifCard(){
-  const st = PUSH.status(), n = notifHelp(st);
-  return `<section class="notif${st === 'off' ? '' : ' warn'}" aria-labelledby="notifH"><div class="nt-top">${ic(n.icon)}<div><div class="eyebrow">Needed for the study</div><b id="notifH">${n.title}</b></div></div>
-    <div class="nt-body">${n.html}</div><div class="msg" id="notifMsg" role="status" hidden></div>
-    ${st === 'off' ? `<button class="btn primary" data-act="notif-on">${ic('bell')} Turn on notifications</button>` : ''}</section>`;
+  const st = PUSH.status(), n = notifHelp(st), trouble = st === 'off' && notifTrouble;
+  return `<section class="notif${st === 'off' && !trouble ? '' : ' warn'}" aria-labelledby="notifH"><div class="nt-top">${ic(n.icon)}<div><div class="eyebrow">Needed for the study</div><b id="notifH">${n.title}</b></div></div>
+    <div class="nt-body">${n.html}</div><div class="msg${trouble ? ' warn' : ''}" id="notifCardMsg" role="status"${trouble ? '' : ' hidden'}>${trouble ? ic('alert') + '<div>' + TROUBLE_TEXT + '</div>' : ''}</div>
+    ${n.btn || ''}</section>`;
 }
-function notifSheet(opener){
-  const st = PUSH.status(), n = notifHelp(st);
-  SS.set(NOTIF_ASKED_KEY, '1');
-  openSheet(`<div class="sh-head"><div><div class="eyebrow">Before you check in</div><b id="sheetTitle">${n.title}</b></div><button class="x" data-act="sheet-close" aria-label="Close">${ic('x')}</button></div>
+/* Before a check-in. On a phone or tablet: the way to get notifications on, and nothing that skips them by choice
+ * (the check-in starts by itself once they are on); only when they cannot be had (not supported here, or switching
+ * them on failed for a technical reason) "Check in this time". On a computer: once a visit, with "Check in without
+ * them". mode: 'self' or 'scheduled' (a reminder tap), carried by the buttons to the check-in. */
+function notifSheet(opener, mode){
+  const st = PUSH.status(), gate = HANDHELD, md = mode === 'scheduled' ? ' data-mode="scheduled"' : '';
+  const failed = gate && st === 'off' && !!notifTrouble, cant = gate && st === 'unsupported';
+  const n = failed ? { title:'Reminders couldn&rsquo;t be switched on', html:`<div class="msg warn">${ic('alert')}<div>${TROUBLE_TEXT}</div></div><p class="note">You can try again now, or later from Today or Settings.</p>` } : notifHelp(st);
+  if(!gate) SS.set(NOTIF_ASKED_KEY, '1');
+  const then = b => b ? b.replace('data-act=', `data-then="start"${md} data-act=`) : '';
+  const anyway = label => `<button class="btn primary" data-act="start-anyway"${md}>${label}</button>`;
+  const acts = failed ? anyway('Check in this time') + then(`<button class="btn link" data-act="notif-on">${ic('refresh')} Try again</button>`)
+    : cant ? anyway('Check in this time') + `<button class="btn link" data-act="sheet-close">Not now</button>`
+    : gate ? `${then(n.btn)}<button class="btn link" data-act="sheet-close">${n.btn ? 'Not now' : 'OK'}</button>`
+    : st === 'off' ? `<button class="btn primary" data-act="notif-on" data-then="start"${md}>${ic('bell')} Turn on and check in</button><button class="btn link" data-act="start-anyway"${md}>Check in without them</button>`
+    : anyway('Check in anyway');
+  openSheet(`<div class="sh-head"><div><div class="eyebrow">${gate ? 'To check in on this ' + PUSH.device(true) : 'Before you check in'}</div><b id="sheetTitle">${n.title}</b></div><button class="x" data-act="sheet-close" aria-label="Close">${ic('x')}</button></div>
     <div class="sh-body nt-body">${n.html}<div class="msg" id="notifMsg" role="status" hidden></div>
-    <div class="actions">${st === 'off' ? `<button class="btn primary" data-act="notif-on" data-then="start">${ic('bell')} Turn on and check in</button><button class="btn link" data-act="start-anyway">Check in without them</button>`
-      : `<button class="btn primary" data-act="start-anyway">Check in anyway</button>`}</div></div>`, st === 'off' ? '[data-act="notif-on"]' : '[data-act="start-anyway"]', opener);
+    <div class="actions">${acts}</div></div>`, '#sheet .actions .btn', opener);
 }
-function notifMsg(t, ok){ const m = $('#notifMsg') || $('#remMsg'); if(!m) return; m.hidden = false; m.className = 'msg' + (ok ? ' ok' : ' warn'); m.innerHTML = ic(ok ? 'checkc' : 'alert') + '<div>' + t + '</div>'; }
+/* A message where the participant is looking: in the open sheet, else on the Today card, else in Settings. */
+function notifMsg(t, ok){ const m = SHEET_OPEN ? $('#sheet #notifMsg') : ($('#notifCardMsg') || $('#remMsg')); if(!m) return; m.hidden = false; m.className = 'msg' + (ok ? ' ok' : ' warn'); m.innerHTML = ic(ok ? 'checkc' : 'alert') + '<div>' + t + '</div>'; }
+async function turnOnNotifs(b, thenStart, mode){
+  mode = mode === 'scheduled' ? 'scheduled' : 'self';
+  LS.set(HOURS_KEY, JSON.stringify(hours()));
+  busy(b, true);
+  let r;
+  try{
+    try{ r = await PUSH.enable(); }
+    catch(e1){
+      if(e1.kind === 'signin' || e1.kind === 'refused') throw e1;      // signing in again, or not in the study: no retry
+      await new Promise(res => setTimeout(res, 1500));                 // once more by itself: a push service or a connection can fail once
+      r = await PUSH.enable();
+    }
+  }catch(err){
+    busy(b, false);
+    if(err.kind === 'signin') return;                                  // keyLost() has opened the sign-in
+    if(!HANDHELD){                                                     // a computer: the check-in goes ahead
+      if(thenStart){ closeSheet(); startSession(mode); showToast({ title:'Notifications are not on', sub:'You can turn them on from Today or Settings', kind:'info' }); }
+      else notifMsg(err.message || 'Something went wrong, please try again.');
+      return; }
+    notifTrouble = err.kind || 'error';                                // a technical reason, not a choice: this check-in may go ahead
+    if(SHEET_OPEN) notifSheet(null, mode); else rerender();           // the Today card and Settings now say so, with "Try again"
+    return;
+  }
+  if(r === 'on'){
+    notifTrouble = '';
+    showToast({ title:'Notifications are on', sub: daysWord(hours()).replace(/&ndash;/g, '–').replace(/&middot;/g, '·') });
+    if(thenStart){ closeSheet(); startSession(mode); }
+    else { rerender(); if(S.screen === 'settings') remMsg(`Notifications are on. ${daysWord(hours())}; change the hours below.`, 'ok'); }
+    return;
+  }
+  busy(b, false);
+  if(HANDHELD){                                           // phones and tablets: no check-in without them by choice
+    if(r === 'dismissed') return notifMsg('Notifications were not allowed. Tap the button again and choose <b>Allow</b>.');
+    if(SHEET_OPEN) notifSheet(null, mode); else rerender();   // blocked now: the steps to allow them
+    return;
+  }
+  if(thenStart){ closeSheet(); startSession(mode); showToast({ title:'Notifications are not on', sub:'You can turn them on from Today or Settings', kind:'info' }); }   // a computer: the check-in goes ahead
+  else if(r === 'dismissed') notifMsg('Notifications were not allowed. Tap the button again and choose <b>Allow</b>.');
+  else rerender();
+}
 /* a progress ring (outer ring first), drawn in the app's own colours */
 function ring(size, stroke, rings, center, label){
   const c = size / 2; let r = c - stroke / 2, s = '';
@@ -522,7 +622,7 @@ function gameToday(list, pts){
   const latest = GAME.badges(list, new Date()).filter(b => b.got).sort((a, b) => a.at < b.at ? 1 : -1)[0];
   const nf = n => Math.round(n || 0).toLocaleString('en-GB');
   return `<div class="stats pts" aria-label="Your points"><div class="stat"><b>${nf(pts.week)}</b><span>this week</span></div><div class="stat"><b>${nf(pts.month)}</b><span>this month</span></div><div class="stat"><b>${nf(pts.all_time)}</b><span>points in all</span></div></div>
-    ${GAME.raceMiniHTML(pay)}
+    ${GAME.raceMiniHTML(pay, { lastWeek: racePayload('last_week'), loading: navigator.onLine !== false })}
     ${latest ? `<button class="row badge-row" data-act="badges">${ic('medal')}<div><b>Latest badge: ${esc(latest.name)}</b><span>${esc(latest.desc)}</span></div>${ic('chev','go')}</button>` : ''}`;
 }
 /* ---- My check-ins: three small charts and the list ---- */
@@ -570,7 +670,7 @@ function detailRows(l){
   const li = (icon, html) => html ? `<li>${icon}<div>${html}</div></li>` : '';
   const tp = byId(TP,l.tp), act = byId(ACTS,l.act), room = byId(ROOMS,l.room), air = byId(AIR,l.air), sun = byId(SUN,l.sun), wall = byId(WALL,l.wall), heat = byId(HEAT,l.heat);
   const taOk = l.ta ? (byId(TA,l.ta) ? l.ta==='acceptable' : !/unacc/.test(l.ta)) : null;
-  const hf = byId(HEAT_FOR, l.heat_for);
+  const hf = heatForWord(l.heat_for);
   return [
     typeof l.tsv==='number' && li(`<span class="f">${face(l.tsv)}</span>`, `<b>${tsvWord(l.tsv)}</b> (${signed(l.tsv)})`),
     tp && li(ic(tp.ic, tp.cls||''), tp.id==='same' ? 'Happy with the temperature' : `Would like to be <b>${tp.n.toLowerCase()}</b>`),
@@ -578,7 +678,7 @@ function detailRows(l){
     (l.garments||[]).length ? li(ic('tshirt'), `${garmentNames(l.garments)} &middot; ${(l.clo||0).toFixed(2)} clo`) : '',
     act && li(ic(act.ic), act.n), room && li(ic(room.ic), room.n),
     air && li(ic(air.ic), air.k), sun && li(ic(sun.ic), sun.n),
-    heat && li(ic(heat.ic, heat.cls||''), heat.k + (l.heat === 'on' && (l.heat_src||[]).length ? ': ' + heatSrcWord(l.heat_src) : '') + (hf ? ` &middot; ${hf.n.toLowerCase()}` : '')),
+    heat && li(ic(heat.ic, heat.cls||''), heat.k + (l.heat === 'on' && (l.heat_src||[]).length ? ': ' + heatSrcWord(l.heat_src) : '') + (hf ? ` &middot; ${hf.toLowerCase()}` : '')),
     typeof l.stat === 'number' && li(ic('stat'), `Thermostat showed ${statWord(l.stat)}`),
     wall && li(ic(wall.ic, wall.cls||''), wall.id === 'no_reach' ? 'Could not reach an outside wall' : `Outside wall felt ${wall.n.toLowerCase()}`),
     Array.isArray(l.actions) && li(ic(byId(ACTIONS, l.actions[0])?.ic || 'checkc'), l.actions.length ? 'Last 30 min: ' + lowerList(namesOf(ACTIONS, l.actions)) : 'Last 30 min: did none of these'),
@@ -604,10 +704,9 @@ function answerTiles(a){
   h += tile('air', tic(air ? air.ic : 'still'), 'Air', air ? air.k : open);
   h += tile('sun', tic(sun ? sun.ic : 'sun'), 'Sun', sun ? sun.n : open);
   h += tile('heat', tic(heat ? heat.ic : 'flame', heat && heat.cls || ''), 'Heating', heat ? heat.n : open, a.heat === 'on' ? '' : 'wide');
-  if(a.heat === 'on') h += tile('heat_for', tic('clock'), 'On for', hf ? hf.n : open);
+  if(a.heat === 'on') h += tile('heat_for', tic('clock'), 'On for', a.heat_for ? heatForWord(a.heat_for) : open);
   if(a.heat === 'on' && (asked('heat_src') || (a.heat_src||[]).length)) h += tile('heat_src', tic('radiator'), 'Which heating', (a.heat_src||[]).length ? heatSrcWord(a.heat_src) : open, 'wide');
-  if(asked('stat')) h += tile('stat', tic('stat'), 'Thermostat shows', typeof a.stat === 'number' ? statWord(a.stat) : a.stat === 'none' ? 'Couldn&rsquo;t see it' : open);
-  h += tile('wall', tic(wall ? wall.ic : 'wall', wall && wall.cls || ''), 'Outside wall', wall ? wall.n : open, asked('stat') ? '' : 'wide');
+  h += tile('wall', tic(wall ? wall.ic : 'wall', wall && wall.cls || ''), 'Outside wall', wall ? wall.n : open, 'wide');
   h += tile('actions', tic('refresh'), 'You did, last 30 minutes', chips(ACTIONS, a.actions, 'None of these'), 'wide');
   h += tile('notes', tic('info'), 'You had or felt, last 30 minutes', chips(NOTES, a.notes, 'None of these'), 'wide');
   return `<ul class="atiles">${h}</ul>`;
@@ -623,7 +722,7 @@ function localRace(p){
   const per = SWITCH.period ? SWITCH.period(p) : { period:p, from:null, to:null, target: hasGame() ? GAME.target(p) : 0 };
   const inP = votes().filter(v => { const k = GAME.ukDay(v.ts); return (!per.from || k >= per.from) && (!per.to || k <= per.to); });
   const goalDays = [...pts.goalDays].filter(k => (!per.from || k >= per.from) && (!per.to || k <= per.to)).length;
-  const points = p === 'month' ? pts.month : pts.week, me = meProfile();
+  const points = p === 'month' ? pts.month : p === 'last_week' ? (pts.last_week || 0) : pts.week, me = meProfile();
   return { period:p, from:per.from, to:per.to, target:per.target, total:1,
     me:{ alias: me.alias || 'You', colour: me.alias_colour || 0, points, rank:1, hidden: !!me.race_hidden },
     runners:[{ alias: me.alias || 'You', colour: me.alias_colour || 0, points, checkins: inP.length, goal_days: goalDays, rank:1, is_me:true }] };
@@ -638,15 +737,49 @@ function fetchRace(p, force){
   raceFetching[p] = (async () => {
     try{
       const r = await SWITCH.race(p);
+      netOk('race:' + p);
       if(r && typeof r === 'object'){ const s = JSON.stringify(r), old = LS.get(RACE_KEY(p)); LS.set(RACE_KEY(p), s); return s !== old; }
-    }catch(e){ if(e.notSignedIn) keyLost(); }
+    }catch(e){ if(e.notSignedIn) keyLost(); else netFail('race:' + p, () => refreshRace(p, true)); }   // each period its own count and timer
     finally { raceFetching[p] = null; }
     return false;
   })();
   return raceFetching[p];
 }
 function refreshRace(p, force){
-  quiet(fetchRace(p, force).then(changed => { if(changed && (S.screen==='race' || S.screen==='today') && !S.lock && !sheetUp()) rerender(true); }));
+  quiet(fetchRace(p, force).then(changed => {
+    if(p === 'week' && needLastWeek()) refreshRace('last_week', force);   // a new week: the note names last week's finish
+    if(changed && (S.screen==='race' || S.screen==='today') && !S.lock && !sheetUp()) rerender(true);
+  }));
+}
+/* this week's race has nobody on points yet (or is not known): last week's finish is shown with it */
+function needLastWeek(){ const w = racePayload('week'); return !w || !Array.isArray(w.runners) || !w.runners.some(r => +r.points > 0); }
+
+/* ---------- loading from the database is never silent ----------
+ * A failed my_checkins, my_points or race (for any reason but "this device is not signed in") shows a small notice
+ * where it matters and is tried again after 5 s, 15 s, 30 s, 1 min, 2 min, then every 5 min until it works.
+ * Each kind keeps its own count and timer: 'pull', and one per race period ('race:week', 'race:last_week',
+ * 'race:month'), so a failed week is retried whatever happens to the other periods. */
+const NET = { n:{}, timers:{} };
+const BACKOFF_S = [5, 15, 30, 60, 120, 300];
+function netFail(kind, retry){
+  NET.n[kind] = (NET.n[kind] || 0) + 1;
+  clearTimeout(NET.timers[kind]);
+  NET.timers[kind] = setTimeout(retry, BACKOFF_S[Math.min(NET.n[kind] - 1, BACKOFF_S.length - 1)] * 1000);
+  if(NET.n[kind] === 1 && TABS.includes(S.screen) && !S.lock && !sheetUp()) rerender();
+}
+function netOk(kind){
+  if(!NET.n[kind]) return;
+  NET.n[kind] = 0; clearTimeout(NET.timers[kind]);
+  if(TABS.includes(S.screen) && !S.lock && !sheetUp()) rerender();
+}
+/* 'race' stands for any of its periods */
+const netBad = k => Object.keys(NET.n).some(x => NET.n[x] > 0 && (x === k || x.startsWith(k + ':')));
+function netNote(kinds){
+  const t = { pull:'Couldn&rsquo;t load your check-ins from your other devices.', race:'Couldn&rsquo;t load the Bay Race.' };
+  const bad = kinds.filter(netBad);
+  if(!bad.length) return '';
+  const off = navigator.onLine === false ? ' You seem to be offline.' : '';
+  return `<div class="msg net" role="status">${ic('refresh')}<div>${bad.map(k => t[k]).join(' ')}${off} Trying again&hellip;</div></div>`;
 }
 /* the participant's place in the week's race if they had these points (the others as last fetched) */
 function rankWith(pay, pts){ if(!pay || !Array.isArray(pay.runners)) return 0; return 1 + pay.runners.filter(r => !r.is_me && r.points > pts).length; }
@@ -679,15 +812,14 @@ function homeSections(r, h, withEmail){
     ['Your area and home', 'area', [[ic('pin'), 'Postcode area', h.postcode_area || null], [art(h.home_type ? 'home_type:' + h.home_type : 'home_type:detached'), 'Home', label(HOME_TYPES, h.home_type) || null]]
       .concat(h.home_type === 'flat' ? [[art(h.flat_position ? 'flat_position:' + h.flat_position : 'flat_position:middle'), 'Floor', label(FLAT_POS, h.flat_position) || null]] : [])
       .concat([[art(h.tenure ? 'tenure:' + h.tenure : 'tenure:own'), 'Tenure', label(TENURE, h.tenure) || null]])],
-    ['Age and size', 'size', [[ic('calendar'), 'Built', label(YEAR_BUILT, h.year_built) || null], [art('floors:' + (h.floors || 2)), 'Floors', h.floors ? (h.floors >= 4 ? '4 or more' : String(h.floors)) : null],
+    ['Age and size', 'size', [[h.year_built ? art('year_built:' + h.year_built) : ic('calendar'), 'Built', label(YEAR_BUILT, h.year_built) || null], [art('floors:' + (h.floors || 2)), 'Floors', h.floors ? (h.floors >= 4 ? '4 or more' : String(h.floors)) : null],
       [ic('bed'), 'Bedrooms', countWord(h.bedrooms, 6)], [ic('ruler'), 'Floor area', typeof h.floor_area_m2 === 'number' ? h.floor_area_m2 + ' m²' : notSure(h.floor_area_m2)],
       [epcArt(h.epc), 'EPC rating', label(EPC, h.epc) || null]]],
     ['Who lives here', 'people', [[ic('user'), 'Adults', countWord(h.adults)], [ic('child'), 'Children', countWord(h.children)], [ic('paw'), 'Pets', countWord(h.pets)], [ic('bed'), 'Bedroom', share]]],
     ['Heating', 'heat', [[art(h.main_heating ? 'heat:' + h.main_heating : 'heat:gas_combi'), 'Main heating', label(MAIN_HEATING, h.main_heating) || null],
-      [ic('flame'), 'Other heaters', listWord(OTHER_HEATERS, h.other_heaters)], [ic('clock'), 'How it&rsquo;s used', label(HEAT_PATTERN, h.heating_pattern) || null],
-      [ic('card'), 'Paying for it', label(PAYMENT, h.payment) || null]]],
-    ['Heating controls', 'controls', [[ic('sliders'), 'Controls', listWord(CONTROLS, h.controls)], [ic('stat'), 'Thermostat shows the temperature', label(STAT_DISPLAY, h.stat_display) || null],
-      [ic('thermo'), 'Usual setting', typeof h.setpoint_c === 'number' ? h.setpoint_c.toFixed(1) + ' °C' : notSure(h.setpoint_c)], [ic('radiator'), 'Bedroom radiator dial', label(BEDROOM_TRV, h.bedroom_trv) || null]]],
+      [ic('flame'), 'Other heaters', listWord(OTHER_HEATERS, h.other_heaters)], [artx('pattern:' + h.heating_pattern, 'clock'), 'How it&rsquo;s used', label(HEAT_PATTERN, h.heating_pattern) || null]]],
+    ['Heating controls', 'controls', [[ic('sliders'), 'Controls', listWord(CONTROLS, h.controls)],
+      [ic('thermo'), 'Usual setting', typeof h.setpoint_c === 'number' ? h.setpoint_c.toFixed(1) + ' °C' : notSure(h.setpoint_c)]]],
     ['Walls, roof and windows', 'fabric', [[art(h.wall_insulation ? 'wall:' + h.wall_insulation : 'wall:none'), 'Walls', label(WALL_INS, h.wall_insulation) || null],
       [art(h.loft ? 'loft:' + h.loft : 'loft:yes'), 'Loft insulation', label(LOFT, h.loft) || null], [ic('window'), 'Glazing', label(GLAZING, h.glazing) || null],
       [ic('windowOpen'), 'Windows open', label(WINDOWS_OPEN, h.windows_open) || null], [ic('drop'), 'Damp or mould', listWord(DAMP, h.damp)]]],
@@ -701,9 +833,10 @@ function homeGlance(r, h, editAct, withEmail){
   return homeSections(r, h, withEmail).map(([title, step, items]) => `<section class="glance"><div class="gl-head"><b>${title}</b>${editAct ? `<button class="btn-edit" data-act="${editAct}" data-step="${step}" aria-label="Edit ${title.toLowerCase()}">${ic('edit')}Edit</button>` : ''}</div>
     <div class="gl-items">${items.map(([a, k, v]) => glanceItem(a, k, v)).join('')}</div></section>`).join('');
 }
-/* iPhone, in Safari rather than the Home Screen app, nobody signed in, and reminders possible: ask for the
- * Home Screen app before joining or signing in (once per tab: "Continue in Safari anyway"). */
-const installFirst = () => !PARTICIPANT && PUSH.status() === 'install' && SS.get(INSTALL_SKIP_KEY) !== '1';
+/* iPhone or iPad, in Safari (or another app's browser) rather than the Home Screen app, nobody signed in, and
+ * reminders possible there: the Home Screen app first, always (only it gets reminders, and it keeps its own
+ * storage, so joining in Safari would mean signing in again later). */
+const installFirst = () => !PARTICIPANT && PUSH.status() === 'install';
 const brand = () => `<div class="brand"><span class="mark">${ic('brand')}</span><span><b>${APP}</b><small>${PROJECT}</small></span></div>`;
 
 /* ---------- screens ---------- */
@@ -721,14 +854,13 @@ const SCREENS = {
       ${SWITCH.live ? '' : `<div class="msg warn">${ic('alert')}<div><b>Local mode.</b> The study database is not connected, so everything stays in this browser.</div></div>`}
       <div class="actions"><p class="note center"><b>${APP}</b> takes the pulse of how your home feels: a few taps while you are at home help Swansea University learn what comfort means in Welsh homes.</p><div class="foot">Questions about the study? Email ${TEAM} &middot; <a href="../">About the study</a></div></div>`;
   },
-  /* iPhone, in Safari, before anyone joins or signs in (see installFirst): the Home Screen app keeps its own
-   * storage, separate from Safari's, and only it can get reminders. */
-  install: () => `<div class="hero">${brand()}<div class="eyebrow">Before you start</div><h1 class="h1" tabindex="-1">Add ${APP} to your Home Screen first</h1>
-      <p class="sub">On iPhone, reminders only work in the Home Screen app, and it keeps its own copy of your answers, separate from Safari. Join there, so everything stays together.</p></div>
-    <section class="card"><b class="card-t">Three quick steps</b><ol class="steps"><li><div>Tap the <b>Share</b> button ${ic('share','inl')} in Safari&rsquo;s toolbar.</div></li><li><div>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</div></li><li><div>Open <b>${APP}</b> from your Home Screen and join there.</div></li></ol>
-      <p class="note">Opened this inside another app? Open it in Safari first.</p></section>
-    <div class="msg">${ic('info')}<div>Joined before? In the Home Screen app, choose <b>I have registered before</b> and sign in with your email and PIN.</div></div>
-    <div class="actions"><button class="btn link" data-act="install-skip">Continue in Safari anyway</button></div>`,
+  /* iPhone or iPad, outside the Home Screen app, before anyone joins or signs in (see installFirst): the Home
+   * Screen app keeps its own storage, separate from Safari's, and only it can get reminders. No way round it. */
+  install: () => `<div class="hero">${brand()}<div class="eyebrow">Before you start</div><h1 class="h1" tabindex="-1">${PUSH.inApp ? `Open ${APP} in Safari` : `Add ${APP} to your Home Screen first`}</h1>
+      <p class="sub">On ${PUSH.device()}, reminders only work in the Home Screen app, and the study needs them. The app keeps its own copy of your answers, separate from Safari, so join or sign in there.</p></div>
+    <section class="card"><b class="card-t">${PUSH.inApp ? 'How to get there' : 'Three quick steps'}</b>${installSteps(false)}</section>
+    <div class="msg">${ic('info')}<div>Joined before? In the Home Screen app, choose <b>I have registered before</b> and sign in with your email and PIN. Forgot your PIN? Email ${TEAM}.</div></div>
+    <div class="actions"><div class="foot"><a href="../">About the study</a></div></div>`,
   signin: () => {
     const rekey = needsKey(), lost = LS.get(KEY_LOST_KEY) === '1', code = SIGNIN_CODE, choose = code || (rekey && !lost);
     const t = rekey ? (lost ? ['Sign in again', 'Please sign in again', 'This phone was signed out. Your check-ins are safe: sign in with your email and your PIN.']
@@ -752,9 +884,10 @@ const SCREENS = {
     lockShown = !!open;
     const last = l ? `Last one <span data-ago="${esc(l.ts)}">${agoWord(l.ts)}</span>${typeof l.tsv === 'number' ? ' &middot; ' + tsvWord(l.tsv).toLowerCase() : ''}` : 'Takes about a minute';
     const cta = open ? `<button class="cta wait" data-act="start"><span class="cta-ic">${ic('clock')}</span><span class="cta-t"><b>Next check-in at ${fmt(open)}</b><span>They open ${GAP_MIN} minutes after the last one &middot; ${last}</span></span></button>`
-      : `<button class="cta" data-act="start"><span class="cta-ic">${ic('bell')}</span><span class="cta-t"><b>Check in now</b><span>${last}</span></span>${ic('chev','go')}</button>`;
+      : `<button class="cta" data-act="start"><span class="cta-ic">${ic('bell')}</span><span class="cta-t"><b>Check in now</b><span>${gateWord() || last}</span></span>${ic('chev','go')}</button>`;
     const notif = !['on','unconfigured'].includes(PUSH.status()) && !studyOver();
     return `<div class="hero today-hero"><div class="eyebrow">${PROJECT}</div><div class="hrow2"><h1 class="h1" tabindex="-1">${greeting()}</h1>${pts ? GAME.pointsChipHTML(pts, (racePayload('week') || {}).me) : ''}</div></div>
+      ${netNote(['pull','race'])}
       ${notif ? notifCard() : ''}
       ${cta}
       ${goalCard(list, pts)}
@@ -762,11 +895,11 @@ const SCREENS = {
       ${gameToday(list, pts)}
       <div class="foot">${NAME ? esc(NAME) + ' &middot; ' : ''}${esc(PARTICIPANT)} &middot; <span data-sync>${syncLine()}</span></div>`;
   },
-  race: () => hasGame() ? `<div class="race-wrap">${GAME.raceHTML(racePayload(RACE_PERIOD), { period:RACE_PERIOD })}</div>` : head('The Bay Race', 'Marina to Mumbles', 'The race is not available right now.'),
+  race: () => hasGame() ? `<div class="race-wrap">${netNote(['race'])}${GAME.raceHTML(racePayload(RACE_PERIOD), { period:RACE_PERIOD, lastWeek: racePayload('last_week'), loading: navigator.onLine !== false })}</div>` : head('The Bay Race', 'Marina to Mumbles', 'The race is not available right now.'),
   history: () => {
     const list = votes();
-    if(!list.length) return head('Your data', 'My check-ins') + `<div class="card empty">${ic('list')}<b>No check-ins yet</b><p class="sub">Your charts and history appear here after your first check-in.</p><button class="btn primary" data-act="start">Check in now ${ic('chev')}</button></div>`;
-    return head('Your data', 'My check-ins', `${list.length} check-in${list.length===1?'':'s'}, from all your devices. Tap one for the details.`) + charts(list) + historyList(list);
+    if(!list.length) return head('Your data', 'My check-ins') + netNote(['pull']) + `<div class="card empty">${ic('list')}<b>No check-ins yet</b><p class="sub">Your charts and history appear here after your first check-in.</p><button class="btn primary" data-act="start">Check in now ${ic('chev')}</button></div>`;
+    return head('Your data', 'My check-ins', `${list.length} check-in${list.length===1?'':'s'}, from all your devices. Tap one for the details.`) + netNote(['pull']) + charts(list) + historyList(list);
   },
   settings: () => {
     const me = meProfile(), h = homeProfile(), shown = !me.race_hidden;
@@ -893,7 +1026,7 @@ function render(){
     el.scrollTop = 0;
     if(!firstRender){ const h = el.querySelector('h1'); if(h) h.focus({ preventScroll:true }); }
     animateGame();
-    if(S.screen === 'race' || S.screen === 'today') refreshRace(S.screen === 'race' ? RACE_PERIOD : 'week');
+    if(S.screen === 'race' || S.screen === 'today'){ refreshRace(S.screen === 'race' ? RACE_PERIOD : 'week'); if(S.screen === 'race' && RACE_PERIOD !== 'week') refreshRace('week'); }
   }
   lastKey = key; firstRender = false;
   syncHistory();
@@ -931,13 +1064,6 @@ function toggle(q, v){
   S.a[q] = arr.length || q==='clo' || q==='heat_src' ? arr : undefined;
   rerender();
 }
-/* the thermostat question: the last reading, or 20.0 the first time */
-function statShown(){
-  if(typeof S.a.statv === 'number') return S.a.statv;
-  if(typeof S.a.stat === 'number') return S.a.stat;
-  const l = votes().find(v => typeof v.stat === 'number');
-  return l ? Math.max(STAT_MIN, Math.min(STAT_MAX, Math.round(l.stat * 2) / 2)) : 20;
-}
 /* "Yes, for over an hour" and "Yes, I just got in" both lead to the check-in; the answer is stored with it. */
 function onHome(v){
   S.a.home = v;
@@ -967,7 +1093,7 @@ function submit(){
   const row = { id:'v'+Date.now()+Math.random().toString(36).slice(2,6), p:PARTICIPANT, ts:new Date().toISOString(), type:S.mode, home:a.home||'long',
     tsv:a.tsv, tp:a.tp, ta:a.ta, garments:a.clo||[], clo:cloOf(a.clo||[]), act:a.act, met:byId(ACTS,a.act)?.met, room:a.room,
     air:a.air, sun:a.sun, heat:a.heat ?? null, heat_src: on ? (a.heat_src ?? null) : null, heat_for: on ? (a.heat_for ?? null) : null,
-    stat: typeof a.stat === 'number' ? a.stat : null, wall:a.wall ?? null,
+    stat: null, wall:a.wall ?? null,                                    // the thermostat reading is no longer asked
     actions:a.actions, notes:a.notes, same:false, secs:Math.max(1, Math.round((Date.now()-S.t0)/1000)) };
   const before = votes();
   store.votes.push(row); store.paused=null; store.pausedWhy=''; save();
@@ -1084,7 +1210,7 @@ function forgetIdentity(note, device){
   if(code && SWITCH.live){ requeueUnsent(code); dropSynced(code); }          // local mode: nothing is anywhere else, so nothing leaves the phone
   if(device){ quiet(SWITCH.forgetDevice()); if(PUSH.status() === 'on') quiet(PUSH.disable()); }
   SWITCH.setKey(null);
-  ['switch_participant','switch_name',APPROVED_KEY,'switch_push','switch_push_lost','switch_sched',HOME_KEY,ME_KEY,KEY_LOST_KEY,POINTS_KEY,BACKFILL_KEY,RACE_KEY('week'),RACE_KEY('month')].forEach(k => LS.del(k));
+  ['switch_participant','switch_name',APPROVED_KEY,'switch_push','switch_push_lost','switch_sched',HOME_KEY,ME_KEY,KEY_LOST_KEY,POINTS_KEY,BACKFILL_KEY,RACE_KEY('week'),RACE_KEY('last_week'),RACE_KEY('month')].forEach(k => LS.del(k));
   PARTICIPANT = ''; NAME = ''; welcomeNote = note || ''; DONE = null;
   go('welcome');
 }
@@ -1114,7 +1240,7 @@ async function signedIn(r){
   if(!same && prev){
     if(PUSH.status() === 'on') await PUSH.disable();
     requeueUnsent(prev); dropSynced(prev);
-    ['switch_push','switch_push_lost','switch_sched',HOME_KEY,ME_KEY,POINTS_KEY,BACKFILL_KEY,RACE_KEY('week'),RACE_KEY('month')].forEach(k => LS.del(k));
+    ['switch_push','switch_push_lost','switch_sched',HOME_KEY,ME_KEY,POINTS_KEY,BACKFILL_KEY,RACE_KEY('week'),RACE_KEY('last_week'),RACE_KEY('month')].forEach(k => LS.del(k));
   }
   save();
   setIdentity(r.code, r.name);
@@ -1159,8 +1285,21 @@ async function pullHistory(force){
   if(!force && Date.now() - lastPull < 3*60000) return;
   lastPull = Date.now();
   try{
-    const [rows, prof] = await Promise.all([SWITCH.myCheckins(), SWITCH.myProfile(), refreshPoints()]);
+    const got = await Promise.allSettled([SWITCH.myCheckins(), SWITCH.myProfile(), SWITCH.myPoints()]);
+    const failed = got.filter(x => x.status === 'rejected').map(x => x.reason || {});
+    if(failed.some(e => e.notSignedIn)){ keyLost(); return; }
+    if(failed.length) netFail('pull', () => pullHistory(true)); else netOk('pull');
+    const val = i => got[i].status === 'fulfilled' ? got[i].value : null;
+    const rows = val(0) || [], prof = val(1), pts = val(2);
     let changed = cacheProfile(prof);
+    if(pts){
+      // the figures shown change only when they differ, or when the stored copy was not in use (older than the last
+      // check-in here, or from another day: gamePoints falls back to its own count then)
+      const old = readJSON(POINTS_KEY), l = lastVote();
+      const inUse = old && old.code === PARTICIPANT && (!l || old.at >= l.ts) && hasGame() && GAME.ukDay(old.at) === GAME.ukDay(new Date());
+      if(!inUse || JSON.stringify(old.p) !== JSON.stringify(pts)) changed = true;
+      LS.set(POINTS_KEY, JSON.stringify({ at:new Date().toISOString(), code:PARTICIPANT, p:pts }));
+    }
     if(prof && prof.approved === false){ LS.del(APPROVED_KEY); if(TABS.includes(S.screen)) go('pending'); return; }
     const have = new Set(store.votes.map(v => v.id)), server = new Set(rows.map(r => r.client_id));
     rows.forEach(r => { if(r.client_id && !have.has(r.client_id)){ store.votes.push(fromServer(r)); changed = true; } });
@@ -1168,8 +1307,16 @@ async function pullHistory(force){
     store.votes.forEach(v => { const r = srvRow.get(v.id); if(r && v.p === PARTICIPANT && r.created_at && v.created_at !== r.created_at){ v.created_at = r.created_at; changed = true; } });   // when the database got it: the points rules use it
     store.votes.forEach(v => { if(server.has(v.id) && !v.synced){ v.synced = true; changed = true; } });
     if(changed){ save(); if(TABS.includes(S.screen) && !S.lock && !sheetUp()) render(); if(DEBUG) renderTable(); }
-    backfillOnce(server);
-  }catch(e){ if(e.notSignedIn) keyLost(); }
+    if(got[0].status === 'fulfilled') backfillOnce(server);   // only with the full list of what the database has
+  }catch(e){ if(e.notSignedIn) keyLost(); else netFail('pull', () => pullHistory(true)); }
+}
+/* Straight after signing in on a device: the profile, the check-ins from the other devices, the points and the race
+ * (with last week's when this week is still empty) before Today is drawn; a few seconds at most, then Today shows
+ * what has arrived and the rest follows (or the "Couldn't load" notice, with retries). */
+async function firstLoad(){
+  lastPull = 0;
+  const all = Promise.all([pullHistory(true), fetchRace('week', true).then(() => needLastWeek() ? fetchRace('last_week', true) : false)]);   // a failure here is retried by fetchRace's own timer
+  await Promise.race([all, new Promise(res => setTimeout(res, 6000))]);
 }
 /* Once per participant on this phone: check-ins made here that the database never got (a 0.4.0 copy of the app
  * still open when the database was updated had its check-ins refused and dropped from its queue) are queued
@@ -1238,10 +1385,11 @@ async function signin(){
     if(r.status !== 'ok'){ idle(); return fieldError(r.status === 'not_found' ? 's_email' : 's_pin', pinOutcome(r)); }
     SIGNIN_CODE = false; SIGNIN_EMAIL = email.toLowerCase();
     await signedIn(r);
-    await Promise.race([refreshProfile(), new Promise(res => setTimeout(res, 4000))]);   // the home profile decides what comes next
+    b.innerHTML = 'Loading your check-ins&hellip;';
+    await firstLoad();                                      // the profile decides what comes next; the history and the race fill Today
     afterIdentity(r.approved);
-    quiet(flushPending()); quiet(pullHistory(true)); refreshRace('week');
-    showToast({ title:'Welcome' + (rekey && !lost ? '' : ' back') + (firstName() ? ', ' + esc(firstName()) : ''), sub: r.pin_set ? 'Your PIN is saved. Use it with your email on your other devices.' : 'Your check-ins from your other devices are on their way.', kind:'info', ms:6000 });
+    quiet(flushPending());
+    showToast({ title:'Welcome' + (rekey && !lost ? '' : ' back') + (firstName() ? ', ' + esc(firstName()) : ''), sub: r.pin_set ? 'Your PIN is saved. Use it with your email on your other devices.' : netBad('pull') ? 'Your check-ins from your other devices are still on their way.' : 'Your check-ins from all your devices are here.', kind:'info', ms:6000 });
   }catch(e){ idle(); fieldError('s_email', friendly(e.message, 'Could not sign in. Check the connection and try again.')); }
 }
 function pendMsg(t){ const m = $('#pendMsg'); if(!m) return; m.hidden = false; m.innerHTML = ic('info') + '<div>' + t + '</div>'; }
@@ -1381,9 +1529,20 @@ const PUSH = {
   supported: 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window,
   standalone: matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
   ios: /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
+  /* iOS before 16.4 (iPhone 6s, 7, first SE): web apps never get notifications there, Home Screen or not */
+  iosOld: (() => { const ua = navigator.userAgent, m = /OS (\d+)_(\d+)/.exec(ua); return /iPhone|iPad|iPod/.test(ua) && !!m && (+m[1] < 16 || (+m[1] === 16 && +m[2] < 4)); })(),
+  /* iPhone or iPad inside another app's browser (Gmail, WhatsApp, Facebook, Instagram, the Google app) or in Chrome,
+   * Firefox or Edge: no Add to Home Screen there. Safari says "Safari/" and none of these names; the Home Screen
+   * app itself says neither, so this is only asked outside it. */
+  inApp: (() => { const ua = navigator.userAgent; return /iPhone|iPad|iPod/.test(ua) && (!/Safari\//.test(ua) || /CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|FBAN|FBAV|FBIOS|Instagram|LinkedInApp|Snapchat|musical_ly|Bytedance|MicroMessenger|Line\/|Pinterest|WhatsApp|Twitter/i.test(ua)); })(),
+  /* 'iPhone', 'iPad', 'phone' or 'tablet' for the words on screen (lower-case 'phone'/'tablet' when generic) */
+  device(generic){ const ua = navigator.userAgent, pad = /iPad/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if(generic) return pad || /Tablet/.test(ua) ? 'tablet' : 'phone';
+    return pad ? 'iPad' : /iPhone|iPod/.test(ua) ? 'iPhone' : 'iPhone and iPad'; },
   configured: SWITCH.live && !!CFG.vapidPublicKey,
   status(){
     if(!this.configured) return 'unconfigured';
+    if(this.iosOld) return 'unsupported';                    // no Home Screen app would help: the check-in goes ahead (notifCanSkip)
     if(!this.supported) return (this.ios && !this.standalone) ? 'install' : 'unsupported';
     if(Notification.permission === 'denied') return 'blocked';
     return LS.get('switch_push') === 'on' ? 'on' : 'off';
@@ -1396,19 +1555,26 @@ const PUSH = {
     return Object.assign({ endpoint:j.endpoint, p256dh:j.keys.p256dh, auth:j.keys.auth,
       tz:zone(), tz_offset_min:-new Date().getTimezoneOffset(), interval_min:INTERVAL, user_agent:navigator.userAgent.slice(0,200) }, hours());
   },
+  /* 'on'; 'blocked' or 'dismissed' (the participant's choice); or it throws an Error with .kind for a technical
+   * reason (perm, sw, subscribe, save, invalid, full, refused, signin) and a message in plain words (never the
+   * browser's own text). */
   async enable(){
+    const fail = (kind, msg) => Object.assign(new Error(msg), { kind });
     // Asked first, straight from the tap: iPhone only shows the question in direct response to one.
-    const perm = await Notification.requestPermission();
+    let perm;
+    try{ perm = await Notification.requestPermission(); }catch(e){ throw fail('perm', 'This browser could not ask about notifications. Please try again.'); }
     if(perm !== 'granted') return perm === 'denied' ? 'blocked' : 'dismissed';
     const reg = await swReady();
-    if(!reg) throw new Error('Reminders could not start on this phone. Close the app, open it again and try once more.');
-    const sub = await this.subscribe(reg);
-    const saved = await SWITCH.saveSubscription(this.record(sub));
-    if(saved === 'not_signed_in'){ keyLost(); throw new Error('This phone needs to sign in again first.'); }
-    if(saved === 'refused'){ quiet(afterRefusal()); throw new Error('The study database did not accept this phone. Please contact the research team.'); }
-    if(saved === 'invalid') throw new Error('Reminders don&rsquo;t work in this browser. On Android use Chrome; on iPhone use Safari and add the app to your Home Screen.');
-    if(saved === 'full') throw new Error('Too many phones are registered for reminders under your code. Please contact the research team.');
-    if(saved !== true) throw new Error('This phone could not be registered. Check the connection and try again.');
+    if(!reg) throw fail('sw', 'Reminders could not start on this phone. Close the app, open it again and try once more.');
+    let sub;
+    try{ sub = await this.subscribe(reg); }catch(e){ throw fail('subscribe', 'This phone&rsquo;s notification service did not answer. Please try again in a moment.'); }
+    let saved;
+    try{ saved = await SWITCH.saveSubscription(this.record(sub)); }catch(e){ saved = false; }
+    if(saved === 'not_signed_in'){ keyLost(); throw fail('signin', 'This phone needs to sign in again first.'); }
+    if(saved === 'refused'){ quiet(afterRefusal()); throw fail('refused', 'The study database did not accept this phone. Please contact the research team.'); }
+    if(saved === 'invalid') throw fail('invalid', 'Reminders don&rsquo;t work in this browser. On Android use Chrome; on iPhone use Safari and add the app to your Home Screen.');
+    if(saved === 'full') throw fail('full', 'Too many phones are registered for reminders under your code. Please contact the research team.');   // an older database only
+    if(saved !== true) throw fail('save', 'This phone could not be registered. Check the connection and try again.');
     LS.set('switch_push','on'); LS.del('switch_push_lost');
     quiet(this.sync(personState()));                        // no reminder during a pause or right after a check-in
     return 'on';
@@ -1480,12 +1646,13 @@ function remindersSection(){
   const msg = `<div class="msg" id="remMsg" role="status" hidden></div>`;
   const title = `<div class="card-head"><b class="card-t" id="remH">Reminders</b>${st==='on' ? `<span class="pill on">${ic('check')}On</span>` : ''}</div>`;
   if(studyOver()) return title + `<div class="msg">${ic('checkc')}<div>The study has ended, so reminders have stopped. Thank you for taking part.</div></div>`;
-  if(st === 'install') return title + `<ol class="steps"><li><div>Tap the <b>Share</b> button ${ic('share','inl')} in Safari.</div></li><li><div>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</div></li><li><div>Open ${APP} from your Home Screen, choose <b>I have registered before</b> and sign in with your email and PIN.</div></li><li><div>Turn on notifications there.</div></li></ol><p class="note">Your check-ins come with you.</p>`;
-  if(st === 'unsupported' || st === 'blocked') return title + `<div class="msg${st === 'blocked' ? ' warn' : ''}">${ic('bellOff')}<div><b>${notifHelp(st).title}.</b></div></div><div class="nt-body">${notifHelp(st).html}</div>`;
+  if(st === 'install') return title + installSteps(true) + `<p class="note">Then turn on notifications in the Home Screen app.</p>`;
+  if(st === 'unsupported' || st === 'blocked') return title + `<div class="msg${st === 'blocked' ? ' warn' : ''}">${ic('bellOff')}<div><b>${notifHelp(st).title}.</b></div></div><div class="nt-body">${notifHelp(st).html}</div>` + msg + (notifHelp(st).btn || '');
   if(st === 'unconfigured') return title + `<div class="msg">${ic('info')}<div>Reminders start once the study database is connected. Your home hours are saved on this phone now.</div></div>` + form + msg + `<button class="btn primary" data-act="save-hours">Save hours</button>`;
   // Off: notifications first, with one tap (the hours saved so far, or Swansea's defaults); the hours come once they are on.
-  if(st === 'off') return title + `<div class="msg ${PUSH.lost() ? 'warn' : ''}">${ic(PUSH.lost() ? 'alert' : 'info')}<div>${PUSH.lost() ? 'Notifications have stopped on this phone. Turn them on again.' : 'The study needs notifications: they remind you to check in. Turn them on, then choose your hours here.'}</div></div>` + msg + `<button class="btn primary" data-act="notif-on">${ic('bell')} Turn on notifications</button><p class="note center">${daysWord(hours())} to start with.</p>`;
-  return title + form + msg + `<button class="btn primary" data-act="save-hours">Save hours</button><button class="btn link" data-act="push-off">${ic('bellOff')} Turn off reminders</button>`;
+  if(st === 'off') return title + `<div class="msg ${PUSH.lost() || notifTrouble ? 'warn' : ''}">${ic(PUSH.lost() || notifTrouble ? 'alert' : 'info')}<div>${notifTrouble ? TROUBLE_TEXT : PUSH.lost() ? 'Notifications have stopped on this phone. Turn them on again.' : 'The study needs notifications: they remind you to check in. Turn them on, then choose your hours here.'}</div></div>` + msg + `<button class="btn primary" data-act="notif-on">${ic(notifTrouble ? 'refresh' : 'bell')} ${notifTrouble ? 'Try again' : 'Turn on notifications'}</button><p class="note center">${daysWord(hours())} to start with.</p>`;
+  return title + form + msg + `<button class="btn primary" data-act="save-hours">Save hours</button><button class="btn link" data-act="push-off">${ic('bellOff')} Turn off reminders</button>` +
+    (HANDHELD ? `<p class="note center">On a phone or tablet, check-ins need notifications: with them off, this device asks you to turn them on again before a check-in.</p>` : '');
 }
 /* The eight hour fields as the form shows them: the main windows fall back to the defaults, a second window is
  * null unless its row is present and both ends are filled in. */
@@ -1515,8 +1682,10 @@ const REG_STEPS = [
   {id:'bedroom', ic:'compass', t:'Your bedroom',            min:1.2},
   {id:'check',   ic:'check',   t:'Check and finish',        min:0.4}
 ];
+/* the keys the wizard asks today; a saved home also keeps any other key it already has (payment, stat_display and
+ * bedroom_trv of 1.0, say), because update_my_profile replaces the whole object */
 const HOME_KEYS = ['postcode_area','home_type','flat_position','tenure','year_built','floors','bedrooms','floor_area_m2','epc','adults','children','pets','bedroom_share',
-  'main_heating','other_heaters','heating_pattern','payment','controls','stat_display','setpoint_c','bedroom_trv','wall_insulation','loft','glazing','windows_open','damp',
+  'main_heating','other_heaters','heating_pattern','controls','setpoint_c','wall_insulation','loft','glazing','windows_open','damp',
   'bedroom_facing','bedroom_facing_deg','bedroom_side','bedroom_side_deg'];
 const stepOf = id => Math.max(0, REG_STEPS.findIndex(s => s.id === id));
 const regFresh = mode => ({ v:1, mode: mode || 'join', code:'', step:0, touched:false, areaTxt:'', name:'', email:'', gender:'', birth_year:'', hu:'cm', cm:'', ft:'', inch:'', wu:'kg', kg:'', st:'', lb:'', sens:null, home:{}, edit:false, pin:'', pin2:'' });
@@ -1543,7 +1712,7 @@ function regFieldsOf(r){
   if(r.wu === 'stlb'){ const st = numOf(r.st), lb = numOf(r.lb); if(st !== null || lb !== null) weight_kg = Math.round(((st||0)*14 + (lb||0)) * 0.45359237 * 10) / 10; }
   else weight_kg = numOf(r.kg);
   const by = numOf(r.birth_year), h = r.home || {}, home = {};
-  HOME_KEYS.forEach(k => { if(h[k] !== undefined && h[k] !== '') home[k] = Array.isArray(h[k]) ? [...h[k]] : h[k]; });
+  Object.keys(h).forEach(k => { if(h[k] !== undefined && h[k] !== '') home[k] = Array.isArray(h[k]) ? [...h[k]] : h[k]; });
   if(home.home_type !== 'flat') delete home.flat_position;
   if(home.postcode_area) home.postcode_area = String(home.postcode_area).toUpperCase().replace(/\s+/g, '');
   return { email: (r.email || '').trim(), name: (r.name || '').trim().replace(/\s+/g, ' '), gender: r.gender || null, birth_year: by !== null ? Math.round(by) : null,
@@ -1621,13 +1790,10 @@ function regProblem(step, r){
     if(!H.main_heating) return ['main_heating', 'Please choose your main heating, or &ldquo;Not sure&rdquo;.'];
     if(!(Array.isArray(H.other_heaters) && H.other_heaters.length)) return ['other_heaters', 'Please choose any you use, or &ldquo;None of these&rdquo;.'];
     if(!H.heating_pattern) return ['heating_pattern', 'Please choose the one closest to how it&rsquo;s used.'];
-    if(!H.payment) return ['payment', 'Please choose one.'];
   }
   if(id === 'controls'){
     if(!(Array.isArray(H.controls) && H.controls.length)) return ['controls', 'Please choose any you have, or &ldquo;None of these&rdquo;.'];
-    if(!H.stat_display) return ['stat_display', 'Please choose one.'];
     if(H.setpoint_c === undefined) return ['setpoint', 'Please set the usual temperature, or tap &ldquo;Not sure&rdquo;.'];
-    if(!H.bedroom_trv) return ['bedroom_trv', 'Please choose one.'];
   }
   if(id === 'fabric'){
     if(!H.wall_insulation) return ['wall_insulation', 'Please choose one, or &ldquo;Not sure&rdquo;.'];
@@ -1691,11 +1857,11 @@ async function regJoin(){
       // the email was registered already (a participant of 0.4.0, say): what was typed here completes their profile
       const hasHome = r.home && typeof r.home === 'object' && Object.keys(r.home).length;
       if(!hasHome){ try{ cacheProfile(await SWITCH.updateMyProfile(profileFieldsOf(f), f.home)); }catch(e){} }
-      else await refreshProfile();
+      if(b) b.innerHTML = 'Loading your check-ins&hellip;';
+      await firstLoad();
       finishJoin(null);
       afterIdentity(r.approved);
       showToast({ title:'Welcome back', sub:'That email was already registered, so we signed you in', kind:'info' });
-      quiet(pullHistory(true)); refreshRace('week');
       return;
     }
     finishJoin(f);
@@ -1741,13 +1907,17 @@ function minutesLeft(){
   return REG.step === REG_STEPS.length - 1 ? 'Last step' : m < 1 ? 'Less than a minute left' : `About ${Math.round(m)} minute${Math.round(m)===1?'':'s'} left`;
 }
 /* ---- pieces of the wizard ---- */
-const regTile = (k, o, on, artHtml, cls='') => `<button class="ptile ${cls} ${on?'on':''}" type="button" role="radio" aria-checked="${on}" aria-label="${o.n.replace(/<[^>]+>/g,'')}${o.h ? ', ' + o.h : ''}" data-act="reg-pick" data-k="${k}" data-v="${o.id}">${artHtml ? `<span class="pt-art">${artHtml}</span>` : ''}<b>${o.n}</b>${o.h?`<small>${o.h}</small>`:''}<span class="tick">${ic('check')}</span></button>`;
-const regMulti = (k, o, on, artHtml) => `<button class="ptile ${on?'on':''}" type="button" aria-pressed="${on}" data-act="reg-toggle" data-k="${k}" data-v="${o.id}">${artHtml ? `<span class="pt-art">${artHtml}</span>` : ''}<b>${o.n}</b>${o.h?`<small>${o.h}</small>`:''}<span class="tick">${ic('check')}</span></button>`;
+const regTile = (k, o, on, artHtml, cls='') => `<button class="ptile ${cls} ${on?'on':''}" type="button" role="radio" aria-checked="${on}" aria-label="${o.n.replace(/<[^>]+>/g,'')}${o.h ? ', ' + o.h : ''}" data-act="reg-pick" data-k="${k}" data-v="${o.id}">${artHtml ? `<span class="pt-art">${artHtml}</span>` : ''}<span class="pt-t"><b>${o.n}</b>${o.h?`<small>${o.h}</small>`:''}</span><span class="tick">${ic('check')}</span></button>`;
+const regMulti = (k, o, on, artHtml, cls='') => `<button class="ptile ${cls} ${on?'on':''}" type="button" aria-pressed="${on}" data-act="reg-toggle" data-k="${k}" data-v="${o.id}">${artHtml ? `<span class="pt-art">${artHtml}</span>` : ''}<span class="pt-t"><b>${o.n}</b>${o.h?`<small>${o.h}</small>`:''}</span><span class="tick">${ic('check')}</span></button>`;
 const groupErr = id => `<p class="err" id="err-${id}" hidden></p>`;
-const fieldBlock = (id, title, hint, body) => `<div class="field rq" id="f-${id}" role="group" aria-labelledby="lab-${id}"><div class="rq-head"><b id="lab-${id}">${title}</b>${hint ? `<p class="note">${hint}</p>` : ''}</div>${body}${groupErr(id)}</div>`;
+/* one question of the wizard; howTo: a short "How to tell" note that opens under the question (and stays open
+ * while answers are tapped: HOWTO_OPEN remembers it across redraws) */
+const HOWTO_OPEN = new Set();
+document.addEventListener('toggle', e => { const d = e.target; if(d && d.dataset && d.dataset.howto){ if(d.open) HOWTO_OPEN.add(d.dataset.howto); else HOWTO_OPEN.delete(d.dataset.howto); } }, true);
+const fieldBlock = (id, title, hint, body, howTo) => `<div class="field rq" id="f-${id}" role="group" aria-labelledby="lab-${id}"><div class="rq-head"><b id="lab-${id}">${title}</b>${hint ? `<p class="note">${hint}</p>` : ''}${howTo ? `<details class="howto" data-howto="${id}"${HOWTO_OPEN.has(id) ? ' open' : ''}><summary>${ic('help')}How to tell</summary><p>${howTo}</p></details>` : ''}</div>${body}${groupErr(id)}</div>`;
 const tiles = (cols, inner, label, multi) => `<div class="ptiles c${cols}" ${multi ? 'role="group"' : 'role="radiogroup"'} aria-label="${label}">${inner}</div>`;
 const pick1 = (k, list, artFn, cols, label, cls='') => { const v = k.startsWith('home.') ? REG.home[k.slice(5)] : REG[k]; return tiles(cols, list.map(o => regTile(k, o, v === o.id, artFn ? artFn(o) : '', cls)).join(''), label); };
-const pickN = (k, list, artFn, cols, label) => { const v = REG.home[k.slice(5)] || []; return tiles(cols, list.map(o => regMulti(k, o, v.includes(o.id), artFn ? artFn(o) : '')).join(''), label, true); };
+const pickN = (k, list, artFn, cols, label, cls='') => { const v = REG.home[k.slice(5)] || []; return tiles(cols, list.map(o => regMulti(k, o, v.includes(o.id), artFn ? artFn(o) : '', cls)).join(''), label, true); };
 /* A count of the home profile. Until it is tapped it shows "–" and stays out of the profile (not answered). A
  * button at its limit stays focusable (aria-disabled, not disabled), so focus is not lost when it is redrawn. */
 const STEP_LIMITS = { adults:[1,8], children:[0,8], pets:[0,8] };
@@ -1876,7 +2046,7 @@ const REGS = {
   size: () => {
     const h = REG.home, v = h.floor_area_m2;
     return `<div class="form">
-      ${fieldBlock('year', 'When was it built?', 'A good guess is fine.', pick1('home.year_built', YEAR_BUILT, null, 2, 'Year built', 'txt'))}
+      ${fieldBlock('year', 'When was it built?', 'A good guess is fine.', pick1('home.year_built', YEAR_BUILT, o => art('year_built:' + o.id), 3, 'Year built'))}
       ${fieldBlock('floors', 'How many floors does your home have?', h.home_type === 'flat' ? 'Inside your flat, not the whole building.' : 'Count a loft or cellar only if it is lived in.', pick1('home.floors', FLOORS, o => art('floors:' + o.id), 4, 'Floors', 'sm'))}
       ${fieldBlock('bedrooms', 'How many bedrooms?', '', `<div class="numrow" role="radiogroup" aria-label="Bedrooms">${BEDROOMS.map(o => `<button class="num-b ${h.bedrooms===o.id?'on':''}" role="radio" aria-checked="${h.bedrooms===o.id}" data-act="reg-pick" data-k="home.bedrooms" data-v="${o.id}">${o.n}</button>`).join('')}</div>`)}
       ${fieldBlock('area', 'What is the floor area?', 'In square metres. Your Energy Performance Certificate (EPC) shows it as &ldquo;Total floor area&rdquo;.', `<div class="area-row"><span class="in-sfx"><input class="in" id="r_area" data-area="1" inputmode="decimal" maxlength="5" placeholder="e.g. 85" value="${typeof v === 'number' ? v : esc(REG.areaTxt || '')}" aria-label="Floor area in square metres"><span aria-hidden="true">m²</span></span><button class="chip ${v === null ? 'on' : ''}" aria-pressed="${v === null}" data-act="reg-unsure" data-k="floor_area_m2">${ic('check')}Not sure</button></div>`)}
@@ -1894,21 +2064,23 @@ const REGS = {
   heat: () => `<div class="form">
       ${fieldBlock('main_heating', 'What is your main heating?', 'The one that heats most of your home.', pick1('home.main_heating', MAIN_HEATING, o => art('heat:' + o.id), 2, 'Main heating'))}
       ${fieldBlock('other_heaters', 'Do you also use any of these?', 'Tap all that you use.', pickN('home.other_heaters', OTHER_HEATERS, o => art('other:' + o.id), 3, 'Other heaters'))}
-      ${fieldBlock('heating_pattern', 'How is your heating usually used?', '', pick1('home.heating_pattern', HEAT_PATTERN, o => ic(o.ic), 1, 'How the heating is used', 'line'))}
-      ${fieldBlock('payment', 'How do you pay for your energy?', '', pick1('home.payment', PAYMENT, o => ic(o.ic), 1, 'Paying for energy', 'line'))}
+      ${fieldBlock('heating_pattern', 'How is your heating usually used?', '', pick1('home.heating_pattern', HEAT_PATTERN, o => artx('pattern:' + o.id, o.ic), 1, 'How the heating is used', 'line'))}
     </div>`,
   controls: () => `<div class="form">
       ${fieldBlock('controls', 'Which heating controls do you have?', 'Tap all that you have.', pickN('home.controls', CONTROLS, o => art('controls:' + o.id), 3, 'Heating controls'))}
-      ${fieldBlock('stat_display', 'Does your thermostat show the room temperature on a screen?', '', pick1('home.stat_display', STAT_DISPLAY, o => art('stat_display:' + o.id), 3, 'Thermostat screen', 'sm'))}
       ${fieldBlock('setpoint', 'What temperature is it usually set to?', 'The setting, when someone is at home.', dialHtml('setpoint_c', 'Usual setting'))}
-      ${fieldBlock('bedroom_trv', 'Does the radiator in your bedroom have a dial?', 'A dial on the radiator itself (a TRV), usually numbered 1 to 5.', pick1('home.bedroom_trv', BEDROOM_TRV, o => art('bedroom_trv:' + o.id), 4, 'Bedroom radiator dial', 'sm'))}
     </div>`,
+  /* These matter a lot for the study: large pictures (two to a row), and a "How to tell" note under each question. */
   fabric: () => `<div class="form">
-      ${fieldBlock('wall_insulation', 'Are your walls insulated?', 'The outside walls. A good guess is fine.', pick1('home.wall_insulation', WALL_INS, o => art('wall:' + o.id), 3, 'Wall insulation', 'sm'))}
-      ${fieldBlock('loft', 'Is the loft insulated?', '', pick1('home.loft', LOFT, o => art('loft:' + o.id), 4, 'Loft insulation', 'sm'))}
-      ${fieldBlock('glazing', 'What kind of windows?', 'Look at the edge of the glass: one, two or three panes.', pick1('home.glazing', GLAZING, o => art('glazing:' + o.id), 3, 'Glazing', 'sm'))}
-      ${fieldBlock('windows_open', 'Can the windows be opened?', '', pick1('home.windows_open', WINDOWS_OPEN, o => art('windows_open:' + o.id), 3, 'Windows open', 'sm'))}
-      ${fieldBlock('damp', 'Have you seen damp or mould in the last year?', 'Tap every room where you saw it.', pickN('home.damp', DAMP, o => art('damp:' + o.id), 4, 'Damp or mould'))}
+      ${fieldBlock('wall_insulation', 'Are your walls insulated?', 'The outside walls. A good guess is fine.', pick1('home.wall_insulation', WALL_INS, o => art('wall:' + o.id), 2, 'Wall insulation', 'lg'),
+        'Look at the outside brickwork. If every brick shows its long side, the walls are probably cavity walls (most homes built after about 1930). If some bricks show their short ends, they are probably solid walls. A regular pattern of small filled holes in the mortar means the cavity has been filled.')}
+      ${fieldBlock('loft', 'Is the loft insulated?', '', pick1('home.loft', LOFT, o => art('loft:' + o.id), 2, 'Loft insulation', 'lg'),
+        'In the loft, a thick soft layer (yellow, grey or white) between and over the wooden beams is insulation; about 27&nbsp;cm is the recommended depth.')}
+      ${fieldBlock('glazing', 'What kind of windows?', '', pick1('home.glazing', GLAZING, o => art('glazing:' + o.id), 2, 'Glazing', 'lg'),
+        'Look at the edge of the glass: two sheets with a gap between them is double glazing, three is triple.')}
+      ${fieldBlock('windows_open', 'Can the windows be opened?', '', pick1('home.windows_open', WINDOWS_OPEN, o => art('windows_open:' + o.id), 2, 'Windows open', 'lg'))}
+      ${fieldBlock('damp', 'Have you seen damp or mould in the last year?', 'Tap every room where you saw it.', pickN('home.damp', DAMP, o => art('damp:' + o.id), 2, 'Damp or mould', 'lg'),
+        'Black or green spots on walls, ceilings or around windows, peeling paint or wallpaper, or a musty smell.')}
     </div>`,
   bedroom: () => `<div class="form">
       ${directionHelp()}
@@ -2026,24 +2198,15 @@ document.addEventListener('click', async e => {
     case 'tab': if(S.screen === d.to){ $('#screen').scrollTo({ top:0, behavior: reduceMotion() ? 'auto' : 'smooth' }); break; } go(d.to); break;
     case 'back': back(); break;
     case 'close': go('today'); break;
-    case 'start': if(!nextOpen() && needsNotif() && SS.get(NOTIF_ASKED_KEY) !== '1' && !studyOver()){ notifSheet(b); break; } startSession('self', b); break;
-    case 'start-anyway': closeSheet(); startSession('self'); break;
-    /* one tap: permission, this phone registered, the hours saved so far (or Swansea's defaults) */
-    case 'notif-on': {
-      const then = d.then;
-      LS.set(HOURS_KEY, JSON.stringify(hours()));
-      busy(b, true);
-      try{
-        const r = await PUSH.enable();
-        if(r === 'on'){
-          showToast({ title:'Notifications are on', sub: daysWord(hours()).replace(/&ndash;/g, '–').replace(/&middot;/g, '·') });
-          if(then === 'start'){ closeSheet(); startSession('self'); }
-          else { rerender(); if(S.screen === 'settings') remMsg(`Notifications are on. ${daysWord(hours())}; change the hours below.`, 'ok'); }
-        } else if(then === 'start'){ closeSheet(); startSession('self'); showToast({ title:'Notifications are not on', sub:'You can turn them on from Today or Settings', kind:'info' }); }   // never asked again in a loop: the check-in goes ahead
-        else if(r === 'dismissed'){ busy(b, false); notifMsg('Notifications were not allowed. Tap the button again and choose <b>Allow</b>.'); }
-        else rerender();                                    // blocked: the steps to allow them
-      }catch(err){ busy(b, false); notifMsg(err.message || 'Something went wrong, please try again.'); if(then === 'start'){ closeSheet(); startSession('self'); } }
-      break; }
+    case 'start': if(!HANDHELD && !nextOpen() && needsNotif() && SS.get(NOTIF_ASKED_KEY) !== '1' && !studyOver()){ notifSheet(b); break; } startSession('self', b); break;
+    case 'start-anyway': closeSheet(); startSession(d.mode === 'scheduled' ? 'scheduled' : 'self', null, true); break;   // a computer, or a phone that cannot have them
+    /* one tap: permission, this phone registered, the hours saved so far (or Swansea's defaults). The permission is
+     * only ever asked from this tap, so it can never be asked in a loop. */
+    case 'notif-recheck':
+      // "I've turned them on": still blocked in the phone's settings -> say so, nothing is asked
+      if(!('Notification' in window) || Notification.permission === 'denied'){ notifMsg(`Notifications are still blocked for ${APP}. Follow the steps above, then tap the button again.`); break; }
+      // falls through: allowed now (or not decided), so turn them on
+    case 'notif-on': await turnOnNotifs(b, d.then === 'start', d.mode); break;
     case 'home': onHome(d.v); break;
     case 'pause': setPause(d.v); break;
     case 'nothome': go('away'); break;
@@ -2052,9 +2215,6 @@ document.addEventListener('click', async e => {
     case 'none': S.a[d.q] = []; rerender(); break;
     case 'lastclo': S.a.clo = [...((lastVote() || {}).garments || [])].filter(id => byId(GARMENTS, id)); rerender(); break;
     case 'next': next(); break;
-    case 'stat': { const v = Math.max(STAT_MIN, Math.min(STAT_MAX, statShown() + Number(d.d) * STAT_STEP)); S.a.statv = v; if(S.a.stat === 'none') delete S.a.stat; rerender(); break; }
-    case 'stat-ok': S.a.stat = statShown(); next(); break;
-    case 'stat-none': S.a.stat = 'none'; rerender(); S.lock = true; clearTimeout(pickTimer); pickTimer = setTimeout(() => { S.lock = false; if(S.screen==='q') next(); }, 460); break;
     case 'edit': {
       refreshFlow();
       const i = S.flow.indexOf(d.q);
@@ -2074,11 +2234,11 @@ document.addEventListener('click', async e => {
     case 'go-reminders': go('settings'); { const r = $('#reminders'); if(r){ r.scrollIntoView({ block:'start' }); r.focus({ preventScroll:true }); } } break;
     case 'add-win': { remDraft = readHours(); remDraft[d.w+'2_start'] = '07:00'; remDraft[d.w+'2_end'] = '09:00'; rerender(); $('#'+(d.w==='weekday'?'h_ws2':'h_es2'))?.focus({ preventScroll:true }); break; }
     case 'rm-win': { remDraft = readHours(); remDraft[d.w+'2_start'] = null; remDraft[d.w+'2_end'] = null; rerender(); $(`[data-act="add-win"][data-w="${d.w}"]`)?.focus({ preventScroll:true }); break; }
-    case 'install-skip': {
-      SS.set(INSTALL_SKIP_KEY, '1');
-      const to = START === 'join' || START === 'signin' ? START : 'welcome';
-      if(to === 'join') REG = loadReg('join');
-      go(to); if(to !== 'welcome') S.hist = ['welcome'];
+    case 'copy-link': {                                     // the app's link, to paste into Safari
+      const inp = b.parentNode && b.parentNode.querySelector('input'), was = b.innerHTML;
+      try{ await navigator.clipboard.writeText(APP_URL); b.innerHTML = ic('check') + ' Copied'; }
+      catch(e){ if(inp){ inp.focus(); inp.select(); } b.innerHTML = 'Now copy it'; }
+      setTimeout(() => { if(document.contains(b)) b.innerHTML = was; }, 2000);
       break; }
     case 'signin': signin(); break;
     case 'recheck': recheck(false); break;
@@ -2098,7 +2258,11 @@ document.addEventListener('click', async e => {
       break; }
     case 'push-off': busy(b, true); await PUSH.disable(); rerender(); remMsg('Reminders are off on this phone.', 'ok'); break;
     /* the game: race period, how points work, badges, hiding from the race */
-    case 'race-period': if(d.v !== RACE_PERIOD){ RACE_PERIOD = d.v === 'month' ? 'month' : 'week'; if(S.screen === 'race') render(); refreshRace(RACE_PERIOD); } break;
+    case 'race-period': {                                    // this week, last week (final standings), this month; from Today it opens the Race tab
+      const v = ['week','last_week','month'].includes(d.v) ? d.v : 'week';
+      if(S.screen !== 'race'){ RACE_PERIOD = v; go('race'); break; }
+      if(v !== RACE_PERIOD){ RACE_PERIOD = v; render(); refreshRace(RACE_PERIOD); }
+      break; }
     case 'race-how': if(hasGame()) howSheet(b); break;
     case 'badges': if(hasGame()) badgesSheet(b); break;
     case 'race-hide': {

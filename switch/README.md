@@ -124,12 +124,12 @@ fill it in. Only the first half of the postcode is stored: the database refuses 
 | `bedroom_share` | others sleeping in the participant's bedroom: 0, 1, 2, 3 (3 or more) |
 | `main_heating` | `gas_combi` (no hot water tank), `gas_tank`, `oil`, `lpg`, `ashp` (air source heat pump), `gshp`, `storage` (storage heaters), `electric` (radiators or panel heaters), `communal`, `solid`, `none`, `unsure` |
 | `other_heaters` | list of `plugin`, `gas_fire`, `electric_fire`, `stove` (wood burner or multi-fuel), `open_fire`, `electric_blanket`, or `none` |
-| `heating_pattern` | `timer`, `when_needed`, `most_day`, `rarely`, `not_me` (someone else controls it) |
-| `payment` | `prepay` (prepayment meter), `bill` (bill or Direct Debit), `in_rent`, `unsure`, `prefer_not` |
+| `heating_pattern` | `always_on` (the thermostat turns it on and off; added 1.1), `timer`, `when_needed`, `most_day`, `rarely`, `not_me` (someone else controls it) |
+| `payment` | no longer asked since 1.1; older profiles: `prepay`, `bill`, `in_rent`, `unsure`, `prefer_not` |
 | `controls` | list of `room_stat`, `smart`, `programmer`, `trvs`, or `none` / `unsure` |
-| `stat_display` | does the thermostat show the room temperature: `yes`, `no`, `no_stat`. Only `yes` adds the thermostat question to check-ins |
+| `stat_display` | no longer asked since 1.1; older profiles: `yes`, `no`, `no_stat` |
 | `setpoint_c` | usual thermostat setting in °C, or null |
-| `bedroom_trv` | `yes`, `no`, `no_radiator`, `unsure` |
+| `bedroom_trv` | no longer asked since 1.1; older profiles: `yes`, `no`, `no_radiator`, `unsure` |
 | `wall_insulation` | `cavity`, `external`, `internal`, `none`, `unsure` |
 | `loft` | `yes`, `no`, `no_loft`, `unsure` |
 | `glazing` | `single`, `double`, `triple`, `mixed`, `unsure` |
@@ -162,9 +162,11 @@ shortcut since 1.0; `same_as_last` is always false; clothing has a one-tap "Same
 | Is the sun shining on you? | `sun` | `yes`, `no`, `dark` |
 | Is your heating on right now? (1.0) | `heating_on` | `on`, `off`, `unsure` |
 | Which heating is on? (1.0, only when on and the home has more than one system) | `heating_src` | the home's `main_heating` / `other_heaters` ids, `other` |
-| How long has it been on? (1.0, only when on) | `heating_for` | `lt30`, `30_60`, `1_2h`, `2_4h`, `gt4h`, `unsure` |
-| What does your thermostat show? (1.0, only when `stat_display` is `yes`) | `stat_temp_c` | °C in half degrees, or null ("I can't see it right now") |
-| Touch the nearest outside wall… how does it feel? (1.0) | `wall` | `cold`, `cool`, `neutral`, `warm`, `no_reach` |
+| How long has it been on? (1.0, only when on) | `heating_for` | `always` (the thermostat switches it on and off; added 1.1), `30_60`, `1_2h`, `2_4h`, `gt4h`, `unsure` (`lt30` in 1.0 check-ins only) |
+| Touch the nearest outside wall… how does it feel? (1.0) | `wall` | `no_reach` (listed first), `cold`, `cool`, `neutral`, `warm` |
+
+The thermostat reading ("What does your thermostat show?", `stat_temp_c`) was asked in 1.0 only; from 1.1 the column stays
+empty.
 | In the last 30 minutes, did you do any of these? | `actions` | `win_open`, `win_close`, `door_open`, `door_close`, `heat_up`, `heat_down`, `layer_on`, `layer_off`, `blanket`, `fan`, `curtains`, `moved` (opened/closed and up/down exclude each other) |
 | In the last 30 minutes, did you have or feel any of these? | `notes` | `hot_drink`, `cold_drink`, `ate`, `hungry`, `tired`, `unwell` |
 
@@ -194,12 +196,17 @@ time (or claims a time in the future) is kept as data but scores nothing, so poi
 back-dating. These numbers are also in `config.js` (`checkinGapMin`, `dailyGoal`, `points`): change both together.
 Participants waiting for approval see only themselves in the race.
 
-The Bay Race runs from Swansea Marina to Mumbles lighthouse, this week or this month; the lighthouse is the daily
+The Bay Race runs from Swansea Marina to Mumbles lighthouse, this week, last week (final standings) or this month;
+the lighthouse is the daily
 goal every day plus the full-week bonus (470 points a week). Participants appear only as their alias; "Show me in
 the Bay Race" off (`race_hidden`) hides a participant from everyone else (they still see the race and their own
 place). Badges (first check-in, daily goal, three in a row, full week, early bird, night owl, 50 and 100 check-ins,
 10 different days, 10 wall answers) are private. No prizes are promised; the points are stored so the team can run
 a reward scheme later (the dashboard lists them by code).
+
+Every Monday the week's race and goals start again from zero. So that a new week never looks like lost data, the
+points chip on Today shows all-time points (with the week's place only once the week has points), and while the new
+week is still empty the race and Today say "A new race started on Monday" with the participant's finish last week.
 
 ## Testing
 
@@ -262,7 +269,10 @@ One-time setup, after the database setup above:
 3. Start the reminder clock (next section).
 
 Participants turn reminders on from the "Turn on notifications" card on Today (or when they first tap "Check in
-now"). On iPhone this only works inside the home-screen copy of the app, and the app says so.
+now"). On iPhone this only works inside the home-screen copy of the app, and the app says so. Since 1.1, phones and
+tablets cannot check in until notifications are on (the study relies on reminders at different times of day): there
+is no "Check in without them" there, a blocked permission gets the steps to allow it, and a phone that cannot get
+web push is told to update or to check in from a computer. Laptops and desktops can still check in without them.
 
 ### The reminder clock
 

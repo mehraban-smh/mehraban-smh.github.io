@@ -28,5 +28,5 @@ self.SWITCH_CONFIG = {
   appName: "HomePulse",
   studyName: "SWITCH home comfort study",
   studyStart: null, studyEnd: null,  // optional "YYYY-MM-DD"; when studyEnd is set, reminders stop after it (UK time)
-  appVersion: "1.0.0"
+  appVersion: "1.1.0"
 };

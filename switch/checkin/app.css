@@ -227,6 +227,8 @@ a{color:var(--accent);font-weight:700}
 .ptile .pt-art{display:grid;place-items:center;min-height:44px}
 .ptile .pt-art .ic{width:34px;height:34px;color:var(--accent)}
 .ptile b{font-weight:700;font-size:.86rem;line-height:1.2}
+.ptile .pt-t{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.ptile.line .pt-t{align-items:flex-start;text-align:left}
 .ptile small{font-size:.74rem;color:var(--muted);line-height:1.2}
 .ptile>.tick{position:absolute;top:7px;right:7px;width:20px;height:20px;margin:0}
 .ptile>.tick .ic{width:12px;height:12px}
@@ -255,7 +257,33 @@ a{color:var(--accent);font-weight:700}
 .ptile.epc{min-height:62px}
 .epc-band{display:inline-grid;place-items:center;width:44px;height:30px;border-radius:7px 15px 15px 7px;background:var(--epc);color:#fff;font-weight:800;font-size:1.05rem;text-shadow:0 1px 1px rgba(0,0,0,.25)}
 .gi-art .epc-band{width:34px;height:24px;font-size:.9rem}
-/* the thermostat reading */
+/* round 3: large picture tiles (Step 7: walls, loft, glazing, windows, damp), two to a row, picture on top */
+.ptile.lg{min-height:158px;padding:12px 8px 11px;gap:4px}
+.ptile.lg .pt-art{min-height:96px}
+.ptile.lg .art{width:96px;height:96px}
+.ptile.lg b{font-size:.92rem}
+.ptile.lg small{font-size:.76rem}
+/* "How to tell": a short note that opens under a question */
+.howto{margin-top:5px;font-size:.84rem}
+.howto summary{display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:var(--accent);font-weight:800;list-style:none;padding:3px 0}
+.howto summary::-webkit-details-marker{display:none}
+.howto summary .ic{width:18px;height:18px}
+.howto[open] summary{color:var(--text)}
+.howto p{margin:6px 0 2px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);line-height:1.45}
+/* how long the heating has been on: picture and words; "always on" across the row with its hint */
+.tile.wide2{grid-column:1/-1}
+.tile.txt .tt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.tile.txt .tt small{font-size:.78rem}
+.tile.txt .art{width:40px;height:40px}
+/* "Couldn't load ... Trying again" */
+.msg.net{font-size:.82rem;padding:8px 12px;background:var(--warn-soft)}
+.msg.net .ic{width:18px;height:18px;color:var(--warn)}
+/* the app's link to copy into Safari (iPhone, outside the Home Screen app) */
+.copylink{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:10px;align-items:center}
+.copylink .in{font-size:.86rem;padding:9px 10px;color:var(--muted)}
+.copylink .btn{width:auto;min-height:44px;padding:9px 14px;font-size:.9rem;gap:6px}
+.copylink .btn .ic{width:18px;height:18px}
+/* the thermostat reading (1.0; no longer asked) */
 .statq{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:6px 0}
 .stat-dev{display:grid;place-items:center;width:88px;height:88px;border-radius:50%;background:var(--card2)}
 .stat-art{width:62px;height:62px}

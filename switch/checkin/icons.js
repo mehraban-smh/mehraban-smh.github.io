@@ -10,77 +10,81 @@ const P = {
   brand:'<path d="M3.5 11L12 4l8.5 7"/><path d="M5.5 9.6V19a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9.6"/><path class="glow" d="M7.2 14.6h2.4l1.5-3.4 2.1 6 1.5-4 1 1.4h1.6"/>',   /* the app icon: a house with a warm pulse line (HomePulse) */
   out:'<path d="M13 4h6v16h-6"/><path d="M3 12h10"/><path d="M10 9l3 3-3 3"/>',
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-  snow:'<path d="M12 3v18M3 12h18M6 6l12 12M18 6L6 18"/><path d="M12 3l-2 2.5M12 3l2 2.5M12 21l-2-2.5M12 21l2-2.5M3 12l2.5-2M3 12l2.5 2M21 12l-2.5-2M21 12l-2.5 2"/>',
+  snow:'<path class="i-c" d="M12 3v18M3 12h18M6 6l12 12M18 6L6 18"/><path class="i-c" d="M12 3l-2 2.5M12 3l2 2.5M12 21l-2-2.5M12 21l2-2.5M3 12l2.5-2M3 12l2.5 2M21 12l-2.5-2M21 12l-2.5 2"/>',
   check:'<path d="M5 12l5 5L20 7"/>',
-  flame:'<path d="M12 3c.5 3.5 4.5 5 4.5 9.5a4.5 4.5 0 0 1-9 0c0-2 1-3.5 2-4.5 0 1.5 1 2.5 2 2.5.5-2-.5-4 .5-7.5z"/>',
-  flameOff:'<path d="M12 3c.5 3.5 4.5 5 4.5 9.5a4.5 4.5 0 0 1-9 0c0-2 1-3.5 2-4.5 0 1.5 1 2.5 2 2.5.5-2-.5-4 .5-7.5z" opacity=".55"/><path d="M4 4l16 16"/>',
-  tshirt:'<path d="M8 4l4 1.5L16 4l4 3-2 3-2-1v11H8V9l-2 1-2-3z"/>',
-  long:'<path d="M8 4l4 1.5L16 4l4 3-1 8h-1v5H6v-5H5L4 7z"/>',
-  jumper:'<path d="M8 4l4 1.5L16 4l4 3-1 8h-1v5H6v-5H5L4 7z"/><path d="M6 17h12"/><path d="M10 5.5c1 1 3 1 4 0"/>',
-  hoodie:'<path d="M8 5l4 1.5L16 5l4 3-1 8h-1v4H6v-4H5L4 8z"/><path d="M9 5.5a3 3 0 0 1 6 0"/><path d="M9 14h6v3H9z"/>',
-  shorts:'<path d="M6 4h12l1 9h-6l-1-4-1 4H5z"/>',
-  trousers:'<path d="M7 3h10l1 18h-5l-1-9-1 9H6z"/>',
-  joggers:'<path d="M7 3h10l1 18h-5l-1-9-1 9H6z"/><path d="M8 6h8"/><path d="M13 19h5M6 19h5"/>',
-  skirt:'<path d="M8 4h8l3 14H5z"/><path d="M8 7h8"/>',
-  pyjamas:'<path d="M7 2.5l3 1 2 1.5 2-1.5 3-1 3 2.5-1.5 5H17v3H7V10H5.5L4 5z"/><path d="M7 13h10l.6 8.5h-4.2L12 16l-1.4 5.5H6.4z"/><path d="M12 5.5v6"/><path d="M9 7v.01M15 7v.01"/>',
-  coatL:'<path d="M8 3l4 2 4-2 4 3-1 9h-1v6h-4.5L12 9l-1.5 12H6v-6H5L4 6z"/><path d="M12 5v4"/>',
-  coatW:'<path d="M8 2.5a4 3 0 0 1 8 0"/><path d="M7.5 3.5L12 6l4.5-2.5L20 6l-1 9h-1v7H6v-7H5L4 6z"/><path d="M12 6v16"/><path d="M8 15h2M14 15h2"/>',
-  socks:'<path d="M9 3h6v9l3 3a3 3 0 0 1-4 4l-5-4z"/><path d="M9 6h6"/>',
-  slippers:'<path d="M3 16c0-2 2-3 5-3h8c3 0 5 1 5 3v1H3z"/><path d="M8 13V9a3 3 0 0 1 6 0v4"/>',
-  blanket:'<path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3H4z"/><path d="M4 10h16v8H4z"/><path d="M4 14h16"/>',
-  bed:'<path d="M3 19v-9"/><path d="M3 13h18v6"/><path d="M7 13V9h4v4"/><path d="M11 13v-2h7a3 3 0 0 1 3 2"/>',
-  sleep:'<path d="M3 20v-8M3 15h18v5M7 15v-4h4v4M11 15v-2h7a3 3 0 0 1 3 2"/><path d="M14 3h4l-4 4h4"/>',
-  lying:'<circle cx="6" cy="10" r="2"/><path d="M9 13h9l2 3"/><path d="M3 16h18"/><path d="M4 16v-3a2 2 0 0 1 2-2"/><path d="M3 16v3M21 16v3"/>',
-  sofa:'<path d="M5 11V8a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v3"/><path d="M3 13a2 2 0 0 1 4 0v3h10v-3a2 2 0 0 1 4 0v5H3z"/>',
-  laptop:'<rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/>',
-  stand:'<circle cx="12" cy="4.5" r="2"/><path d="M12 7v7"/><path d="M8 10l4-2 4 2"/><path d="M12 14l-3 7M12 14l3 7"/>',
-  pan:'<circle cx="10" cy="13" r="6"/><path d="M16 13h6"/><path d="M8 4c0 1.5 1 1.5 1 3M11 3c0 1.5 1 1.5 1 3"/>',
-  walk:'<circle cx="13" cy="4" r="2"/><path d="M12 7l-3 5 2 2v6"/><path d="M12 7l3 3 3 1"/><path d="M9 12l-3 2"/><path d="M11 14l4 3 1 4"/>',
-  gym:'<path d="M6 8v8M18 8v8M3 10v4M21 10v4M6 12h12"/>',
-  door:'<path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17"/><path d="M3 21h18"/><circle cx="15" cy="12" r="1"/>',
-  doorOpen:'<path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17"/><path d="M3 21h18"/><path d="M5 4l8 2.5v16"/><circle cx="11" cy="13" r=".8"/>',
-  bath:'<path d="M4 12h16v3a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M6 12V6a2 2 0 0 1 4 0"/><path d="M7 20l-1 2M17 20l1 2"/>',
+  flame:'<path class="i-fl" d="M12 3c.5 3.5 4.5 5 4.5 9.5a4.5 4.5 0 0 1-9 0c0-2 1-3.5 2-4.5 0 1.5 1 2.5 2 2.5.5-2-.5-4 .5-7.5z"/>',
+  flameOff:'<path class="i-d" d="M12 3c.5 3.5 4.5 5 4.5 9.5a4.5 4.5 0 0 1-9 0c0-2 1-3.5 2-4.5 0 1.5 1 2.5 2 2.5.5-2-.5-4 .5-7.5z" opacity=".6"/><path d="M4 4l16 16"/>',
+  tshirt:'<path class="i-gm" style="--gc:var(--g-tshirt)" d="M8 4l4 1.5L16 4l4 3-2 3-2-1v11H8V9l-2 1-2-3z"/><path d="M10.2 5.2c.6 1 3 1 3.6 0" stroke-width="1.3"/>',
+  long:'<path class="i-gm" style="--gc:var(--g-long)" d="M8 4l4 1.5L16 4l4 3-1 8h-1v5H6v-5H5L4 7z"/><path d="M5 13.5h1.6M17.4 13.5H19" stroke-width="1.3"/>',
+  jumper:'<path class="i-gm" style="--gc:var(--g-jumper)" d="M8 4l4 1.5L16 4l4 3-1 8h-1v5H6v-5H5L4 7z"/><path d="M6 17h12M5 13.5h1.6M17.4 13.5H19"/><path d="M10 5.5c1 1 3 1 4 0"/><path d="M8.5 10h7" stroke-width="1.2" stroke-dasharray="1.4 1.4"/>',
+  hoodie:'<path class="i-gm" style="--gc:var(--g-hoodie)" d="M8 5l4 1.5L16 5l4 3-1 8h-1v4H6v-4H5L4 8z"/><path d="M9 5.5a3 3 0 0 1 6 0"/><path d="M9 14h6v3H9z"/><path d="M11 7v3M13 7v3" stroke-width="1.2"/>',
+  shorts:'<path class="i-gm" style="--gc:var(--g-shorts)" d="M6 4h12l1 9h-6l-1-4-1 4H5z"/><path d="M6 6.5h12" stroke-width="1.2"/>',
+  trousers:'<path class="i-gm" style="--gc:var(--g-trousers)" d="M7 3h10l1 18h-5l-1-9-1 9H6z"/><path d="M7 5.5h10M12 3v4" stroke-width="1.2"/>',
+  joggers:'<path class="i-gm" style="--gc:var(--g-joggers)" d="M7 3h10l1 18h-5l-1-9-1 9H6z"/><path d="M8 6h8"/><path d="M13 19h5M6 19h5"/><path d="M11 6.5l-.6 2M13 6.5l.6 2" stroke-width="1.2"/>',
+  skirt:'<path class="i-gm" style="--gc:var(--g-skirt)" d="M8 4h8l3 14H5z"/><path d="M8 7h8"/><path d="M10 7l-1.4 11M14 7l1.4 11" stroke-width="1.2"/>',
+  pyjamas:'<path class="i-gm" style="--gc:var(--g-pyjamas)" d="M7 2.5l3 1 2 1.5 2-1.5 3-1 3 2.5-1.5 5H17v3H7V10H5.5L4 5z"/><path class="i-gm" style="--gc:var(--g-pyjamas)" d="M7 13h10l.6 8.5h-4.2L12 16l-1.4 5.5H6.4z"/><path d="M12 5.5v6"/><path d="M10 4.4l2 1.6 2-1.6" stroke-width="1.2"/><path d="M9 7v.01M9 9.5v.01M15 7v.01M15 9.5v.01" stroke-width="1.8"/><path d="M8.5 15l-.4 5M15.5 15l.4 5" stroke-width="1.1"/>',
+  coatL:'<path class="i-gm" style="--gc:var(--g-coat-light)" d="M8 3l4 2 4-2 4 3-1 9h-1v6h-4.5L12 9l-1.5 12H6v-6H5L4 6z"/><path d="M12 5v4"/><path d="M9.5 3.8l2.5 3 2.5-3" stroke-width="1.2"/><path d="M7.5 14h2.4M14.1 14h2.4" stroke-width="1.3"/>',
+  coatW:'<path class="i-gm" style="--gc:var(--g-coat-winter)" d="M7.5 3.5L12 6l4.5-2.5L20 6l-1 9h-1v7H6v-7H5L4 6z"/><path d="M8 2.5a4 3 0 0 1 8 0"/><path class="i-p" d="M8.6 3.6a3.6 2.4 0 0 0 6.8 0" stroke-width="1.2"/><path d="M12 6v16"/><path d="M6.4 10.5h11.2M6.2 14.5h11.6M6 18.5h12" stroke-width="1.1"/>',
+  socks:'<path class="i-gm" style="--gc:var(--g-socks)" d="M9 3h6v9l3 3a3 3 0 0 1-4 4l-5-4z"/><path d="M9 6h6"/><path d="M10.5 9h3" stroke-width="1.2"/>',
+  slippers:'<path class="i-gm" style="--gc:var(--g-slippers)" d="M3 16c0-2 2-3 5-3h8c3 0 5 1 5 3v1H3z"/><path class="i-gm" style="--gc:var(--g-slippers)" d="M8 13V9a3 3 0 0 1 6 0v4"/><path d="M3 19h18" stroke-width="1.2"/>',
+  blanket:'<path class="i-wf" d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3H4z"/><path class="i-wf" d="M4 10h16v8H4z"/><path d="M4 14h16"/><path class="i-w" d="M8 18v2M12 18v2M16 18v2" stroke-width="1.3"/>',
+  bed:'<path d="M3 19v-9M21 13v6"/><rect class="i-p" x="4.5" y="10" width="6" height="3" rx="1.2"/><path class="i-f" d="M11 13v-1.6c0-.8.7-1.4 1.5-1.4H18a3 3 0 0 1 3 3z"/><path d="M3 13h18v4H3z"/>',
+  sleep:'<path d="M3 9v11M21 15.5V20M3 17.5h18"/><path class="i-f" d="M8.5 17.5v-3.6c0-.8.6-1.4 1.4-1.4H19a2 2 0 0 1 2 2v3z"/><rect class="i-p" x="3" y="12.6" width="5" height="2.8" rx="1.2"/><circle class="i-hd" cx="5.6" cy="11.4" r="1.8"/><path class="i-c" d="M13.5 3.5h3.4l-3.4 4h3.4" stroke-width="1.5"/><path class="i-c" d="M18.4 7h2.2l-2.2 2.6h2.2" stroke-width="1.3"/>',
+  lying:'<path class="i-f" d="M3 14h18v3H3z"/><path d="M3 11v8M21 11v8M3 17h18"/><circle class="i-hd" cx="6.2" cy="10.6" r="1.9"/><path d="M8.6 11.8h6.6l2.6-1.8 1.8 1.6"/>',
+  actSit:'<path class="i-f" d="M4 13.5h12.5V17H4z"/><path d="M4 8.5V20M17.5 13.5V20M4 17h13.5"/><circle class="i-hd" cx="10" cy="4.6" r="2"/><path d="M10 7v5.5h5l1.5 5"/><path d="M10 8.8l3.4 2.2"/>',
+  actDesk:'<circle class="i-hd" cx="12" cy="4.8" r="2.2"/><path d="M6.8 13c0-2.8 2.3-4.8 5.2-4.8s5.2 2 5.2 4.8"/><path class="i-g" d="M6 10.8h12v6.6H6z"/><path d="M2.5 19.8h19"/><path d="M4.5 17.4h15"/>',
+  sofa:'<path class="i-f" d="M5 11V8a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v3"/><path class="i-f" d="M3 13a2 2 0 0 1 4 0v3h10v-3a2 2 0 0 1 4 0v5H3z"/><path d="M5 18v2M19 18v2"/>',
+  laptop:'<rect class="i-g" x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/><path d="M4 16l-1.6 3M20 16l1.6 3"/>',
+  stand:'<circle class="i-hd" cx="12" cy="4.5" r="2"/><path class="i-f" d="M10 7.5h4l.6 6.5H9.4z"/><path d="M12 7v7"/><path d="M8 10l4-2.5 4 2.5"/><path d="M12 14l-2.6 7M12 14l2.6 7"/>',
+  pan:'<path class="i-f" d="M4.5 11.5h11v2.5a3 3 0 0 1-3 3h-5a3 3 0 0 1-3-3z"/><path d="M15.5 12.5h5"/><path d="M3 20.5h18"/><path class="i-fl" d="M7.5 20.5c-.6-1 .2-1.6.4-2.4.6.6.8 1 .7 1.6M12 20.5c-.6-1 .2-1.6.4-2.4.6.6.8 1 .7 1.6" stroke-width="1.2"/><path class="i-w" d="M8 3.5c0 1.5 1 1.5 1 3M11.5 3c0 1.5 1 1.5 1 3" stroke-width="1.5"/>',
+  walk:'<circle class="i-hd" cx="13" cy="4" r="2"/><path d="M12 7l-3 5 2 2v6"/><path d="M12 7l3 3 3 1"/><path d="M9 12l-3 2"/><path d="M11 14l4 3 1 4"/>',
+  gym:'<rect class="i-f" x="4" y="7.5" width="3.2" height="9" rx="1"/><rect class="i-f" x="16.8" y="7.5" width="3.2" height="9" rx="1"/><path d="M1.8 10v4M22.2 10v4M7.2 12h9.6"/>',
+  door:'<path class="i-f" d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17z"/><path d="M3 21h18"/><circle cx="15" cy="12" r="1"/>',
+  doorOpen:'<path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17"/><path d="M3 21h18"/><path class="i-sk" d="M6 4h12v17H6z"/><path class="i-f" d="M5 4l8 2.5v16L5 21z"/><circle cx="11" cy="13" r=".8"/>',
+  bath:'<path class="i-f" d="M3.5 12h17v3a5 5 0 0 1-5 5h-7a5 5 0 0 1-5-5z"/><path class="i-c" d="M6.5 14.4h11" stroke-width="1.3"/><path d="M6 12V6a2 2 0 0 1 4 0"/><path d="M7 20l-1 2M17 20l1 2"/>',
   up:'<path d="M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1z"/><path d="M7 11l4-7c1.5 0 2.5 1 2.5 2.5L13 10h5a2 2 0 0 1 2 2.3l-1 6a2 2 0 0 1-2 1.7H7"/>',
   down:'<g transform="rotate(180 12 12)"><path d="M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1z"/><path d="M7 11l4-7c1.5 0 2.5 1 2.5 2.5L13 10h5a2 2 0 0 1 2 2.3l-1 6a2 2 0 0 1-2 1.7H7"/></g>',
-  still:'<path d="M4 12h16"/><path d="M8 8h8M8 16h8" opacity=".35"/>',
-  slight:'<path d="M4 12h10a2 2 0 1 0-2-2"/>',
-  draught:'<path d="M3 8h9a2 2 0 1 0-2-2"/><path d="M3 12h14a2 2 0 1 1-2 2"/><path d="M3 16h7a2 2 0 1 1-2 2"/>',
+  still:'<path class="i-f" d="M9.5 13.5h5V21h-5z"/><path d="M8 21h8"/><path d="M12 13.5v-1.2"/><path class="i-fl" d="M12 3.6c1.5 2 2.4 3.4 2.4 5a2.4 2.4 0 0 1-4.8 0c0-1.6.9-3 2.4-5z"/>',
+  slight:'<path class="i-f" d="M9.5 13.5h5V21h-5z"/><path d="M8 21h8"/><path d="M12 13.5v-1.2"/><g transform="rotate(14 12 11)"><path class="i-fl" d="M12 3.6c1.5 2 2.4 3.4 2.4 5a2.4 2.4 0 0 1-4.8 0c0-1.6.9-3 2.4-5z"/></g><path class="i-c" d="M2.5 7.5c1.5-.8 3-.8 4.5 0" stroke-width="1.5"/>',
+  draught:'<path class="i-f" d="M9.5 13.5h5V21h-5z"/><path d="M8 21h8"/><path d="M12 13.5v-1.2"/><g transform="rotate(48 12 11.5)"><path class="i-fl" d="M12 3.6c1.5 2 2.4 3.4 2.4 5a2.4 2.4 0 0 1-4.8 0c0-1.6.9-3 2.4-5z"/></g><path class="i-c" d="M2 5c1.5-.9 3-.9 4.5 0M1.5 9c2-.9 3.8-.9 5.5 0M2.5 13c1.3-.7 2.6-.7 4 0" stroke-width="1.5"/>',
   drop:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
-  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
-  cloud:'<path d="M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9z"/>',
-  moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
-  window:'<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M12 3v18M4 12h16"/>',
-  windowOpen:'<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M4 12h16"/><path d="M12 12V3"/><path d="M12 12l5-2.5V3.5" opacity=".9"/><path d="M12 21v-9" opacity=".5"/>',
+  sun:'<circle class="i-wf" cx="12" cy="12" r="4.2"/><path class="i-w" d="M12 2v2.4M12 19.6V22M2 12h2.4M19.6 12H22M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7"/>',
+  cloud:'<circle class="i-wf" cx="16.5" cy="7.5" r="3.2"/><path class="i-w" d="M16.5 2v1.2M21.6 7.5h1.2M20.1 3.9l.9-.9" stroke-width="1.5"/><path class="i-f" d="M7 19a4 4 0 0 1-.5-8A6 6 0 0 1 17.6 10a4.5 4.5 0 0 1-.1 9z"/>',
+  moon:'<path class="i-f" d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/><path class="i-w" d="M17 3.5v3M15.5 5h3M20.5 9.2v2M19.5 10.2h2" stroke-width="1.4"/>',
+  window:'<rect class="i-g" x="4" y="3" width="16" height="18" rx="1"/><path d="M12 3v18M4 12h16"/>',
+  windowOpen:'<rect class="i-sk" x="4" y="3" width="16" height="18" rx="1"/><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M4 12h16M12 12V3"/><path class="i-g" d="M12 12l5.5-2.4V3.6L12 3z"/><path class="i-c" d="M14 15.5c1.2-.7 2.4-.7 3.6 0M14 18.2c1.2-.7 2.4-.7 3.6 0" stroke-width="1.3"/>',
   radiator:'<rect x="3" y="7" width="18" height="10" rx="1"/><path d="M7 7v10M10.5 7v10M14 7v10M17.5 7v10"/>',
-  heatUp:'<rect x="2" y="10" width="14" height="9" rx="1"/><path d="M5.5 10v9M9 10v9M12.5 10v9"/><path d="M19.5 15V4M16.5 7l3-3 3 3"/>',
-  heatDown:'<rect x="2" y="10" width="14" height="9" rx="1"/><path d="M5.5 10v9M9 10v9M12.5 10v9"/><path d="M19.5 4v11M16.5 12l3 3 3-3"/>',
-  fan:'<circle cx="12" cy="12" r="2"/><path d="M12 10c0-4-2-6-5-6 0 3 2 5 5 6zM14 12c4 0 6-2 6-5-3 0-5 2-6 5zM12 14c0 4 2 6 5 6 0-3-2-5-5-6zM10 12c-4 0-6 2-6 5 3 0 5-2 6-5z"/>',
-  mug:'<path d="M4 8h12v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M16 10h2a2 2 0 0 1 0 4h-2"/><path d="M7 3c0 1.5 1 1.5 1 3M11 3c0 1.5 1 1.5 1 3"/>',
-  glass:'<path d="M6 3h12l-1.5 17a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1z"/><path d="M7 9h10"/><rect x="10" y="12" width="4" height="4"/>',
-  curtain:'<path d="M3 3h18"/><path d="M5 3c3 5 3 13 0 18M19 3c-3 5-3 13 0 18"/><path d="M5 21h14"/>',
-  layerOn:'<path d="M8 4l4 1.5L16 4l4 3-2 3-2-1v11H8V9l-2 1-2-3z"/><path d="M12 12v6M9 15h6"/>',
-  layerOff:'<path d="M8 4l4 1.5L16 4l4 3-2 3-2-1v11H8V9l-2 1-2-3z"/><path d="M9 15h6"/>',
-  zzz:'<path d="M4 8h5l-5 6h5"/><path d="M13 4h4l-4 5h4"/><path d="M14 14h6l-6 6h6"/>',
-  thermo:'<path d="M10 4a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 9v6"/>',
-  thermoLow:'<path d="M10 4a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 13v3"/>',
-  thermoHigh:'<path d="M10 4a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 6v10"/>',
-  fork:'<path d="M7 3v18"/><path d="M5 3v5a2 2 0 0 0 4 0V3"/><path d="M17 3c-2 0-3 3-3 6a3 3 0 0 0 3 3v9"/>',
-  apple:'<path d="M12 8c-1.6-1.2-3.8-1.4-5.3-.3C4.4 9.3 4.6 13 5.6 15.8c.9 2.6 2.7 4.7 4.4 4.7.8 0 1.3-.4 2-.4s1.2.4 2 .4c1.7 0 3.5-2.1 4.4-4.7 1-2.8 1.2-6.5-1.1-8.1-1.5-1.1-3.7-.9-5.3.3z"/><path d="M12 8c0-2 .8-3.6 2.5-4.5"/>',
+  heatUp:'<rect class="i-wf" x="2" y="10" width="14" height="9" rx="1"/><path d="M5.5 10v9M9 10v9M12.5 10v9"/><path class="i-w" d="M19.5 15V4M16.5 7l3-3 3 3"/>',
+  heatDown:'<rect class="i-f" x="2" y="10" width="14" height="9" rx="1"/><path d="M5.5 10v9M9 10v9M12.5 10v9"/><path class="i-c" d="M19.5 4v11M16.5 12l3 3 3-3"/>',
+  fan:'<circle cx="12" cy="10" r="1.8"/><path class="i-f" d="M12 8.2c0-3.6-1.8-5.4-4.5-5.4 0 2.7 1.8 4.5 4.5 5.4zM13.8 10c3.6 0 5.4-1.8 5.4-4.5-2.7 0-4.5 1.8-5.4 4.5zM12 11.8c0 3.6 1.8 5.4 4.5 5.4 0-2.7-1.8-4.5-4.5-5.4zM10.2 10c-3.6 0-5.4 1.8-5.4 4.5 2.7 0 4.5-1.8 5.4-4.5z"/><path d="M12 12v8M8.5 21h7"/>',
+  mug:'<path class="i-wf" d="M4 8h12v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M16 10h2a2 2 0 0 1 0 4h-2"/><path class="i-w" d="M7 2.5c0 1.5 1 1.5 1 3M11 2.5c0 1.5 1 1.5 1 3" stroke-width="1.5"/>',
+  glass:'<path d="M6 3h12l-1.5 17a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1z"/><path class="i-cf" d="M6.9 10h10.2l-.9 9.6a.8.8 0 0 1-.8.7H8.6a.8.8 0 0 1-.8-.7z"/><rect class="i-p" x="10" y="12" width="3.6" height="3.6" rx=".6" transform="rotate(12 11.8 13.8)"/>',
+  curtain:'<path class="i-sk" d="M5 3h14v18H5z"/><path d="M3 3h18"/><path class="i-f" d="M5 3c3 5 3 13 0 18h4.5c1-6 .5-12-1-18zM19 3c-3 5-3 13 0 18h-4.5c-1-6-.5-12 1-18z"/><path d="M5 21h14"/>',
+  layerOn:'<path class="i-f" d="M8 4l4 1.5L16 4l4 3-2 3-2-1v11H8V9l-2 1-2-3z"/><path class="i-w" d="M12 11.5v6M9 14.5h6"/>',
+  layerOff:'<path class="i-f" d="M8 4l4 1.5L16 4l4 3-2 3-2-1v11H8V9l-2 1-2-3z"/><path class="i-c" d="M9 14.5h6"/>',
+  zzz:'<path class="i-c" d="M4 8h5l-5 6h5"/><path class="i-c" d="M13 4h4l-4 5h4"/><path d="M14 14h6l-6 6h6"/>',
+  unwell:'<circle class="i-f" cx="11" cy="12" r="8.5"/><path d="M8 10h.01M14 10h.01" stroke-width="2.4"/><path d="M8.2 15.6c1.6-1.2 4-1.2 5.6 0"/><path class="i-wf" d="M17.5 13.5l4-4a1.2 1.2 0 0 1 1.7 1.7l-4 4z"/><circle class="i-fl" cx="17.3" cy="15.6" r="1.4"/>',
+  thermo:'<path class="i-p" d="M10 4a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z"/><path class="i-w" d="M12 9v6"/><circle class="i-fl" cx="12" cy="16.6" r="1.8"/>',
+  thermoLow:'<path class="i-p" d="M10 4a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z"/><path class="i-c" d="M12 13v3"/><circle class="i-cf" cx="12" cy="16.6" r="1.8"/>',
+  thermoHigh:'<path class="i-p" d="M10 4a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z"/><path class="i-w" d="M12 6v10"/><circle class="i-fl" cx="12" cy="16.6" r="1.8"/>',
+  fork:'<circle class="i-f" cx="12.5" cy="13" r="6"/><circle cx="12.5" cy="13" r="3.4"/><path d="M3.5 4v16M2 4v3.5a1.5 1.5 0 0 0 3 0V4"/><path d="M21.5 4c-1.4 0-2.2 2.2-2.2 4.4a2 2 0 0 0 2.2 2V20"/>',
+  apple:'<path class="i-wf" d="M12 8c-1.6-1.2-3.8-1.4-5.3-.3C4.4 9.3 4.6 13 5.6 15.8c.9 2.6 2.7 4.7 4.4 4.7.8 0 1.3-.4 2-.4s1.2.4 2 .4c1.7 0 3.5-2.1 4.4-4.7 1-2.8 1.2-6.5-1.1-8.1-1.5-1.1-3.7-.9-5.3.3z"/><path d="M12 8c0-2 .8-3.6 2.5-4.5"/><path class="i-lf" d="M12.6 6.2c1.6-.2 2.8-1.2 3-2.8-1.6.1-2.8 1-3 2.8z" stroke-width="1.2"/>',
   checkc:'<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
   refresh:'<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/>',
   copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
   bolt:'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
   bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
   bellOff:'<path d="M6 16V11a6 6 0 0 1 9.5-4.9M18 11v5l2 2H8"/><path d="M10 21h4"/><path d="M3 3l18 18"/>',
+  phone:'<rect class="i-f" x="6.5" y="2.5" width="11" height="19" rx="2.2"/><path d="M10.4 5.2h3.2"/><circle cx="12" cy="18.3" r=".9"/><circle class="i-fl" cx="16.8" cy="5.6" r="2.4"/>',
   bulb:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.6 1 1.5 1 2.5h6c0-1 .3-1.9 1-2.5A6 6 0 0 0 12 3z"/>',
   chev:'<path d="M9 5l7 7-7 7"/>',
   pause:'<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
   pin:'<path d="M12 21s7-6.5 7-11.5a7 7 0 0 0-14 0C5 14.5 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
   list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
-  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-7 8-7s8 3 8 7"/>',
+  user:'<path class="i-f" stroke="none" d="M4 21c0-4 3.5-7 8-7s8 3 8 7z"/><circle class="i-hd" cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-7 8-7s8 3 8 7"/>',
   users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M15.5 4.6a3.5 3.5 0 0 1 0 6.8M17.5 14.3c2.4.6 4 2.7 4 5.7"/>',
-  child:'<circle cx="12" cy="9" r="3"/><path d="M7 21c0-3.3 2.2-6 5-6s5 2.7 5 6"/>',
-  paw:'<circle cx="7" cy="10" r="1.8"/><circle cx="10.5" cy="6.5" r="1.8"/><circle cx="14.5" cy="6.5" r="1.8"/><circle cx="18" cy="10" r="1.8"/><path d="M12.5 11.5c-3 0-5.5 3.5-5.5 6 0 1.5 1.2 2.5 2.7 2.5 1 0 1.8-.5 2.8-.5s1.8.5 2.8.5c1.5 0 2.7-1 2.7-2.5 0-2.5-2.5-6-5.5-6z"/>',
+  child:'<path class="i-f" stroke="none" d="M7 21c0-3.3 2.2-6 5-6s5 2.7 5 6z"/><circle class="i-hd" cx="12" cy="9" r="3"/><path d="M7 21c0-3.3 2.2-6 5-6s5 2.7 5 6"/>',
+  paw:'<circle class="i-wf" cx="7" cy="10" r="1.8"/><circle class="i-wf" cx="10.5" cy="6.5" r="1.8"/><circle class="i-wf" cx="14.5" cy="6.5" r="1.8"/><circle class="i-wf" cx="18" cy="10" r="1.8"/><path class="i-wf" d="M12.5 11.5c-3 0-5.5 3.5-5.5 6 0 1.5 1.2 2.5 2.7 2.5 1 0 1.8-.5 2.8-.5s1.8.5 2.8.5c1.5 0 2.7-1 2.7-2.5 0-2.5-2.5-6-5.5-6z"/>',
   mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
   info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
   help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><path d="M12 17h.01"/>',
@@ -110,6 +114,11 @@ const P = {
   stat:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 7v2.5"/>',
   wall:'<path d="M3 4h18v16H3z"/><path d="M3 9.3h18M3 14.6h18M9 4v5.3M15 4v5.3M6 9.3v5.3M12 9.3v5.3M18 9.3v5.3M9 14.6V20M15 14.6V20"/>',
   hand:'<path d="M8 13V6a1.5 1.5 0 0 1 3 0v5M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V5.5a1.5 1.5 0 0 1 3 0V13M17 9.5a1.5 1.5 0 0 1 3 0V15a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-2.7L4.3 15.5a1.6 1.6 0 0 1 2.6-1.9L8 15"/>',
+  wallCold:'<rect class="i-cf" x="2.5" y="3" width="19" height="18" rx="1"/><path class="i-brl" d="M2.5 9h19M2.5 15h19M8 3v6M16 3v6M12 9v6M5 15v6M19 15v6" stroke-width="1"/><path class="i-hd" d="M9.2 21.5v-8a1.3 1.3 0 0 1 2.6 0V9.8a1.3 1.3 0 0 1 2.6 0v.6a1.3 1.3 0 0 1 2.6 0v1a1.3 1.3 0 0 1 2.6 0v5.2c0 2.7-2 4.9-4.8 4.9zM9.2 17.2l-1.8-2a1.25 1.25 0 0 0-1.9 1.6l3.7 4.7"/><path class="i-c" d="M5.5 3.8v5.4M2.8 6.5h5.4M3.6 4.6l3.8 3.8M7.4 4.6L3.6 8.4" stroke-width="1.4"/>',
+  wallCool:'<rect class="i-cf" x="2.5" y="3" width="19" height="18" rx="1"/><path class="i-brl" d="M2.5 9h19M2.5 15h19M8 3v6M16 3v6M12 9v6M5 15v6M19 15v6" stroke-width="1"/><path class="i-hd" d="M9.2 21.5v-8a1.3 1.3 0 0 1 2.6 0V9.8a1.3 1.3 0 0 1 2.6 0v.6a1.3 1.3 0 0 1 2.6 0v1a1.3 1.3 0 0 1 2.6 0v5.2c0 2.7-2 4.9-4.8 4.9zM9.2 17.2l-1.8-2a1.25 1.25 0 0 0-1.9 1.6l3.7 4.7"/><path class="i-c" d="M3.4 5h4.4M3.4 8h3" stroke-width="1.6"/>',
+  wallNeutral:'<rect class="i-br" x="2.5" y="3" width="19" height="18" rx="1"/><path class="i-brl" d="M2.5 9h19M2.5 15h19M8 3v6M16 3v6M12 9v6M5 15v6M19 15v6" stroke-width="1"/><path class="i-hd" d="M9.2 21.5v-8a1.3 1.3 0 0 1 2.6 0V9.8a1.3 1.3 0 0 1 2.6 0v.6a1.3 1.3 0 0 1 2.6 0v1a1.3 1.3 0 0 1 2.6 0v5.2c0 2.7-2 4.9-4.8 4.9zM9.2 17.2l-1.8-2a1.25 1.25 0 0 0-1.9 1.6l3.7 4.7"/>',
+  wallWarm:'<rect class="i-wf" x="2.5" y="3" width="19" height="18" rx="1"/><path class="i-brl" d="M2.5 9h19M2.5 15h19M8 3v6M16 3v6M12 9v6M5 15v6M19 15v6" stroke-width="1"/><path class="i-hd" d="M9.2 21.5v-8a1.3 1.3 0 0 1 2.6 0V9.8a1.3 1.3 0 0 1 2.6 0v.6a1.3 1.3 0 0 1 2.6 0v1a1.3 1.3 0 0 1 2.6 0v5.2c0 2.7-2 4.9-4.8 4.9zM9.2 17.2l-1.8-2a1.25 1.25 0 0 0-1.9 1.6l3.7 4.7"/><path class="i-w" d="M4.4 9.4c-1.2-1.4 1.2-2.1 0-3.6M7.4 9.4c-1.2-1.4 1.2-2.1 0-3.6" stroke-width="1.6"/>',
+  wallFar:'<rect class="i-br" x="15" y="3" width="6.5" height="18" rx="1"/><path class="i-brl" d="M15 7.5h6.5M15 12h6.5M15 16.5h6.5M18 3v4.5M18 12v4.5" stroke-width="1"/><path class="i-hd" d="M2.5 21v-8.4a1.2 1.2 0 0 1 2.4 0V9.4a1.2 1.2 0 0 1 2.4 0v1.6a1.2 1.2 0 0 1 2.4 0v5.4c0 2.6-1.8 4.6-4.4 4.6z"/><path class="i-d" d="M10.5 12.5h3.5" stroke-dasharray="1.2 1.6"/><path d="M11 4l3 3M14 4l-3 3" stroke-width="1.5"/>',
   undo:'<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
   wifi:'<path d="M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0"/><path d="M12 19.5h.01"/>',
   eye:'<path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
@@ -133,58 +142,169 @@ const radiatorArt = (x, y, w, h) => `<rect x="${x}" y="${y}" width="${w}" height
 const fireplace = inner => `<path d="M7 42V11h34v31"/><path d="M5 11h38"/><path d="M14 42V20h20v22"/>${inner}`;
 const stoveArt = `<path d="M22 16V5h4v11"/><rect x="11" y="16" width="26" height="22" rx="2"/><rect x="16" y="21" width="16" height="11" rx="1.5"/><path d="M21 31l6-4M21 27l6 4"/><path d="M13 38v4M35 38v4"/>`;
 const room = ico => `<g transform="translate(6 6) scale(1.5)">${P[ico]}</g>`;
+/* ---- houses: ground, sash windows, doors, chimneys, trees ---- */
+const gnd = '<path class="a-d a-t1" d="M2 42.5h44"/>';
+const sash = (x, y, w=4.6, h=4.6) => `<rect class="a-gl a-t1" x="${x}" y="${y}" width="${w}" height="${h}" rx=".5"/><path class="a-gll a-t0" d="M${x} ${n1(y + h / 2)}h${w}"/>`;
+const door = (x, y, w) => `<path class="a-wd a-t1" d="M${x} 42.5V${n1(y + w / 2)}a${w / 2} ${w / 2} 0 0 1 ${w} 0V42.5"/>`;
+const chim = (x, y, h=7) => `<path class="a-br a-t1" d="M${x} ${y + h}V${y}h3.6v${h}"/><path class="a-t1" d="M${x + .9} ${y}v-1.5M${x + 2.7} ${y}v-1.5"/>`;
+const tree = x => `<path class="a-wdl a-t1" d="M${x} 42.5v-6"/><circle class="a-lf a-t1" cx="${x}" cy="31.5" r="5"/>`;
+/* a two-storey bay window (the 1930s semi, the terraces), w wide from x */
+const bay = (x, w=8) => `<path class="a-p a-t1" d="M${x} 42.5V25h${w}v17.5"/><path class="a-t1" d="M${x - .6} 25h${w + 1.2}"/>${sash(x + 1.2, 26.4, w - 2.4, 5.4)}${sash(x + 1.2, 34.6, w - 2.4, 5.4)}`;
+/* one terraced house front, 14 wide from x: two windows up, a window and a door down */
+const terr = x => `${sash(x + 2, 25.6, 4, 4.4)}${sash(x + 8, 25.6, 4, 4.4)}${sash(x + 2, 34.4, 4.6, 5)}${door(x + 8.2, 34.2, 3.8)}<path class="a-t1" d="M${x} 22.5v20"/>`;
+const house = fill => `${gnd}<path class="a-rf a-t1" d="M5 24L24 9l19 15z"/><rect class="${fill} a-ns" x="8.5" y="24" width="31" height="18.5"/><path d="M8.5 42.5V24h31v18.5"/>`;
+/* the flat's floor in a block cut through: y is the top of the marked floor (basement 35, ground 25 ...) */
+const flatPos = y => `<path class="a-ea" d="M2 35h44v11H2z"/><rect class="a-wl a-ns" x="11" y="5" width="26" height="39"/><rect class="a-f a-ns" x="11" y="${y}" width="26" height="${y === 35 ? 9 : 10}"/>` +
+  [5, 15, 25, 35].map(t => sash(14.5, t + 2.8, 5, 4.6) + sash(28.5, t + 2.8, 5, 4.6)).join('') + `${y === 25 ? '' : '<path class="a-wd a-t1" d="M22 35v-6h4v6"/>'}` +
+  `<path class="a-t1" d="M11 15h26M11 25h26M11 35h26"/><path d="M11 44V5h26v39M9.5 5h29"/><path class="a-d" d="M2 35h9M37 35h9"/><rect class="a-t3" x="11" y="${y}" width="26" height="${y === 35 ? 9 : 10}"/>`;
+/* storeys: the same house, n floors high */
+const storeys = n => { const top = 42.5 - n * 8 - 1.5, rows = Array.from({length: n}, (_, i) => 42.5 - (i + 1) * 8 + 1.6);
+  return `${gnd}${chim(29, top - 9.5, 7)}<path class="a-rf a-t1" d="M11 ${top}l13-9 13 9z"/><rect class="a-f a-ns" x="14" y="${top}" width="20" height="${42.5 - top}"/>` +
+    rows.map((y, i) => sash(16.6, y, 4.4, 4.6) + (i ? sash(27, y, 4.4, 4.6) : '')).join('') + door(27, 35.6, 4.2) +
+    rows.slice(1).map((y, i) => `<path class="a-t1" d="M14 ${n1(42.5 - (i + 1) * 8)}h20"/>`).join('') + `<path d="M14 42.5V${top}h20v${42.5 - top}"/>`; };
+/* heating: a wall boiler (white box, display, the flame window), a gas bottle, a stove, a dial, a clock */
+const wallBoiler = (x, y, w, h) => `<rect class="a-p" x="${x}" y="${y}" width="${w}" height="${h}" rx="2.5"/><rect class="a-k" x="${x + w * .22}" y="${y + h * .62}" width="${w * .56}" height="${h * .12}" rx=".8" opacity=".85"/>` +
+  `<path class="a-fl a-t1" d="M${x + w / 2} ${y + h * .2}c.7 2 3 3 3 5.4a3 3 0 0 1-6 0c0-1.4.7-2.3 1.4-2.9 0 1 .6 1.6 1.2 1.7.3-1.3-.2-2.6.4-4.2z"/><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2.5"/>`;
+const bottle = x => `<path class="a-wf" d="M${x} 42V15a6 6 0 0 1 6-6h3a6 6 0 0 1 6 6v27z"/><path class="a-w a-t0" d="M${x} 20h15M${x} 36h15"/><path class="a-mt a-t1" d="M${x + 5} 9V5.5h5V9"/>`;
+const stoveFire = `<path class="a-mtl a-t1" d="M21 15V3h6v12"/><rect class="a-mt" x="9" y="15" width="30" height="23" rx="2.5"/><rect class="a-k" x="14" y="20" width="20" height="13" rx="1.5" opacity=".18"/><path class="a-wd a-t1" d="M16 31.5l16-3M16 28.5l16 3"/><path class="a-fl a-t1" d="M20.5 29.5c-1.3-1.8.4-2.8.8-4.6 1 1 1.4 1.8 1.2 2.6.8-1.4.6-2.8 1.6-4.2 1.3 1.8 2.2 3.2 2 4.8.7-.6 1-1.5 1.2-2.6 1.4 1.8 1.6 3.2.6 4.4z"/><rect class="a-t1" x="14" y="20" width="20" height="13" rx="1.5"/><path class="a-t1" d="M12 38v4.5M36 38v4.5"/>`;
+const statDial = (cx, cy, r) => `<circle class="a-p" cx="${cx}" cy="${cy}" r="${r}"/><circle class="a-f a-t1" cx="${cx}" cy="${cy}" r="${n1(r * .62)}"/><path d="M${cx} ${n1(cy - r * .62)}v${n1(r * .38)}"/><circle cx="${cx}" cy="${cy}" r="${r}"/>`;
+/* a clock face; arcs [[from, to], ...] in hours are shaded warm (the hours the heating runs) */
+const clockArt = arcs => { const R = 19, pt = h => [n1(24 + Math.sin(h * Math.PI / 6) * R), n1(24 - Math.cos(h * Math.PI / 6) * R)];
+  const sect = ([a, b]) => { const [x0, y0] = pt(a), [x1, y1] = pt(b); return `<path class="a-wf a-t1" d="M24 24L${x0} ${y0}A${R} ${R} 0 ${b - a > 6 ? 1 : 0} 1 ${x1} ${y1}z"/>`; };
+  return `<circle class="a-p" cx="24" cy="24" r="${R}"/>${arcs.map(sect).join('')}${Array.from({length: 12}, (_, i) => { const a = i * Math.PI / 6, r0 = i % 3 ? 17 : 15.4; return `<path class="a-t1" d="M${n1(24 + Math.sin(a) * r0)} ${n1(24 - Math.cos(a) * r0)}L${n1(24 + Math.sin(a) * R)} ${n1(24 - Math.cos(a) * R)}"/>`; }).join('')}<circle cx="24" cy="24" r="${R}"/><circle class="a-tf" cx="24" cy="24" r="1.4"/>`; };
+/* a bed seen from its foot: headboard, pillows with heads on them, the duvet; you is the first head */
+const bed = (x, w, heads, small) => { const hs = Array.from({length: heads}, (_, i) => x + w * (i + .5) / heads);
+  return `<rect class="a-wd a-t1" x="${x}" y="${small ? 20 : 15}" width="${w}" height="${small ? 12 : 15}" rx="2"/>` +
+    hs.map((hx, i) => `<rect class="a-p a-t1" x="${n1(hx - 4.4)}" y="${small ? 25.5 : 24}" width="8.8" height="4.4" rx="1.8"/><circle class="${i === 0 && !small ? 'a-f' : 'a-wf'} a-t1" cx="${n1(hx)}" cy="${small ? 25 : 23.4}" r="3"/>`).join('') +
+    `<path class="a-f a-t1" d="M${x - 1} ${small ? 29 : 28}h${w + 2}l1.4 10H${x - 2.4}z"/><path class="a-t1" d="M${x + 1.5} ${small ? 33 : 32.4}h${w - 3}"/><path class="a-t1" d="M${x} 38v4M${x + w} 38v4"/>`; };
+/* ---- Step 7 helpers: materials drawn in section, badges, rooms ---- */
+const n1 = v => +v.toFixed(2);
+/* a leaf of masonry cut through: the courses, and for a solid (two-brick) wall a joint down every other course */
+const leaf = (x, w, y0, y1, ch, m, mid) => { let j = '';
+  for(let y = y0 + ch; y < y1 - .5; y += ch) j += `M${x} ${n1(y)}h${w}`;
+  if(mid) for(let y = y0, k = 0; y < y1 - .5; y += ch, k++) if(k % 2) j += `M${x + w/2} ${n1(y)}V${n1(Math.min(y + ch, y1))}`;
+  return `<rect class="a-${m} a-t1" x="${x}" y="${y0}" width="${w}" height="${y1 - y0}"/><path class="a-${m}l a-t0" d="${j}"/>`; };
+/* insulation: a soft yellow band with the drawing-office zigzag, upright (V) or lying (H) */
+const insV = (x, w, y0, y1) => { let d = `M${x + 1} ${y0}`, i = 0; for(let y = y0; y < y1;){ y = Math.min(y1, y + 2.6); d += `L${i++ % 2 ? x + 1 : x + w - 1} ${n1(y)}`; }
+  return `<rect class="a-in a-t1" x="${x}" y="${y0}" width="${w}" height="${y1 - y0}"/><path class="a-inl a-t0" d="${d}"/>`; };
+const insH = (pts, x0, x1, y0, y1) => { let d = `M${x0} ${y1}`, i = 0; for(let x = x0; x < x1;){ x = Math.min(x1, x + 2.6); d += `L${n1(x)} ${i++ % 2 ? y1 : y0}`; }
+  return `<path class="a-in a-t1" d="M${pts}Z"/><path class="a-inl a-t0" d="${d}"/>`; };
+/* the top of a wall slice in perspective: one parallelogram per layer [x, w, material class] */
+const cap = layers => layers.map(([x, w, c]) => `<path class="${c} a-t1" d="M${x} 5l3-3h${w}l-3 3z"/>`).join('');
+const rain = '<path class="a-c a-t1" d="M6 7l-1.7 3.2M8.8 14l-1.7 3.2M6 21l-1.7 3.2M8.8 28l-1.7 3.2M6 35l-1.7 3.2"/>';
+const warmAir = x => `<path class="a-w a-t1" d="M${x} 35c-1.6-2 1.6-3 0-5s1.6-3 0-5 1.6-3 0-5M${x + 4} 31c-1.6-2 1.6-3 0-5s1.6-3 0-5"/>`;
+const escape = y => `<path class="a-w" d="M46 ${y}c-2.2 0-2.2-2.2-4.4-2.2s-2.2 2.2-4.4 2.2-2.2-2.2-4.4-2.2-2.2 2.2-4.4 2.2-2.2-2.2-4.4-2.2-2.2 2.2-4.4 2.2-2.2-2.2-4.4-2.2-2.2 2.2-4.4 2.2H6"/><path class="a-w" d="M9 ${y - 3}l-3 3 3 3"/>`;
+const qBadge = (x, y) => `<g transform="translate(${x} ${y})"><circle class="a-p" r="7.2"/><path class="a-t1" d="M-2.5-1.9a2.6 2.6 0 1 1 3.6 2.4c-.7.3-1.1.9-1.1 1.6v.5"/><path d="M0 4.4h.01"/></g>`;
+const tickBadge = (x, y) => `<g transform="translate(${x} ${y})"><circle class="a-f" r="7.2"/><path d="M-3.3.2l2.2 2.3 4.4-4.7"/></g>`;
+const lockBadge = (x, y) => `<g transform="translate(${x} ${y})"><circle class="a-p" r="7.6"/><path class="a-t1" d="M-2.3-.6v-1.9a2.3 2.3 0 0 1 4.6 0v1.9"/><rect class="a-f a-t1" x="-3.8" y="-.6" width="7.6" height="5.4" rx="1.2"/></g>`;
+/* mould: a soft stain with dark spots, scattered the same way every time */
+const mould = (cx, cy, rx, ry, n) => { let seed = Math.round(cx * 7 + cy * 13), d = '';
+  const r = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  for(let i = 0; i < n; i++){ const a = r() * 6.283, k = Math.sqrt(r()); d += `<circle class="a-m" cx="${n1(cx + Math.cos(a) * rx * k)}" cy="${n1(cy + Math.sin(a) * ry * k)}" r="${n1(.45 + r() * .75)}"/>`; }
+  return `<ellipse class="a-mh" cx="${cx}" cy="${cy}" rx="${rx + 1}" ry="${ry + 1}"/>${d}`; };
+/* a room seen from the doorway: back wall, side walls, floor; the furniture goes on top */
+const roomBox = (inner, extra='') => `<path class="a-fo a-ns" d="M10 32h28l7 11H3z"/><rect class="a-wl a-d a-t1" x="10" y="8" width="28" height="24"/><path class="a-d a-t1" d="M10 8L3 3M38 8l7-5M10 32L3 43M38 32l7 11"/>${extra}${inner}`;
+/* the loft: a house cut through; the room has a window and a radiator, the ceiling joists sit at y 25 */
+const radiatorRoom = `<rect class="a-gl a-t1" x="12.5" y="29.5" width="7" height="7" rx=".6"/><path class="a-gll a-t0" d="M16 29.5v7M12.5 33h7"/><rect class="a-mt a-t1" x="26" y="35.5" width="10" height="5" rx="1"/><path class="a-mtl a-t0" d="M28.5 35.5v5M31 35.5v5M33.5 35.5v5"/>`;
+const joists = [10.5, 15.5, 20.5, 25.5, 30.5, 35.5].map(x => `<rect class="a-wd a-t0" x="${x}" y="22" width="2" height="3"/>`).join('');
+const rise = x => `<path class="a-w" d="M${x} 32c-1.8-1.8 1.8-2.7 0-4.5s1.8-2.7 0-4.5 1.8-2.7 0-4.5 1.8-2.7 0-4.5"/><path class="a-w" d="M${x - 2.6} 16.4L${x} 13.8l2.6 2.6"/>`;
+const loftHouse = inner => `<path class="a-wl a-ns" d="M8 25h32v17H8z"/><path class="a-sk" d="M8 25V20.7L24 7.2 40 20.7V25z" opacity=".55"/>${inner}<path d="M3 25L24 7l21 18"/><path class="a-t1" d="M6.4 24L24 9.6 41.6 24"/><path class="a-t1" d="M8 25h32"/><path d="M8 25v17M40 25v17M3 42h42"/>`;
+/* glazing: the window face on, a spot on its edge, and that edge magnified */
+const spacer = (x, w) => `<rect class="a-k" x="${x}" y="16" width="${w}" height="2"/><rect class="a-k" x="${x}" y="30" width="${w}" height="2"/>`;
+const glass = xs => xs.map(x => `<rect class="a-gl a-t1" x="${x}" y="16" width="2.2" height="16"/>`).join('');
+const zoomWin = inner => `<rect class="a-p" x="2.5" y="9" width="12" height="30" rx="1"/>${pane(4.6, 11.1, 7.8, 11.6)}${pane(4.6, 25.4, 7.8, 11.5)}<rect x="2.5" y="9" width="12" height="30" rx="1"/><path class="a-t1" d="M2.5 24.2h12"/>` +
+  `<circle class="a-t1" cx="14.5" cy="31" r="2.6"/><path class="a-d a-t0" stroke-dasharray="1.6 1.6" d="M16.4 29.1L24.5 11.9M16.4 32.9L24.5 36.1"/>` +
+  `<circle class="a-p a-ns" cx="31.5" cy="24" r="14"/><path class="a-df a-t1" d="M20 16A14 14 0 0 1 43 16ZM20 32A14 14 0 0 0 43 32Z"/>${inner}<circle class="a-t1" cx="31.5" cy="24" r="14"/>`;
+/* a casement window, shut (glass and handle) or open (the sash swung out, cool air coming in) */
+const winShut = x => `<rect class="a-p" x="${x}" y="9" width="19" height="30" rx="1"/>${pane(x + 2.4, 11.4, 14.2, 25.2)}<rect x="${x}" y="9" width="19" height="30" rx="1"/><path class="a-t1" d="M${x + 14.2} 23v4"/>`;
+const winOpen = x => `<rect class="a-sk" x="${x + 2}" y="11" width="15" height="26"/><path class="a-c a-t1" d="M${x + 16} 19c-2 0-2 1.6-4 1.6s-2-1.6-4-1.6M${x + 16} 27c-2 0-2 1.6-4 1.6s-2-1.6-4-1.6"/><rect x="${x}" y="9" width="19" height="30" rx="1"/>` +
+  `<path class="a-gl a-t1" d="M${x + 2} 11l7.4 3.2v27.4L${x + 2} 37z"/><path class="a-t1" d="M${x + 2} 11l7.4 3.2v27.4L${x + 2} 37"/>`;
+/* a window on a room's back wall */
+const winBack = (x, y, w, h) => `${pane(x, y, w, h, `<path class="a-gll a-t0" d="M${x + w / 2} ${y}v${h}M${x} ${y + h / 2}h${w}"/>`)}<rect class="a-t1" x="${x}" y="${y}" width="${w}" height="${h}" rx=".6"/>`;
+const pane = (x, y, w, h, bars) => `<rect class="a-gl a-t1" x="${x}" y="${y}" width="${w}" height="${h}" rx=".6"/>${bars || ''}`;
 return {
   unsure: unsureArt, none: noneArt,
-  /* home types */
-  'home_type:detached': `${ground}<path d="M12 42V22h24v20" ${F}/><path d="M8.5 23.5L24 10l15.5 13.5"/><path d="M31 15.5V10h4v9"/><path d="M21 42v-9h6v9"/>${win(15,26)}${win(29,26)}`,
-  'home_type:semi': `${ground}<path d="M6 42V24h18v18" ${F}/><g ${D}><path d="M24 42V24h18v18"/>${win(35,28)}<path d="M28 42v-7h5v7"/></g><path d="M3 25.5L13.5 13h21L45 25.5"/><path d="M24 13v11"/>${win(9,28)}<path d="M16 42v-7h5v7"/>`,
-  'home_type:end_terrace': `${ground}<path d="M5 42V24h14v18" ${F}/><g ${D}><path d="M19 42V24h13v18M32 42V24h13"/>${win(22,28,3.5)}<path d="M27 42v-6h3v6"/>${win(35,28,3.5)}<path d="M40 42v-6h3v6"/></g><path d="M3 25L9.5 15H47"/>${win(8,28,3.5)}<path d="M13 42v-6h3.5v6"/>`,
-  'home_type:mid_terrace': `${ground}<path d="M17 42V24h14v18" ${F}/><g ${D}><path d="M3 24h14M3 42V24M31 24h14v18"/>${win(6,28,3.5)}<path d="M11 42v-6h3v6"/>${win(38,28,3.5)}<path d="M34 42v-6h3v6"/><path d="M1 15h4M43 15h4"/></g><path d="M5 15h38"/><path d="M3 24l2-9M45 24l-2-9"/>${win(20,28,3.5)}<path d="M25 42v-6h3.5v6"/>`,
-  'home_type:bungalow': `${ground}<path d="M7 42V27h34v15" ${F}/><path d="M3.5 28.5L14 17h20l10.5 11.5"/><path d="M21.5 42v-8h5v8"/>${win(11,31)}${win(33,31)}`,
-  'home_type:flat': `${ground}<path d="M12 42V7h24v35"/>${[11,18,25].map(y => win(15,y,4.5)+win(21.75,y,4.5)+win(28.5,y,4.5)).join('')}<rect x="21.75" y="18" width="4.5" height="4.5" rx=".6" ${F}/><path d="M21 42v-8h6v8"/>`,
-  /* which floor the flat is on: the block with that floor marked; below the line is the basement */
-  'flat_position:basement': `<path d="M10 6h28v38H10z"/><path d="M4 34h40"/><rect x="12" y="36" width="24" height="6" rx="1" ${F}/>${[9,17,26].map(y => win(14,y)+win(22,y)+win(30,y)).join('')}`,
-  'flat_position:ground': `<path d="M10 6h28v38H10z"/><path d="M4 34h40"/><rect x="12" y="25" width="24" height="7.5" rx="1" ${F}/>${[9,17].map(y => win(14,y)+win(22,y)+win(30,y)).join('')}<path d="M21 34v-6h6v6"/>`,
-  'flat_position:middle': `<path d="M10 6h28v38H10z"/><path d="M4 34h40"/><rect x="12" y="16" width="24" height="7.5" rx="1" ${F}/>${[9,27].map(y => win(14,y)+win(22,y)+win(30,y)).join('')}`,
-  'flat_position:top': `<path d="M10 6h28v38H10z"/><path d="M4 34h40"/><rect x="12" y="7.5" width="24" height="7.5" rx="1" ${F}/>${[18,27].map(y => win(14,y)+win(22,y)+win(30,y)).join('')}`,
+  /* home types: a British street. The participant's home is teal, the neighbours faded. Slate roofs, chimney
+   * stacks with pots, sash windows; the semi is a 1930s pair with bays, the terraces share their stacks. */
+  'home_type:detached':    `${gnd}${tree(6.5)}${chim(31.5, 8.5)}<path class="a-rf a-t1" d="M10.5 21.5L15.5 11h19l5 10.5z"/><rect class="a-f a-ns" x="13" y="21.5" width="24" height="21"/><path d="M13 42.5v-21h24v21"/>` +
+                           `${sash(15.6, 24.4)}${sash(22.5, 24.4)}${sash(29.4, 24.4)}${sash(15.6, 33.2)}${sash(29.4, 33.2)}${door(23, 33.6, 4)}<path class="a-t1" d="M21.6 33h6.8"/>`,
+  'home_type:semi':        `${gnd}${chim(22.2, 7.5)}<path class="a-rf a-t1" d="M2.5 22L11 11.5h26L45.5 22z"/><rect class="a-f a-ns" x="4.5" y="22" width="19.5" height="20.5"/>` +
+                           `<g opacity=".45"><rect class="a-wl a-ns" x="24" y="22" width="19.5" height="20.5"/><path d="M43.5 42.5V22H24"/>${bay(34)}${sash(27, 26, 4, 4.4)}${door(27, 34.5, 4)}</g>` +
+                           `<path d="M4.5 42.5V22H24v20.5"/>${bay(6)}${sash(18, 26, 4, 4.4)}${door(17.6, 34.5, 4)}`,
+  'home_type:end_terrace': `${gnd}${chim(16.2, 7.5)}${chim(30.2, 7.5)}<path class="a-rf a-t1" d="M3 22.5L8.5 12.5H47v10z"/>` +
+                           `<g opacity=".45"><rect class="a-wl a-ns" x="18" y="22.5" width="29" height="20"/><path d="M18 22.5h29M32 22.5v20"/>${terr(18)}${terr(32)}</g>` +
+                           `<rect class="a-f a-ns" x="4" y="22.5" width="14" height="20"/><path d="M4 42.5v-20h14v20"/>${terr(4)}`,
+  'home_type:mid_terrace': `${gnd}${chim(13.2, 7.5)}${chim(31.2, 7.5)}<path class="a-rf a-t1" d="M1 22.5l1.5-10h43l1.5 10z"/>` +
+                           `<g opacity=".45"><rect class="a-wl a-ns" x="1" y="22.5" width="14" height="20"/><rect class="a-wl a-ns" x="33" y="22.5" width="14" height="20"/><path d="M1 22.5h14M33 22.5h14"/>${terr(1)}${terr(33)}</g>` +
+                           `<rect class="a-f a-ns" x="15" y="22.5" width="18" height="20"/><path d="M15 42.5v-20h18v20"/>${sash(17.5, 25.8, 4.6, 4.6)}${sash(26, 25.8, 4.6, 4.6)}${bay(24.2, 7.4)}${door(17.8, 34.4, 4)}`,
+  'home_type:bungalow':    `${gnd}${tree(43)}${chim(28.5, 14.5, 6)}<path class="a-rf a-t1" d="M2.5 28.5L10 19.5h24l7.5 9z"/><rect class="a-f a-ns" x="5" y="28.5" width="34" height="14"/><path d="M5 42.5v-14h34v14"/>` +
+                           `${sash(8.5, 31.5, 6.4, 5.4)}${sash(29.5, 31.5, 6.4, 5.4)}${door(19.8, 34.2, 4.4)}`,
+  'home_type:flat':        `${gnd}<rect class="a-wl a-ns" x="10" y="6" width="28" height="36.5"/><path d="M10 42.5V6h28v36.5M8.5 6h31"/>` +
+                           [9.5, 17.5, 25.5].map(y => [13.5, 21.5, 29.5].map(x => (x === 21.5 && y === 17.5) ? `<rect class="a-f a-t3" x="${x}" y="${y}" width="5" height="5" rx=".6"/>` : sash(x, y, 5, 5)).join('') + `<path class="a-d a-t1" d="M12 ${y + 6.5}h24"/>`).join('') +
+                           `${door(21.8, 34.4, 4.4)}<path class="a-t1" d="M20.2 33.6h7.6"/>`,
+  /* which floor the flat is on: the block cut through, the ground line, earth round the basement; the floor marked */
+  'flat_position:basement': flatPos(35),
+  'flat_position:ground':   flatPos(25),
+  'flat_position:middle':   flatPos(15),
+  'flat_position:top':      flatPos(5),
   /* tenure */
-  'tenure:own': `<path d="M7 24L24 10l17 14"/><path d="M11 21v19h26V21"/><circle cx="20" cy="30" r="4.5" ${F}/><path d="M24.5 30H33M30 30v3.5M33 30v4"/>`,
-  'tenure:housing_association': `<path d="M7 24L24 10l17 14"/><path d="M11 21v19h26V21"/><path d="M24 36s-7-4.4-7-9a3.6 3.6 0 0 1 7-1.2 3.6 3.6 0 0 1 7 1.2c0 4.6-7 9-7 9z" ${F}/>`,
-  'tenure:council': `<path d="M6 17L24 8l18 9z" ${F}/><path d="M11 20v15M19 20v15M29 20v15M37 20v15"/><path d="M7 38h34M4 42h40"/>`,
-  'tenure:private_rent': `${ground}<path d="M6 24L16 15l10 9"/><path d="M8.5 22v20h15V22"/><path d="M14 42v-7h4v7"/><rect x="29" y="16" width="15" height="10" rx="1.2" ${F}/><path d="M36.5 26v16"/><path d="M32 21h9"/>`,
-  'tenure:shared_ownership': `<path d="M7 24L24 10l17 14"/><path d="M11 21.5V40h13V11.8" ${F}/><path d="M24 40h13V21.5"/><path d="M24 12v28"/>`,
-  'tenure:other': `<circle cx="17" cy="15" r="5"/><path d="M7 38c0-6 4.5-10 10-10s10 4 10 10"/><circle cx="33" cy="19" r="4" ${F}/><path d="M25.5 38.5c.5-5 3.6-8 7.5-8s7.5 3 7.5 8"/>`,
-  /* floors (storeys): the same house one to four storeys high */
-  'floors:1': `${ground}<path d="M14 42V31h20v11" ${F}/><path d="M11 32l13-9 13 9"/>${win(17,34)}<path d="M25 42v-5h4v5"/>`,
-  'floors:2': `${ground}<path d="M14 42V24h20v18" ${F}/><path d="M11 25l13-9 13 9"/><path d="M14 33h20"/>${win(17,27)}${win(27,27)}${win(17,35)}<path d="M25 42v-5h4v5"/>`,
-  'floors:3': `${ground}<path d="M14 42V17h20v25" ${F}/><path d="M11 18l13-9 13 9"/><path d="M14 25.5h20M14 33.5h20"/>${win(17,20)}${win(27,20)}${win(17,28)}${win(27,28)}${win(17,36)}<path d="M25 42v-5h4v5"/>`,
-  'floors:4': `${ground}<path d="M14 42V12h20v30" ${F}/><path d="M11 13l13-8 13 8"/><path d="M14 19.5h20M14 27h20M14 34.5h20"/>${win(17,14.5,3.5)}${win(27,14.5,3.5)}${win(17,22,3.5)}${win(27,22,3.5)}${win(17,29.5,3.5)}${win(27,29.5,3.5)}<path d="M25 42v-5h4v5"/>`,
+  'tenure:own':                 `${house('a-f')}<g transform="translate(20 27)"><circle class="a-wf a-t1" r="4.6"/><circle class="a-p a-t1" r="1.6"/><path class="a-w a-t1" d="M4.6 0h11M12 0v3.4M15.6 0v4"/></g>`,
+  'tenure:housing_association': `${house('a-f')}<path class="a-wf a-t1" d="M24 38.5s-7.5-4.6-7.5-9.4a3.8 3.8 0 0 1 7.5-1.3 3.8 3.8 0 0 1 7.5 1.3c0 4.8-7.5 9.4-7.5 9.4z"/>`,
+  'tenure:council':             `<path class="a-f a-t1" d="M5 18L24 8l19 10z"/><circle class="a-p a-t1" cx="24" cy="14" r="2"/><path d="M5 18h38"/><path class="a-wl a-ns" d="M8 20h32v15H8z"/><path class="a-t1" d="M10.5 20v15M17 20v15M24 20v15M31 20v15M37.5 20v15"/><path d="M6 35.5h36M4 39h40M2.5 42.5h43"/>`,
+  'tenure:private_rent':        `${gnd}<path class="a-rf a-t1" d="M4 24L14 15l10 9z"/><rect class="a-wl a-ns" x="6.5" y="24" width="15" height="18.5"/><path d="M6.5 42.5V24h15v18.5"/>${sash(9, 27, 4, 4)}${door(15, 34.4, 4)}<path class="a-wdl" d="M36 42.5V22"/><rect class="a-f" x="27.5" y="13" width="17" height="11" rx="1.2"/><path class="a-t1" d="M31 17h10M31 20.5h7"/>`,
+  'tenure:shared_ownership':    `${gnd}<path class="a-rf a-t1" d="M6 24L24 9l18 15z"/><path class="a-f a-ns" d="M9 24h15v18.5H9z"/><path class="a-wf a-ns" d="M24 24h15v18.5H24z"/><path d="M9 42.5V24h30v18.5"/><path class="a-t1" stroke-dasharray="2 1.6" d="M24 11v31.5"/>${sash(12, 28, 5, 5)}${sash(31, 28, 5, 5)}`,
+  'tenure:other':               `${house('a-wl')}<circle class="a-f a-t1" cx="19.5" cy="29" r="2.8"/><path class="a-f a-t1" d="M14.5 42v-3.5a5 5 0 0 1 10 0V42"/><circle class="a-wf a-t1" cx="29.5" cy="31.5" r="2.2"/><path class="a-wf a-t1" d="M25.8 42v-2.4a3.7 3.7 0 0 1 7.4 0V42"/>`,
+  /* storeys: the same house one to four floors high */
+  'floors:1': storeys(1), 'floors:2': storeys(2), 'floors:3': storeys(3), 'floors:4': storeys(4),
   /* main heating */
-  'heat:gas_combi': `${boiler(13,5,22,30)}<path d="M18 35v7M24 35v7M30 35v7"/>`,
-  'heat:gas_tank': `${boiler(5,6,18,26)}<path d="M10 32v8M18 32v8"/><rect x="28" y="9" width="15" height="33" rx="7.5" ${F}/><path d="M28 18h15"/><path d="M23 20h5"/>`,
-  'heat:oil': `${boiler(5,6,18,26)}<path d="M10 32v8M18 32v8"/><path d="M35 12s7 7.7 7 13a7 7 0 0 1-14 0c0-5.3 7-13 7-13z" ${F}/>`,
-  'heat:lpg': `<rect x="14" y="13" width="20" height="29" rx="7" ${F}/><path d="M21 13V8h6v5M18 7.5h12"/><path d="M14 22h20M14 34h20"/>`,
-  'heat:ashp': `<rect x="4" y="11" width="40" height="25" rx="3"/><circle cx="18" cy="23.5" r="8" ${F}/><circle cx="18" cy="23.5" r="1.5"/><path d="M18 22c0-3-1.5-4.5-4-4.5M19.5 23.5c3 0 4.5-1.5 4.5-4M18 25c0 3 1.5 4.5 4 4.5M16.5 23.5c-3 0-4.5 1.5-4.5 4"/><path d="M31 17h8M31 21.5h8M31 26h8M31 30.5h8"/><path d="M9 36v5M39 36v5"/>`,
-  'heat:gshp': `<path d="M12 20L24 11l12 9"/><path d="M15 18v8h18v-8"/><path d="M3 26h42"/><path d="M10 30c0 9 5 9 5 0s5-9 5 0 5 9 5 0 5-9 5 0 5 9 5 0" ${D}/><path d="M24 26v4"/>`,
-  'heat:storage': `<rect x="5" y="14" width="38" height="24" rx="3" ${F}/><path d="M10 19.5h28"/><path d="M11 25v8M16 25v8M21 25v8M26 25v8"/><circle cx="34" cy="29" r="3"/><path d="M9 38v4M39 38v4"/>`,
-  'heat:electric': `${radiatorArt(5,14,34,20)}<path d="M9 34v6M35 34v6"/><path d="M42 6l-4 7h4l-3 6" />`,
-  'heat:communal': `<path d="M5 42V13h18v29"/>${win(9,17)}${win(15,17)}${win(9,25)}${win(15,25)}${win(9,33)}${win(15,33)}<path d="M23 36h8"/><rect x="31" y="24" width="13" height="18" rx="2" ${F}/><path d="M37.5 28c.5 1.6 2.4 2.4 2.4 4.5a2.4 2.4 0 0 1-4.8 0c0-1 .5-1.7 1-2.2 0 .8.5 1.2 1 1.3.2-1-.2-2.1.4-3.6z"/>`,
-  'heat:solid': stoveArt.replace('<rect x="16" y="21" width="16" height="11" rx="1.5"/>', `<rect x="16" y="21" width="16" height="11" rx="1.5" ${F}/>`),
-  'heat:none': noneArt, 'heat:unsure': unsureArt,
+  'heat:gas_combi': `${wallBoiler(6, 4, 24, 28)}<path class="a-mtl a-t1" d="M10 32v10M14.5 32v10M18 32v5h12M22.5 32v2.5h7.5"/><path class="a-mt a-t1" d="M30 34.5h6.5v4H30zM36.5 35.5h3a2.5 2.5 0 0 1 2.5 2.5v2"/><path class="a-w a-t1" d="M32 32.6c0-1.6 1.6-1.6 1.6-3.2M35 32.6c0-1.6 1.6-1.6 1.6-3.2"/><path class="a-wf a-t1" d="M42 41.5c1 1.3 1.5 2.1 1.5 2.8a1.5 1.5 0 0 1-3 0c0-.7.5-1.5 1.5-2.8z"/>`,
+  'heat:gas_tank':  `${wallBoiler(3, 5, 16, 22)}<path class="a-mtl a-t1" d="M7 27v15M11 27v6h16M15 27v3h12"/><rect class="a-wf" x="27" y="7" width="15" height="35" rx="7"/><path class="a-w a-t0" d="M27 15h15M27 23h15M27 31h15"/><path class="a-mtl a-t1" d="M34.5 7V3"/>`,
+  'heat:oil':       `${wallBoiler(3, 5, 15, 21)}<path class="a-mtl a-t1" d="M6.5 26v16M10.5 26v4.5H25"/><rect class="a-tk" x="22" y="21" width="23" height="17" rx="5"/><path class="a-tk a-t1" d="M26 38v4M41 38v4M30.5 21v-2.5h6V21"/><path class="a-k" d="M33.5 25.5s3 3.2 3 5.4a3 3 0 0 1-6 0c0-2.2 3-5.4 3-5.4z"/>`,
+  'heat:lpg': `${wallBoiler(2.5, 5, 15, 21)}<path class="a-mtl a-t1" d="M6 26v16M10 26v4h17"/>${bottle(27)}`,
+  'heat:ashp':      `<path class="a-d a-t1" d="M3 4v38"/><path class="a-mtl a-t1" d="M3 30h4"/><rect class="a-p" x="7" y="12" width="38" height="25" rx="2.5"/><circle class="a-f a-t1" cx="20" cy="24.5" r="9"/><circle class="a-t1" cx="20" cy="24.5" r="1.6"/><path class="a-t1" d="M20 22.9c0-3-1.4-4.8-4-5.2M21.6 24.5c3 0 4.8-1.4 5.2-4M20 26.1c0 3 1.4 4.8 4 5.2M18.4 24.5c-3 0-4.8 1.4-5.2 4"/><path class="a-t1" d="M33 17h8M33 21h8M33 25h8M33 29h8M33 33h8"/><rect x="7" y="12" width="38" height="25" rx="2.5"/><path class="a-t1" d="M11 37v5M41 37v5"/>`,
+  'heat:gshp': `<path class="a-ea" d="M2 27h44v19H2z"/><path class="a-d a-t1" d="M2 27h44"/><path class="a-rf a-t1" d="M4 14L14 5l10 9z"/><rect class="a-f a-ns" x="6.5" y="14" width="15" height="13"/><path d="M6.5 27V14h15v13"/>${sash(9, 16.5, 4, 4)}<rect class="a-mt a-t1" x="15" y="19" width="4.5" height="6" rx=".8"/><path class="a-mtl a-t1" d="M17.2 25v9"/><path class="a-w a-t1" d="M17.2 34c3 0 3 7 6 7s3-7 6-7 3 7 6 7 3-7 6-7 3 7 3 7"/><path class="a-c a-t1" d="M13.5 30c-1.5 5 .5 11 5 11"/>`,
+  'heat:storage':   `<rect class="a-p" x="5" y="13" width="38" height="25" rx="2.5"/><path class="a-t1" d="M9 17.5h22M9 20.5h22"/><rect class="a-wf a-t1" x="9" y="24" width="22" height="10" rx="1"/><path class="a-w a-t0" d="M12 24v10M15.5 24v10M19 24v10M22.5 24v10M26 24v10"/><circle class="a-t1" cx="37" cy="21" r="2.4"/><circle class="a-t1" cx="37" cy="29.5" r="2.4"/><path class="a-t1" d="M37 18.6v2.4M37 27.1v2.4"/><rect x="5" y="13" width="38" height="25" rx="2.5"/><path class="a-t1" d="M8.5 38v4M39.5 38v4"/>`,
+  'heat:electric':  `${radiatorArt(4, 14, 30, 19)}<path class="a-t1" d="M8 33v6M30 33v6"/><path class="a-mtl a-t1" d="M34 30c6 0 7 3 7 7"/><rect class="a-mt a-t1" x="37.5" y="37" width="7" height="5" rx="1"/><path class="a-w" d="M20.5 18l-3.2 5.4h3.4l-2.6 5"/>`,
+  'heat:communal':  `${gnd}<rect class="a-wl a-ns" x="3" y="10" width="18" height="32.5"/><path d="M3 42.5V10h18v32.5"/>${[13.5, 21, 28.5].map(y => sash(5.6, y, 4.4, 4.4) + sash(13.6, y, 4.4, 4.4)).join('')}<rect class="a-f" x="30" y="25" width="15" height="17.5" rx="1.5"/><path class="a-br a-t1" d="M38 25V12h3.4v13"/><path class="a-w a-t1" d="M37.5 30.5c.6 1.8 2.8 2.7 2.8 5.1a2.8 2.8 0 0 1-5.6 0c0-1.2.6-2 1.2-2.5 0 .9.6 1.4 1.1 1.4.3-1.2-.2-2.4.5-4z"/><path class="a-w" d="M21 38.5h9"/><path class="a-c a-t1" d="M21 41h9"/>`,
+  'heat:solid':     `${stoveFire}<path class="a-wd a-t1" d="M38 42.5l-3-7h9l-3 7z"/><circle class="a-k" cx="38" cy="34.5" r="1.3"/><circle class="a-k" cx="40.6" cy="34.2" r="1.1"/>`,
+  'heat:none':      `<g opacity=".5">${radiatorArt(6, 15, 36, 20)}<path class="a-t1" d="M10 35v5M38 35v5"/></g><path class="a-w" d="M7 40L41 10"/>`,
+  'heat:unsure':    unsureArt,
   /* other heaters */
-  'other:plugin': `<rect x="6" y="11" width="26" height="25" rx="5"/><circle cx="19" cy="23.5" r="7.5" ${F}/><path d="M14.5 21h9M14.5 24h9M14.5 27h9"/><path d="M32 30c6 0 8 3 8 7"/><path d="M36.5 37h7v5h-7zM38.5 42v3M41.5 42v3"/>`,
-  'other:gas_fire': fireplace(`<path d="M24 25c.9 3 4.5 4.5 4.5 8.4a4.5 4.5 0 0 1-9 0c0-2 .9-3.3 2-4.2 0 1.5.9 2.3 1.8 2.4.4-2-.3-3.9.7-6.6z" ${F}/><path d="M16 39h16"/>`),
-  'other:electric_fire': fireplace(`<path d="M17 27h14M17 32h14M17 37h14"/><rect x="16" y="24" width="16" height="16" rx="1" ${F} stroke="none" opacity=".7"/>`),
-  'other:stove': stoveArt,
-  'other:open_fire': fireplace(`<path d="M17 39l14-5M17 34l14 5"/><path d="M24 24c.8 2.6 3.8 3.8 3.8 7a3.8 3.8 0 0 1-7.6 0c0-1.7.8-2.8 1.7-3.6 0 1.3.8 2 1.5 2 .4-1.6-.2-3.2.6-5.4z" ${F}/>`),
-  'other:electric_blanket': `<path d="M6 14a3 3 0 0 1 3-3h30a3 3 0 0 1 3 3v6H6z"/><path d="M6 20h36v16H6z" ${F}/><path d="M6 28h36"/><path d="M27 21l-4 7h4l-3 6"/><path d="M42 33c3 0 3 4 0 6"/>`,
-  'other:none': noneArt,
+  'other:plugin':           `<rect class="a-p" x="6" y="12" width="26" height="24" rx="3"/>${[10, 14.5, 19, 23.5, 28].map(x => `<path class="a-t1" d="M${x} 14v20"/>`).join('')}<rect x="6" y="12" width="26" height="24" rx="3"/><path class="a-t1" d="M9 36v3M29 36v3"/><circle class="a-t1" cx="9" cy="40.5" r="1.4"/><circle class="a-t1" cx="29" cy="40.5" r="1.4"/><path class="a-mtl a-t1" d="M32 30c6 0 8 3 8 7"/><rect class="a-mt a-t1" x="36.5" y="37" width="7" height="5" rx="1"/><path class="a-w a-t1" d="M14 9c-1.2-1.4 1.2-2 0-3.5M19 9c-1.2-1.4 1.2-2 0-3.5M24 9c-1.2-1.4 1.2-2 0-3.5"/>`,
+  'other:gas_fire':         fireplace(`<rect class="a-mt a-t1" x="16" y="22" width="16" height="16" rx="1"/><path class="a-k" d="M18 25h12v2H18zM18 29h12v2H18z" opacity=".25"/><path class="a-fl a-t1" d="M20 37.5c-1.6-2.2.4-3.4.8-5.6 1.2 1.2 1.6 2.2 1.4 3.2.9-1.6.7-3.4 1.8-5 1.4 2 2.6 3.6 2.4 5.4.8-.8 1.1-1.8 1.4-3 1.6 2 1.8 3.6.6 5z"/>`),
+  'other:electric_fire':    fireplace(`<rect class="a-p a-t1" x="16" y="22" width="16" height="16" rx="1"/><rect class="a-fl a-t1" x="18.5" y="26" width="11" height="2.4" rx="1.2"/><rect class="a-fl a-t1" x="18.5" y="31" width="11" height="2.4" rx="1.2"/><path class="a-w a-t0" d="M19 24.5c.5-.6 1-.6 1.5 0s1 .6 1.5 0M24 24.5c.5-.6 1-.6 1.5 0s1 .6 1.5 0"/>`),
+  'other:stove':            stoveFire,
+  'other:open_fire':        fireplace(`<path class="a-k" d="M16 22h16v16H16z" opacity=".12"/><path class="a-mtl a-t1" d="M17 37.5h14M18.5 37.5v-3h11v3"/><path class="a-wd a-t1" d="M18.5 34.5l11-3.4M18.5 31.1l11 3.4"/><path class="a-fl a-t1" d="M22 31c-1.4-2 .4-3.2.8-5.2 1.2 1.2 1.6 2 1.4 3 .9-1.6.7-3.2 1.8-4.8 1.6 2 2.4 3.6 1.6 5.4"/>`),
+  'other:electric_blanket': `<rect class="a-wd a-t1" x="5" y="12" width="38" height="9" rx="2"/><rect class="a-p a-t1" x="9" y="15" width="9" height="5" rx="2"/><path class="a-wf a-t1" d="M5 21h38v15H5z"/><path class="a-w a-t1" d="M8 25h32l-2.5 3.5h-27L8 32h32"/><path class="a-t1" d="M5 36v4M43 36v4"/><path class="a-mtl a-t1" d="M43 30c3 0 3 3 0 5"/><rect class="a-mt a-t1" x="38" y="35" width="5.5" height="7" rx="1.2"/>`,
+  'other:none':             noneArt,
   /* heating controls */
-  'controls:room_stat': `<circle cx="24" cy="24" r="16"/><circle cx="24" cy="24" r="10" ${F}/><path d="M24 14v5"/><path d="M12 9.5l2 2.5M36 9.5l-2 2.5M8 24h3M37 24h3"/>`,
-  'controls:smart': `<rect x="14" y="4" width="20" height="40" rx="4"/><path d="M21 8h6"/><circle cx="24" cy="25" r="8" ${F}/><path d="M24 20.5v4.5l2.5 1.5"/><path d="M17.5 37.5a9 9 0 0 1 13 0"/>`,
-  'controls:programmer': `<rect x="4" y="12" width="40" height="24" rx="3"/><circle cx="16" cy="24" r="7" ${F}/><path d="M16 20v4l2.5 1.5"/><rect x="28" y="17" width="11" height="6" rx="1"/><path d="M29 29h3M35 29h3"/>`,
-  'controls:trvs': `${radiatorArt(3,16,24,20)}<path d="M27 32h5"/><rect x="32" y="11" width="11" height="22" rx="4" ${F}/><path d="M32 16h11M32 21h11M32 26h11"/><path d="M37.5 33v9"/>`,
+  'controls:room_stat':  `<rect class="a-p" x="9" y="9" width="30" height="30" rx="6"/><circle class="a-f a-t1" cx="24" cy="24" r="10"/><circle class="a-t1" cx="24" cy="24" r="6.5"/><path d="M24 17.5v4"/><path class="a-t1" d="M24 11.6v1.6M15.2 15.2l1.1 1.1M32.8 15.2l-1.1 1.1M11.6 24h1.6M34.8 24h1.6"/><rect x="9" y="9" width="30" height="30" rx="6"/><circle class="a-w a-tf" cx="34.5" cy="34.5" r="1.4"/>`,
+  'controls:smart':      `<circle class="a-p" cx="19" cy="22" r="13"/><circle class="a-f a-ns" cx="19" cy="22" r="9.6"/><path class="a-w a-t3" d="M11.5 27a9.6 9.6 0 0 1 9.4-14.4"/><path class="a-t1" d="M16 22h6M19 19v6"/><circle cx="19" cy="22" r="13"/><rect class="a-p" x="33" y="20" width="11" height="20" rx="2"/><rect class="a-f a-ns" x="35" y="23" width="7" height="12" rx=".8"/><path class="a-w a-t1" d="M36.5 31.5a2.2 2.2 0 0 1 4 0"/><rect x="33" y="20" width="11" height="20" rx="2"/><path class="a-c a-t1" d="M33.5 13.5a7 7 0 0 1 10 0M35.5 16a4 4 0 0 1 6 0"/>`,
+  'controls:programmer': `<rect class="a-p" x="4" y="11" width="40" height="26" rx="3"/><circle class="a-f a-t1" cx="16" cy="24" r="8"/>${Array.from({length: 12}, (_, i) => { const a = i * Math.PI / 6, on = i >= 2 && i <= 4 || i >= 8 && i <= 10; return `<path class="${on ? 'a-w' : 'a-d'} a-t1" d="M${n1(16 + Math.sin(a) * 8)} ${n1(24 - Math.cos(a) * 8)}L${n1(16 + Math.sin(a) * 10)} ${n1(24 - Math.cos(a) * 10)}"/>`; }).join('')}<path class="a-t1" d="M16 20v4l2.6 1.6"/><rect class="a-k" x="28" y="15" width="12" height="6" rx="1" opacity=".85"/><path class="a-t1" d="M28.5 27.5h3M35.5 27.5h3M28.5 32h3M35.5 32h3"/><rect x="4" y="11" width="40" height="26" rx="3"/>`,
+  'controls:trvs':       `${radiatorArt(3, 17, 22, 19)}<path class="a-mtl a-t1" d="M25 31h6"/><rect class="a-f" x="31" y="10" width="13" height="23" rx="5"/><path class="a-t1" d="M33.5 14v15M37.5 13v17M41.5 14v15"/><circle class="a-w a-tf" cx="37.5" cy="10.6" r="1.2"/><path class="a-mtl a-t1" d="M37.5 33v9"/>`,
   'controls:none': noneArt, 'controls:unsure': unsureArt,
+  /* how the heating is used (one per row, the picture at the left) */
+  'pattern:always_on':   `${statDial(24, 24, 9)}<path class="a-w" d="M24 9a15 15 0 1 1-14.2 10.2"/><path class="a-w" d="M6.6 16.4l3.2 3 3.6-2.6"/>`,
+  'pattern:timer':       clockArt([[0, 2], [7, 10]]) + `<path class="a-t1" d="M24 24V12.5M24 24l6.5 3.8"/>`,
+  'pattern:when_needed': `<rect class="a-p" x="12" y="6" width="24" height="36" rx="4"/><rect class="a-f" x="17" y="12" width="14" height="24" rx="3"/><rect class="a-p a-t1" x="19" y="14" width="10" height="11" rx="2"/><path class="a-w a-t1" d="M24 28.5c.6 1.6 2.2 2.4 2.2 4.3a2.2 2.2 0 0 1-4.4 0c0-1 .5-1.7 1-2.1 0 .7.5 1.1 1 1.2.2-1-.2-2 .2-3.4z"/><rect x="12" y="6" width="24" height="36" rx="4"/>`,
+  'pattern:most_day': clockArt([[5.5, 15.5]]) + `<path class="a-t1" d="M24 24V12.5M24 24l6.5 3.8"/>`,
+  'pattern:rarely':      `<rect class="a-p" x="6" y="9" width="36" height="32" rx="3"/><path d="M6 17h36"/><path class="a-t1" d="M14 6v6M34 6v6"/>${Array.from({length: 12}, (_, i) => `<rect class="${i === 6 ? 'a-wf' : 'a-d'} a-t1" x="${10 + (i % 4) * 7.4}" y="${20.5 + Math.floor(i / 4) * 6.4}" width="5" height="4.4" rx=".8"/>`).join('')}<rect x="6" y="9" width="36" height="32" rx="3"/>`,
+  'pattern:not_me':      `${statDial(15, 21, 8)}<circle class="a-wf a-t1" cx="35" cy="17" r="4.5"/><path class="a-wf a-t1" d="M27 41v-5a8 8 0 0 1 16 0v5z"/><path class="a-t1" d="M28 27.5l-4.5-3"/>`,
+  /* how long the heating has been on: a clock with the time it has been running shaded */
+  'heat_for:always':  `${statDial(24, 24, 9)}<path class="a-w" d="M24 9a15 15 0 1 1-14.2 10.2"/><path class="a-w" d="M6.6 16.4l3.2 3 3.6-2.6"/>`,
+  'heat_for:30_60':   clockArt([[0, 1]]),
+  'heat_for:1_2h':    clockArt([[0, 2]]),
+  'heat_for:2_4h':    clockArt([[0, 4]]),
+  'heat_for:gt4h':    clockArt([[0, 7]]) + `<path class="a-w" stroke-dasharray="2 2.4" d="M7.5 33.5A19 19 0 0 1 24 5"/>`,
+  'heat_for:unsure':  `<g opacity=".5">${clockArt([])}</g>${qBadge(24, 24)}`,
+  /* the age of the house (year built): the style of each period */
+  'year_built:pre1919':   `${gnd}${chim(8.5, 9)}${chim(35.5, 9)}<path class="a-rf a-t1" d="M5 20l3-6h32l3 6z"/><rect class="a-br" x="7" y="20" width="34" height="22.5"/><path class="a-brl a-t0" d="M7 26h34M7 32h34M7 38h34"/>${sash(10, 22.5, 5, 6)}${sash(33, 22.5, 5, 6)}<path class="a-p a-t1" d="M9 42.5V34l2-2h6l2 2v8.5"/>${sash(11, 34.5, 6, 5)}${door(24, 33.4, 4.6)}<path class="a-t1" d="M7 42.5V20h34v22.5"/>`,
+  'year_built:1919_1944': `${gnd}${chim(30, 8)}<path class="a-rf a-t1" d="M5 21L13 10h22l8 11z"/><rect class="a-rd" x="7.5" y="21" width="33" height="21.5"/><path class="a-p a-t1" d="M10 42.5V21.5h11v21"/>${sash(12, 24, 7, 6)}${sash(12, 33.5, 7, 6)}<path class="a-t1" d="M9 21.5h13"/>${sash(29, 24, 6, 5.4)}${door(29.5, 33.4, 4.6)}<path class="a-t1" d="M27.6 32.8h8.4"/><path d="M7.5 42.5V21h33v21.5"/>`,
+  'year_built:1945_1964': `${gnd}${chim(31, 10.5)}<path class="a-rf a-t1" d="M5 22.5L24 11l19 11.5z"/><rect class="a-wl" x="8" y="22.5" width="32" height="20"/>${sash(11, 25.5, 7, 5.4)}${sash(30, 25.5, 7, 5.4)}${sash(11, 34, 7, 5.4)}<rect class="a-wd a-t1" x="27" y="33.4" width="5" height="9.1"/><path class="a-t1" d="M25.5 32.8h8"/><path d="M8 42.5v-20h32v20"/>`,
+  'year_built:1965_1982': `${gnd}<path class="a-rf a-t1" d="M4 22l20-6 20 6z"/><rect class="a-wl" x="6" y="22" width="36" height="20.5"/><rect class="a-wd a-t1" x="6" y="22" width="36" height="7.5"/><path class="a-wdl a-t0" d="M6 24.5h36M6 27h36"/><rect class="a-gl a-t1" x="9" y="23" width="13" height="5.5"/><rect class="a-gl a-t1" x="26" y="23" width="13" height="5.5"/><rect class="a-gl a-t1" x="9" y="32" width="15" height="6"/><rect class="a-p a-t1" x="30" y="31.5" width="6" height="11"/><path d="M6 42.5V22h36v20.5"/>`,
+  'year_built:1983_2002': `${gnd}<path class="a-rf a-t1" d="M5 22.5L24 11l19 11.5z"/><path class="a-rf a-t1" d="M24 33l7-6 7 6z"/><rect class="a-br" x="8" y="22.5" width="32" height="20"/><path class="a-brl a-t0" d="M8 28h32M8 37.5h32"/><rect class="a-p a-t1" x="25.5" y="33" width="11" height="9.5"/>${sash(11, 25.5, 6, 5)}${sash(31, 25.5, 6, 5)}${sash(11, 33.5, 6, 5)}<path class="a-t1" d="M27.5 42.5v-6.5h7v6.5"/><path d="M8 42.5v-20h32v20"/>`,
+  'year_built:2003_plus': `${gnd}<path class="a-rf a-t1" d="M5 20L24 10l19 10z"/><rect class="a-wl" x="8" y="20" width="32" height="22.5"/><rect class="a-wd a-t1" x="8" y="20" width="12" height="22.5"/><path class="a-wdl a-t0" d="M10.5 20v22.5M13.5 20v22.5M16.5 20v22.5"/><rect class="a-gl a-t1" x="23" y="23" width="14" height="8" rx=".6"/><rect class="a-gl a-t1" x="23" y="33.5" width="6" height="9"/><rect class="a-sk" x="27.5" y="11.5" width="11" height="4.5" transform="rotate(-27.5 33 13.75)"/><path class="a-t1" d="M27.6 16.3l9.8-5.1"/><path d="M8 42.5V20h32v22.5"/>`,
+  'year_built:unsure':    unsureArt,
   /* thermostat screen */
   'stat_display:yes': `<rect x="7" y="9" width="34" height="30" rx="7"/><rect x="12" y="14" width="24" height="13" rx="2" ${F}/><text x="24" y="24.5" text-anchor="middle" class="art-num">21.5</text><path d="M16 33h4M28 33h4"/>`,
   'stat_display:no': `<circle cx="24" cy="24" r="16"/><circle cx="24" cy="24" r="9" ${F}/><path d="M24 15v5"/><path d="M14 33l2-2M34 33l-2-2"/>`,
@@ -194,41 +314,55 @@ return {
   'bedroom_trv:no': `${radiatorArt(6,15,36,20)}<path d="M10 35v5M38 35v5"/>`,
   'bedroom_trv:no_radiator': `<g ${D}>${radiatorArt(6,15,36,20)}</g><path d="M8 40L40 10"/>`,
   'bedroom_trv:unsure': unsureArt,
-  /* walls: a cut through the wall, outside on the left, inside on the right */
-  'wall:cavity': `<path d="M8 5v38M17 5v38M31 5v38M40 5v38"/><path d="M8 13h9M8 21h9M8 29h9M8 37h9M31 13h9M31 21h9M31 29h9M31 37h9"/><path d="M17 5h14v38H17z" ${F} stroke="none"/>${[10,17,24,31,38].map(y => `<circle cx="21" cy="${y}" r="1"/><circle cx="27" cy="${y+3}" r="1"/>`).join('')}`,
-  'wall:external': `<path d="M11 5h8v38h-8z" ${F}/><path d="M19 5h14v38H19z"/><path d="M19 13h14M19 21h14M19 29h14M19 37h14M26 5v8M26 21v8M26 37v6M22.5 13v8M29.5 29v8"/>`,
-  'wall:internal': `<path d="M13 5h14v38H13z"/><path d="M13 13h14M13 21h14M13 29h14M13 37h14M20 5v8M20 21v8M20 37v6M16.5 13v8M23.5 29v8"/><path d="M27 5h8v38h-8z" ${F}/>`,
-  'wall:none': `<path d="M17 5h14v38H17z"/><path d="M17 13h14M17 21h14M17 29h14M17 37h14M24 5v8M24 21v8M24 37v6M20.5 13v8M27.5 29v8"/>`,
-  'wall:unsure': unsureArt,
-  /* the loft */
-  'loft:yes': `<path d="M4 32L24 11l20 21"/><path d="M7 32h34"/><path d="M8 31.5c2-3 3-3 4-3s2 3 4 3 3-3 4-3 2 3 4 3 3-3 4-3 2 3 4 3 3-3 4-3 2 3 4 3" ${F}/><path d="M12 32v8h24v-8"/>`,
-  'loft:no': `<path d="M4 32L24 11l20 21"/><path d="M7 32h34"/><path d="M12 32v8h24v-8"/><path d="M24 17v15" ${D}/>`,
-  'loft:no_loft': `<path d="M9 6h30v36H9z"/><path d="M9 18h30M9 30h30"/><rect x="11" y="20" width="26" height="8" rx="1" ${F}/>${win(13,9)}${win(31,9)}${win(13,33)}${win(31,33)}`,
-  'loft:unsure': unsureArt,
-  /* glazing: the window and, beside it, its panes of glass seen from the edge */
-  'glazing:single': `<rect x="5" y="9" width="24" height="30" rx="1.5"/><path d="M17 9v30M5 24h24"/><path d="M39 11v26" class="pane"/>`,
-  'glazing:double': `<rect x="5" y="9" width="24" height="30" rx="1.5"/><path d="M17 9v30M5 24h24"/><path d="M35.5 11v26M41.5 11v26"/><path d="M35.5 11h6v26h-6z" ${F} stroke="none"/>`,
-  'glazing:triple': `<rect x="5" y="9" width="24" height="30" rx="1.5"/><path d="M17 9v30M5 24h24"/><path d="M33 11v26M38.5 11v26M44 11v26"/><path d="M33 11h11v26H33z" ${F} stroke="none"/>`,
-  'glazing:mixed': `<rect x="4" y="10" width="17" height="24" rx="1.5"/><path d="M12.5 10v24"/><rect x="27" y="10" width="17" height="24" rx="1.5" ${F}/><path d="M35.5 10v24"/><path d="M8 40h9M31 40h9M31 42.5h9"/>`,
-  'glazing:unsure': unsureArt,
-  /* can the windows be opened */
-  'windows_open:yes': `<rect x="7" y="7" width="34" height="34" rx="1.5"/><path d="M24 7v34"/><path d="M7 7l9 5v34l-9-5" ${F}/><path d="M41 7l-9 5v34l9-5" ${F}/>`,
-  'windows_open:some': `<rect x="5" y="9" width="17" height="30" rx="1.5"/><path d="M5 9l7 4v30l-7-4" ${F}/><rect x="26" y="9" width="17" height="30" rx="1.5"/><path d="M26 24h17"/>`,
-  'windows_open:no': `<rect x="7" y="6" width="34" height="34" rx="1.5"/><path d="M24 6v34M7 23h34"/><rect x="28" y="28" width="12" height="10" rx="2" ${F}/><path d="M30.5 28v-2.5a3.5 3.5 0 0 1 7 0V28"/>`,
-  /* damp or mould: the rooms */
-  'damp:bedroom': room('bed'), 'damp:living': room('sofa'), 'damp:kitchen': room('pan'), 'damp:bathroom': room('bath'), 'damp:elsewhere': room('door'),
-  'damp:none': `<circle cx="24" cy="24" r="16"/><path d="M16 24.5l5.5 5.5 11-12"/>`, 'damp:unsure': unsureArt,
-  /* bedroom sharing: one to four people, you in teal */
-  'share:0': `<circle cx="24" cy="16" r="6" ${F}/><path d="M12 40c0-7 5.4-12 12-12s12 5 12 12"/>`,
-  'share:1': `<circle cx="17" cy="17" r="5.5" ${F}/><path d="M7 39c0-6.5 4.5-11 10-11s10 4.5 10 11"/><g ${D}><circle cx="32" cy="17" r="5.5"/><path d="M24 39c.5-6 4-11 8-11 5.5 0 10 4.5 10 11"/></g>`,
-  'share:2': `<circle cx="13" cy="18" r="5" ${F}/><path d="M4 39c0-6 4-10 9-10s9 4 9 10"/><g ${D}><circle cx="24" cy="15" r="5"/><path d="M18 30c1.6-1.5 3.7-2.3 6-2.3 5 0 9 4 9 10"/><circle cx="35" cy="18" r="5"/><path d="M30 30c1.4-.7 3-1 5-1 5 0 9 4 9 10"/></g>`,
-  'share:3': `<circle cx="11" cy="19" r="4.5" ${F}/><path d="M3 39c0-5.5 3.6-9.5 8-9.5s8 4 8 9.5"/><g ${D}><circle cx="20" cy="14" r="4.5"/><circle cx="29" cy="14" r="4.5"/><circle cx="38" cy="19" r="4.5"/><path d="M15 26c1.4-1.5 3-2.3 5-2.3M29 23.7c2 0 3.7.8 5 2.3M30 31c1.6-1 3.2-1.5 8-1.5 4.4 0 8 4 8 9.5"/></g><path d="M41 8v6M38 11h6" ${D}/>`,
-  /* the compass in the middle of the direction picker */
-  compass: `<circle cx="24" cy="24" r="15"/><path d="M24 9v4M24 35v4M9 24h4M35 24h4"/><path d="M24 14l4.5 10H19.5z" ${F}/><path d="M19.5 24h9L24 34z"/>`
+  /* walls, cut through: outside on the left (rain), inside on the right (warm air). Brick is terracotta, concrete
+   * block grey, insulation yellow with the zigzag drawn on plans, plaster and plasterboard pale. */
+  'wall:cavity':   `${rain}${cap([[10, 8, 'a-br'], [18, 8, 'a-in'], [26, 8, 'a-bk'], [34, 2, 'a-pl a-d']])}${leaf(10, 8, 5, 43, 5.4, 'br')}${insV(18, 8, 5, 43)}${leaf(26, 8, 5, 43, 9.5, 'bk')}<rect class="a-pl a-d a-t1" x="34" y="5" width="2" height="38"/>${warmAir(39.5)}`,
+  'wall:external': `${rain}${cap([[8.5, 2, 'a-rd'], [10.5, 7, 'a-in'], [17.5, 13, 'a-br'], [30.5, 2, 'a-pl a-d']])}<rect class="a-rd a-t1" x="8.5" y="5" width="2" height="38"/>${insV(10.5, 7, 5, 43)}${leaf(17.5, 13, 5, 43, 5.4, 'br', 1)}<rect class="a-pl a-d a-t1" x="30.5" y="5" width="2" height="38"/>${warmAir(37.5)}`,
+  'wall:internal': `${rain}${cap([[10.5, 13, 'a-br'], [23.5, 7, 'a-in'], [30.5, 2.4, 'a-pl a-d']])}${leaf(10.5, 13, 5, 43, 5.4, 'br', 1)}${insV(23.5, 7, 5, 43)}<rect class="a-pl a-d a-t1" x="30.5" y="5" width="2.4" height="38"/>${warmAir(37.5)}`,
+  'wall:none':     `${rain}${cap([[16.5, 13, 'a-br'], [29.5, 2, 'a-pl a-d']])}${leaf(16.5, 13, 5, 43, 5.4, 'br', 1)}<rect class="a-pl a-d a-t1" x="29.5" y="5" width="2" height="38"/>${escape(17)}${escape(33)}`,
+  'wall:unsure':   `<g opacity=".5">${cap([[17, 14, 'a-br']])}${leaf(17, 14, 5, 43, 5.4, 'br', 1)}</g>${qBadge(24, 24)}`,
+  /* the loft: a house cut through, its room below and the roof space above the ceiling joists */
+  'loft:yes':      loftHouse(insH('8 25L8 20.7L13.5 16H34.5L40 20.7V25', 13.5, 34.5, 17.2, 23.8) + radiatorRoom + `<path class="a-w a-t1" d="M30.5 33c-1.6-2 1.6-3 0-5M34.5 33c-1.6-2 1.6-3 0-5"/>`),
+  'loft:no':       loftHouse(joists + radiatorRoom + rise(17) + rise(31)),
+  'loft:no_loft':  `<path class="a-wl a-ns" d="M9 6h30v37H9z"/><rect class="a-f a-ns" x="9" y="18.5" width="30" height="12"/><path d="M9 43V6h30v37M7 6h34M3 43h42"/><path class="a-t1" d="M9 18.5h30M9 30.5h30"/>` +
+                   `<g class="a-d a-t1">${[13, 30].map(x => `<rect x="${x}" y="9.5" width="5" height="5.5" rx=".6"/>`).join('')}<circle cx="24" cy="10.6" r="1.7"/><path d="M21 17.4c0-2.4 1.3-4 3-4s3 1.6 3 4"/>${[13, 30].map(x => `<rect x="${x}" y="33.5" width="5" height="5.5" rx=".6"/>`).join('')}<path d="M21.5 43v-7h5v7"/></g>` +
+                   `${[13, 30].map(x => pane(x, 21.5, 5, 5.5)).join('')}<path class="a-w a-t1" d="M24 28.5c-1.3-1.6 1.3-2.4 0-4s1.3-2.4 0-4"/>`,
+  'loft:unsure':   `<g opacity=".5">${loftHouse(joists)}</g>${qBadge(24, 19)}`,
+  /* windows: the pane seen face on, and the edge of the glass in a magnifier: one, two or three panes with the
+   * dark spacer bars between them */
+  'glazing:single': zoomWin(glass([30.4])),
+  'glazing:double': zoomWin(`<rect class="a-sk" x="28.6" y="16" width="5.8" height="16"/>${spacer(28.6, 5.8)}${glass([26.4, 34.4])}`),
+  'glazing:triple': zoomWin(`<rect class="a-sk" x="26.4" y="16" width="10.2" height="16"/>${spacer(26.4, 3.9)}${spacer(32.5, 3.9)}${glass([24.2, 30.3, 36.4])}`),
+  'glazing:mixed': `<rect class="a-wd a-t1" x="3" y="9" width="18" height="30" rx="1"/>${pane(5.5, 11.5, 13, 25, '<path class="a-wdl a-t1" d="M12 11.5v25M5.5 19.8h13M5.5 28.2h13"/>')}<path class="a-wdl a-t1" d="M3 24h18"/>` +
+                   `<rect class="a-p" x="26" y="9" width="19" height="30" rx="1.5"/>${pane(28.8, 11.8, 13.4, 24.4)}<rect x="26" y="9" width="19" height="30" rx="1.5"/><rect class="a-t1" x="28" y="11" width="15" height="26" rx=".8"/><path class="a-t1" d="M39.5 23.5v3"/>`,
+  'glazing:unsure': `<g opacity=".5"><rect class="a-p" x="12" y="6" width="24" height="36" rx="1.5"/>${pane(14.5, 8.5, 19, 14.5)}${pane(14.5, 25, 19, 14.5)}<rect x="12" y="6" width="24" height="36" rx="1.5"/></g>${qBadge(24, 24)}`,
+  /* can the windows be opened: two windows, open (the casement swung out, air coming in) or shut */
+  'windows_open:yes':  winOpen(3) + winOpen(26),
+  'windows_open:some': winOpen(3) + winShut(26),
+  'windows_open:no':   winShut(3) + winShut(26) + lockBadge(38.5, 36.5),
+  /* damp or mould: the room, with the dark spots where mould grows first, round the window and in the corners */
+  'damp:bedroom':   roomBox(`<rect class="a-wd a-t1" x="12.5" y="20" width="13" height="10.5" rx="1.5"/><rect class="a-p a-t1" x="14.5" y="25" width="5" height="3.2" rx="1.2"/><path class="a-f a-t1" d="M11 29.5h17l1.6 8.5H9.4z"/><path class="a-t1" d="M14 33.5h12"/>`, winBack(25.5, 12, 9, 9) + mould(12.3, 10.2, 2.6, 1.8, 9) + mould(34.2, 12.4, 2, 1.6, 6) + mould(25.3, 21.8, 1.6, 1.2, 4)),
+  'damp:living':    roomBox(`<path class="a-f a-t1" d="M14.5 23h19v6h-19z"/><rect class="a-f a-t1" x="12.5" y="28" width="23" height="5" rx="1.5"/><rect class="a-p a-t1" x="10.5" y="25" width="4" height="9" rx="1.6"/><rect class="a-p a-t1" x="33.5" y="25" width="4" height="9" rx="1.6"/><path class="a-t1" d="M13 34v2.5M35 34v2.5"/>`, winBack(15, 11, 11, 9) + mould(36, 10.2, 2.4, 1.8, 8) + mould(14.8, 11.2, 1.8, 1.6, 6) + mould(26.4, 20.2, 1.4, 1.1, 4)),
+  'damp:kitchen':   roomBox(`<rect class="a-p a-t1" x="11" y="25" width="26" height="9"/><path class="a-t1" d="M11 25h26M19.6 25v9M28.3 25v9M17.4 29.5h.01M21.8 29.5h.01M30.5 29.5h.01"/><path class="a-mt a-t1" d="M13 25v-3.2h4v3.2"/><path class="a-t1" d="M17 22.4l1.6-.9M29.5 24h6"/>`, winBack(18, 11, 12, 8.5) + mould(11.8, 10, 2.2, 1.6, 7) + mould(30, 11.2, 1.8, 1.4, 6) + mould(36.6, 18, 1.2, 2.6, 6)),
+  'damp:bathroom':  roomBox(`<path class="a-p a-t1" d="M11 25.5h25v3.5a5 5 0 0 1-5 5H16a5 5 0 0 1-5-5z"/><path class="a-t1" d="M14 34l-.8 2M33 34l.8 2M34 25.5V13.5h-3"/><path class="a-mt a-t1" d="M28.5 13.5h3v1.6h-3z"/>`, '<path class="a-d a-t0" d="M10 15h28M10 20.5h28M15 8v24M21 8v24M27 8v24M33 8v24"/>' + mould(36.4, 9.8, 2.3, 1.6, 9) + mould(12.8, 22.8, 1.8, 1.3, 5) + mould(21, 10, 1.6, 1, 4)),
+  'damp:elsewhere': roomBox(`<rect class="a-wd a-t1" x="19" y="12.5" width="10" height="19.5"/><path class="a-t1" d="M26.6 22.5h.01"/><path class="a-t1" d="M33.5 15.5v2.4"/><path class="a-f a-t1" d="M31 18h5l1 7h-7z"/>`, mould(11.8, 10, 2.4, 1.8, 8) + mould(36.4, 10, 2, 1.6, 7) + mould(24, 10.4, 2.2, 1.1, 5)),
+  'damp:none':      roomBox(`<rect class="a-wd a-t1" x="12.5" y="20" width="13" height="10.5" rx="1.5"/><path class="a-f a-t1" d="M11 29.5h17l1.6 8.5H9.4z"/>`, winBack(25.5, 12, 9, 9)) + tickBadge(38.5, 37),
+  'damp:unsure':    `<g opacity=".5">${roomBox('', winBack(25.5, 12, 9, 9))}</g>${qBadge(24, 22)}`,
+  /* bedroom sharing: the beds in the participant's bedroom, their own head in teal */
+  'share:0': `${bed(14, 20, 1)}`,
+  'share:1': `${bed(8, 32, 2)}`,
+  'share:2': `${bed(2.5, 27, 2)}${bed(31.5, 14, 1, true)}`,
+  'share:3': `${bed(2.5, 27, 2)}${bed(31.5, 14, 1, true)}<path class="a-t1" d="M38.5 6v6M35.5 9h6"/>`,
+  /* the compass in the middle of the direction picker: an eight-point rose, north in teal */
+  compass: `<circle class="a-p" cx="24" cy="24" r="16"/><circle class="a-d a-t1" cx="24" cy="24" r="12.5"/>${Array.from({length: 16}, (_, i) => { const a = i * Math.PI / 8, r0 = i % 2 ? 14.6 : 13.6; return `<path class="a-t0" d="M${n1(24 + Math.sin(a) * r0)} ${n1(24 - Math.cos(a) * r0)}L${n1(24 + Math.sin(a) * 16)} ${n1(24 - Math.cos(a) * 16)}"/>`; }).join('')}` +
+           `<path class="a-p a-t1" d="M24 24l3.6-3.6L35 13l-7.4 7.4zM24 24l3.6 3.6L35 35l-7.4-7.4zM24 24l-3.6 3.6L13 35l7.4-7.4zM24 24l-3.6-3.6L13 13l7.4 7.4z"/>` +
+           `<path class="a-p a-t1" d="M24 24l3.4 0L24 38zM24 24h-3.4L24 38zM24 24h11.6L27.4 27.4zM24 24h-11.6l8.2 3.4z"/><path class="a-f a-t1" d="M24 6l3.4 18h-6.8z"/><circle class="a-t1" cx="24" cy="24" r="16"/><circle class="a-tf" cx="24" cy="24" r="1.6"/>`
 };
 })();
+/* class "art art-<family>" (art-wall, art-heat ...) lets art.css size each family to its tiles */
 function art(name, cls=''){
-  return `<svg class="art ${cls}" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ART[name] || ART.unsure}</svg>`;
+  const fam = ART[name] ? String(name).split(':')[0] : 'unsure';
+  return `<svg class="art art-${fam} ${cls}" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ART[name] || ART.unsure}</svg>`;
 }
 /* the EPC letter, in the certificate's own band colours (A green to G red) */
 const EPC_COLOURS = { A:'#008054', B:'#19B459', C:'#8DCE46', D:'#FFD500', E:'#FCAA65', F:'#EF8023', G:'#E9153B' };
@@ -310,7 +444,7 @@ function avatar(ids){
   s += `<circle cx="54.5" cy="27" r="1.6" fill="var(--face-ink)"/><circle cx="65.5" cy="27" r="1.6" fill="var(--face-ink)"/><path d="M56 34q4 3 8 0" stroke="var(--face-ink)" stroke-width="1.5" fill="none" stroke-linecap="round"/>`;
   // legs: pyjama trousers first (anything else goes over them)
   const legsLong = c => `<path d="M41 104h38l1 84H61l-1-60-1 60H40z" fill="${c}" ${O}/>`;
-  if(has('pyjamas'))  s += legsLong('var(--g-pyjamas)') + `<path d="M46 110v74M53 110v74M67 110v74M74 110v74" stroke="rgba(255,255,255,.4)" stroke-width="2"/>`;
+  if(has('pyjamas'))  s += legsLong('var(--g-pyjamas)') + `<path d="M46 110v74M53 110v74M67 110v74M74 110v74" stroke="rgba(255,255,255,.4)" stroke-width="2"/><path d="M41.5 184h17M61.5 184h17" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>`;
   if(has('shorts'))   s += `<path d="M41 104h38l1 38H61l-1-14-1 14H40z" fill="var(--g-shorts)" ${O}/>`;
   if(has('trousers')) s += legsLong('var(--g-trousers)');
   if(has('joggers'))  s += legsLong('var(--g-joggers)') + `<path d="M42 180h17M61 180h17" stroke="rgba(20,30,45,.25)" stroke-width="2"/>`;
@@ -321,19 +455,27 @@ function avatar(ids){
   // tops
   const top = (c, sleeve) => `<path d="M38 48Q60 40 82 48L86 106Q60 114 34 106Z" fill="${c}" ${O}/>` + arms(c, sleeve) +
     `<path d="M52 47q8 5 16 0" fill="none" stroke="rgba(20,30,45,.22)" stroke-width="1.4"/>`;
-  if(has('pyjamas')) s += top('var(--g-pyjamas)', 64) + `<path d="M46 52v52M74 52v52M28 60l3 52M92 60l-3 52" stroke="rgba(255,255,255,.4)" stroke-width="2"/><circle cx="60" cy="62" r="1.6" fill="rgba(20,30,45,.35)"/><circle cx="60" cy="76" r="1.6" fill="rgba(20,30,45,.35)"/><circle cx="60" cy="90" r="1.6" fill="rgba(20,30,45,.35)"/>`;
+  if(has('pyjamas')) s += top('var(--g-pyjamas)', 64) +
+    `<path d="M45 52v52M75 52v52M28 60l3 52M92 60l-3 52" stroke="rgba(255,255,255,.4)" stroke-width="2"/>` +
+    `<path d="M48 46l12 14 12-14-5 12-7 2-7-2z" fill="var(--g-pyjamas)" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>` +
+    `<path d="M66 70h9v8h-9z" fill="none" stroke="#fff" stroke-width="1.6"/><path d="M22 110l13 1.6M98 110l-13 1.6" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>` +
+    `<circle cx="60" cy="68" r="1.7" fill="#fff"/><circle cx="60" cy="81" r="1.7" fill="#fff"/><circle cx="60" cy="94" r="1.7" fill="#fff"/>`;
   if(has('tshirt')) s += top('var(--g-tshirt)', 26);
   if(has('long'))   s += top('var(--g-long)', 64);
   if(has('jumper')) s += top('var(--g-jumper)', 66) + `<path d="M36 102h48" stroke="rgba(20,30,45,.25)" stroke-width="3"/>`;
-  if(has('hoodie')) s += `<path d="M44 46a16 16 0 0 1 32 0v8H44z" fill="var(--g-hoodie)" ${O}/>` + top('var(--g-hoodie)', 68) + R(46,82,28,14,5,'rgba(20,30,45,.14)');
+  if(has('hoodie')) s += top('var(--g-hoodie)', 68) + `<path d="M43 49q17-12 34 0q-3 9-17 10q-14-1-17-10z" fill="var(--g-hoodie)" ${O}/><path d="M48.5 52q11.5 6 23 0" fill="none" stroke="rgba(20,30,45,.3)" stroke-width="1.6"/>` +
+    `<path d="M56 57v12M64 57v12" stroke="rgba(255,255,255,.75)" stroke-width="1.6" stroke-linecap="round"/>` + R(46,82,28,14,5,'rgba(20,30,45,.14)');
   // coats: over the tops, the light jacket open at the front to the hip, the winter coat closed to the knee
   if(has('coat_light'))  s += arms('var(--g-coat-light)', 68, 17, 20.5) +
     `<path d="M36 47Q47 42 56 45L55 116Q45 118 33 113Z" fill="var(--g-coat-light)" ${O}/><path d="M84 47Q73 42 64 45L65 116Q75 118 87 113Z" fill="var(--g-coat-light)" ${O}/>` +
     `<path d="M47 45l8 14M73 45l-8 14" stroke="rgba(20,30,45,.3)" stroke-width="1.6" fill="none"/><path d="M40 92h9M71 92h9" stroke="rgba(20,30,45,.28)" stroke-width="2"/>`;
   if(has('coat_winter')) s += arms('var(--g-coat-winter)', 70, 18, 19.5) +
     `<path d="M36 46Q60 37 84 46L91 152Q60 161 29 152Z" fill="var(--g-coat-winter)" ${O}/>` +
-    `<path d="M44 47q16 12 32 0" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="5" stroke-linecap="round"/><path d="M60 52v100" stroke="rgba(255,255,255,.35)" stroke-width="1.6"/>` +
-    `<path d="M41 112h10M69 112h10" stroke="rgba(255,255,255,.3)" stroke-width="2.4"/>`;
+    `<path d="M35 64Q60 70 85 64M34 84Q60 90 86 84M33 104Q60 110 87 104M31.5 124Q60 130 88.5 124M30.5 142Q60 148 89.5 142" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="2"/>` +
+    `<path d="M24 76l13 1M96 76l-13 1M24 96l12 1M96 96l-12 1" stroke="rgba(255,255,255,.2)" stroke-width="2"/>` +
+    `<path d="M41 49q19-11 38 0" fill="none" stroke="var(--g-coat-winter)" stroke-width="7" stroke-linecap="round"/><path d="M41 49q19-11 38 0" fill="none" stroke="rgba(20,30,45,.25)" stroke-width="1.2"/>` +
+    `<path d="M43.5 49.5q16.5 13 33 0" fill="none" stroke="#EFE6D4" stroke-width="5" stroke-linecap="round"/><path d="M43.5 49.5q16.5 13 33 0" fill="none" stroke="#D9CCB2" stroke-width="5" stroke-linecap="round" stroke-dasharray=".1 3.4"/>` +
+    `<path d="M60 52v100" stroke="rgba(255,255,255,.5)" stroke-width="1.6"/><rect x="58" y="54" width="4" height="6" rx="1" fill="rgba(255,255,255,.6)"/>`;
   // wraps
   if(has('blanket')) s += `<path d="M22 66Q60 46 98 66L104 198H16z" fill="var(--g-blanket)" ${O}/><path d="M28 100h64M26 130h68M24 160h72" stroke="rgba(20,30,45,.14)" stroke-width="3"/>`;
   if(has('duvet'))   s += R(12,58,96,148,22,'var(--g-duvet)') + `<path d="M12 110h96M12 160h96M60 58v148" stroke="rgba(20,30,45,.12)" stroke-width="2"/>`;

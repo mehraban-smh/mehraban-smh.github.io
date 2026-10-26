@@ -40,8 +40,8 @@
 .gm-chev{margin-left:auto;width:20px;height:20px;color:var(--muted);flex:none}
 
 /* period switch */
-.gm-seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:14px;background:var(--card2)}
-.gm-seg button{padding:9px 6px;border-radius:11px;font-weight:800;font-size:.88rem;text-align:center;color:var(--muted);transition:background .15s,color .15s,box-shadow .15s}
+.gm-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:14px;background:var(--card2)}
+.gm-seg button{white-space:nowrap;padding:9px 4px;border-radius:11px;font-weight:800;font-size:.88rem;text-align:center;color:var(--muted);transition:background .15s,color .15s,box-shadow .15s}
 .gm-seg button.gm-on{background:var(--card);color:var(--accent);box-shadow:0 1px 3px rgba(24,32,42,.12)}
 .gm-seg button:active{transform:scale(.98)}
 
@@ -264,3 +264,12 @@
 .gm-hrows div>span{display:block;font-size:.84rem;color:var(--muted);line-height:1.35}
 .gm-hsec b{display:block;font-weight:800;font-size:.95rem;margin-bottom:2px}
 .gm-hsec p{margin:0;font-size:.88rem;line-height:1.45}
+
+/* a new week: "A new race started on Monday", with last week's finish and a way to last week's standings */
+.gm-new{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;background:var(--accent-soft);border:1.5px solid var(--accent-line)}
+.gm-new>.ic{width:22px;height:22px;color:var(--accent);flex:none;margin-top:1px}
+.gm-new div{display:flex;flex-direction:column;gap:3px;align-items:flex-start;min-width:0}
+.gm-new b{font-weight:800}
+.gm-new span{font-size:.86rem;color:var(--muted)}
+.gm-mini.gm-fresh .gm-mline b{color:var(--accent)}
+@media (max-width:370px){.gm-seg button{font-size:.8rem}}

@@ -63,7 +63,7 @@
     air: { still: 'Still', slight: 'A little air movement', draughty: 'Clearly draughty', drafty: 'Clearly draughty' },
     sun: { yes: 'Sun on me', no: 'No direct sun', dark: 'It’s dark' },
     heating_on: { on: 'On', off: 'Off', unsure: 'Not sure' },
-    heating_for: { lt30: 'Less than 30 minutes', '30_60': '30 minutes to an hour', '1_2h': '1 to 2 hours', '2_4h': '2 to 4 hours', gt4h: 'More than 4 hours', unsure: 'Not sure' },
+    heating_for: { lt30: 'Less than 30 minutes (no longer offered)', '30_60': '30 minutes to an hour', '1_2h': '1 to 2 hours', '2_4h': '2 to 4 hours', gt4h: 'More than 4 hours', always: 'Always on (the thermostat switches it on and off)', unsure: 'Not sure' },
     wall: { cold: 'Cold', cool: 'Cool', neutral: 'Neither cold nor warm', warm: 'Warm', no_reach: 'Can’t reach one' },
     actions: { win_open: 'Opened a window', win_close: 'Closed a window', door_open: 'Opened a door', door_close: 'Closed a door', heat_up: 'Turned the heating up', heat_down: 'Turned the heating down or off', layer_on: 'Put on a layer', layer_off: 'Took off a layer', blanket: 'Got a blanket', fan: 'Turned a fan on', curtains: 'Drew the curtains or blinds', moved: 'Moved to another room', none: 'None of these' },
     notes: { hot_drink: 'Hot drink', cold_drink: 'Cold drink', ate: 'Ate something', hungry: 'Felt hungry', tired: 'Felt tired', unwell: 'Felt unwell', none: 'None of these' },
@@ -84,7 +84,7 @@
     bedroom_share: { 0: 'Just me', 1: 'With 1 other person', 2: 'With 2 others', 3: 'With 3 or more others' },
     main_heating: { gas_combi: 'Gas combi boiler (no tank)', gas_tank: 'Gas boiler with a hot water tank', oil: 'Oil boiler', lpg: 'LPG boiler', ashp: 'Air source heat pump', gshp: 'Ground source heat pump', storage: 'Electric storage heaters', electric: 'Electric radiators or panel heaters', communal: 'Communal or district heating', solid: 'Solid fuel (coal or wood)', none: 'No central heating', unsure: 'Not sure' },
     other_heaters: { plugin: 'Plug-in electric heater', gas_fire: 'Gas fire', electric_fire: 'Electric fire', stove: 'Wood burner or multi-fuel stove', open_fire: 'Open fire', electric_blanket: 'Electric blanket', none: 'None of these' },
-    heating_pattern: { timer: 'On a timer at set times', when_needed: 'Switched on when needed', most_day: 'On most of the day', rarely: 'Rarely used', not_me: 'Someone else controls it' },
+    heating_pattern: { timer: 'On a timer at set times', when_needed: 'Switched on when needed', most_day: 'On most of the day', always_on: 'Always on (the thermostat switches it on and off)', rarely: 'Rarely used', not_me: 'Someone else controls it' },
     payment: { prepay: 'Prepayment meter', bill: 'Bill or Direct Debit', in_rent: 'Included in the rent', unsure: 'Not sure', prefer_not: 'Prefer not to say' },
     controls: { room_stat: 'Wall thermostat', smart: 'Smart thermostat', programmer: 'Timer or programmer', trvs: 'Radiator dials (TRVs)', none: 'None of these', unsure: 'Not sure' },
     stat_display: { yes: 'Shows the room temperature', no: 'No temperature on screen', no_stat: 'No thermostat' },
@@ -100,6 +100,14 @@
   L.heating_src = Object.assign({}, L.main_heating, L.other_heaters, { other: 'Something else', main: 'The main heating (not named)', unsure: 'Not sure' });
   delete L.heating_src.none;
   const NOT_SURE = '__unsure', NOT_ANSWERED = '__na';
+  // Home questions the app no longer asks (dropped after 1.0): older answers are kept, shown only where someone gave
+  // one, marked as no longer asked, and still exported.
+  const RETIRED = new Set(['payment', 'stat_display', 'bedroom_trv']);
+  const RETIRED_NOTE = ' (no longer asked)';
+  const answeredHome = (p, key) => { const h = homeOf(p) || {}; const v = h[key]; return Object.prototype.hasOwnProperty.call(h, key) && v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && !v.length); };
+  // The thermostat reading is no longer asked either: its chart and table column appear only while some check-in has one.
+  const anyStat = () => (st.rows || []).some(r => r && r.stat_temp_c !== null && r.stat_temp_c !== undefined && r.stat_temp_c !== '');
+  const tableCols = () => anyStat() ? TABLE_COLS : TABLE_COLS.filter(c => c !== 'stat_temp_c');
   const pretty = v => { const s = String(v == null ? '' : v).replace(/[_-]+/g, ' ').trim(); return s ? s[0].toUpperCase() + s.slice(1) : ''; };
   const lab = (group, v) => {
     if (v === null || v === undefined || v === '') return '';
@@ -995,6 +1003,7 @@
   /* (6) thermostat reading against thermal sensation */
   const jit = (s, k) => { let h = 2166136261; s = String(s) + k; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return ((h >>> 0) % 1000) / 1000 - 0.5; };
   function statFig(ctx) {
+    if (!anyStat()) return '';              // the question is no longer asked: no chart without any reading
     const pts = ctx.V.filter(x => x.tsv !== null && num(x.r.stat_temp_c) !== null).map(x => ({ x, t: num(x.r.stat_temp_c) }));
     const homes = new Set(pts.map(p => p.x.code)).size;
     let r = null;
@@ -1006,9 +1015,9 @@
     const bins = new Map(); pts.forEach(p => { const b = Math.round(p.t); if (!bins.has(b)) bins.set(b, []); bins.get(b).push(p.x.tsv); });
     const binRows = [...bins.entries()].sort((a, b) => a[0] - b[0]);
     addChart('stat', w => statSvg(w, pts, binRows, ctx.sel === 'ALL'));
-    const sub = pts.length ? `${plural(pts.length, 'reading')}${ctx.sel === 'ALL' ? ' from ' + plural(homes, 'home') : ''}${r === null ? '' : ' · correlation r = ' + r.toFixed(2)}` : 'No readings yet';
+    const sub = (pts.length ? `${plural(pts.length, 'reading')}${ctx.sel === 'ALL' ? ' from ' + plural(homes, 'home') : ''}${r === null ? '' : ' · correlation r = ' + r.toFixed(2)}` : 'No readings in this view') + ' · no longer asked';
     const body = pts.length ? svgBox('stat', 'Thermostat room temperature against thermal sensation, one dot per check-in. Open the table for the means.') + `<div class="hlegend"><span class="legend-line">Mean sensation per °C (3 or more readings)</span></div><p class="fnote">Asked only in homes whose thermostat shows the room temperature; “I can’t see it” is left out.</p>`
-      : `<p class="tnote">No thermostat readings in this view. The question is asked only when the home profile says the thermostat shows the room temperature (from version 1.0).</p>`;
+      : `<p class="tnote">No thermostat readings in this view. Version 1.0 asked for the reading when the home profile said the thermostat shows the room temperature; the question is no longer asked.</p>`;
     return fig('stat', 'Thermostat reading and how people feel', esc(sub), body,
       { table: tbl(['Thermostat shows', 'Readings', 'Mean sensation'], binRows.map(([b, a]) => [esc((b - 0.5) + '–' + (b + 0.4) + ' °C'), fmtN(a.length), signed(mean(a))])) });
   }
@@ -1174,11 +1183,11 @@
       const h = homeOf(p) || {};
       if (kind === 'p') { const v = p[key]; if (v === null || v === undefined || v === '') add(NOT_ANSWERED); else add(String(v)); return; }
       if (kind === 'age') { const b = ageBand(p.birth_year); add(b || NOT_ANSWERED); return; }
-      if (!Object.prototype.hasOwnProperty.call(h, key)) { if (key === 'flat_position' && h.home_type !== 'flat') return; add(NOT_ANSWERED); return; }
+      if (!Object.prototype.hasOwnProperty.call(h, key)) { if (key === 'flat_position' && h.home_type !== 'flat') return; if (RETIRED.has(key)) return; add(NOT_ANSWERED); return; }
       const v = h[key];
       if (kind === 'multi') { const a = [...new Set(listOf(v))]; if (!a.length) add(NOT_ANSWERED); a.forEach(x => add(String(x))); return; }
       if (kind === 'area' || kind === 'setp') { const n = num(v); if (n === null) { add(NOT_SURE); return; } vals.push(n); add(kind === 'area' ? areaBand(n) : setBand(n)); return; }
-      if (v === null || v === undefined || v === '') { if (key === 'flat_position' && h.home_type !== 'flat') return; add(NOT_ANSWERED); return; }
+      if (v === null || v === undefined || v === '') { if ((key === 'flat_position' && h.home_type !== 'flat') || RETIRED.has(key)) return; add(NOT_ANSWERED); return; }
       add(String(v));   // 0 counts (bedroom_share 0 = "Just me")
     });
     if (vals.length) med = median(vals);
@@ -1199,8 +1208,10 @@
     const tRows = [];
     const groups = HOME_GROUPS.map(([gt, keys]) => {
       const blocks = keys.map(([key, title, kind]) => {
+        if (RETIRED.has(key) && !list.some(p => answeredHome(p, key))) return '';      // no longer asked, and nobody answered it
+        if (RETIRED.has(key)) title += RETIRED_NOTE;
         const t = tallyHome(list, key, kind);
-        const of = key === 'flat_position' ? t.out.reduce((s, x) => s + x.n, 0) : list.length;
+        const of = key === 'flat_position' || RETIRED.has(key) ? t.out.reduce((s, x) => s + x.n, 0) : list.length;
         t.out.forEach(x => tRows.push([esc(gt), esc(title), esc(x.label), fmtN(x.n), pct(x.n, of)]));
         const unit = kind === 'p' || kind === 'age' ? 'person' : 'home';
         const items = t.out.map(x => Object.assign({}, x, { colour: x.k === NOT_ANSWERED || x.k === NOT_SURE ? 'var(--ink-muted)' : null }));
@@ -1260,7 +1271,7 @@
     const actions = (st.local || dbStale()) ? '' : `<div class="pact" data-errhost>${p.approved ? '' : `<button class="btn sm" type="button" data-act="approve" data-code="${esc(code)}">Approve</button>`}<button class="btn ghost sm" type="button" data-act="pinreset" data-code="${esc(code)}">${icon('key')}Reset PIN</button><button class="btn ghost sm" type="button" data-act="devout" data-code="${esc(code)}">${icon('out')}Sign out devices</button><button class="btn ghost sm danger" type="button" data-act="remove" data-code="${esc(code)}">Remove from the study</button>
       <span class="hint">${p.approved ? 'Reset PIN lets them choose a new PIN at their next sign-in (their devices keep working). Sign out devices makes every phone ask for the email and PIN again. Remove deletes the profile, PIN, devices and reminder phones; the check-ins already submitted are kept under the code.' : 'They cannot check in until approved. Remove anyone you do not recognise; nothing they submitted is lost.'}</span></div>`;
     const h = homeOf(p);
-    const home = h && Object.keys(h).length ? `<div class="homedl">${HOME_GROUPS.slice(1).map(([gt, keys]) => { const items = keys.map(([key, title, kind]) => { const v = homeValue(h, key, kind); return v ? `<dt>${esc(title)}</dt><dd>${esc(v)}</dd>` : ''; }).join(''); return items ? `<section><h3>${esc(gt)}</h3><dl>${items}</dl></section>` : ''; }).join('')}</div>${Object.keys(h).filter(k => !HOME_KEYS.includes(k)).length ? `<p class="tnote">Other stored answers: ${esc(Object.keys(h).filter(k => !HOME_KEYS.includes(k)).map(k => k + ' = ' + (Array.isArray(h[k]) ? h[k].join('|') : typeof h[k] === 'object' ? JSON.stringify(h[k]) : h[k])).join(' · '))}</p>` : ''}`
+    const home = h && Object.keys(h).length ? `<div class="homedl">${HOME_GROUPS.slice(1).map(([gt, keys]) => { const items = keys.map(([key, title, kind]) => { const v = homeValue(h, key, kind); return v ? `<dt>${esc(title + (RETIRED.has(key) ? RETIRED_NOTE : ''))}</dt><dd>${esc(v)}</dd>` : ''; }).join(''); return items ? `<section><h3>${esc(gt)}</h3><dl>${items}</dl></section>` : ''; }).join('')}</div>${Object.keys(h).filter(k => !HOME_KEYS.includes(k)).length ? `<p class="tnote">Other stored answers: ${esc(Object.keys(h).filter(k => !HOME_KEYS.includes(k)).map(k => k + ' = ' + (Array.isArray(h[k]) ? h[k].join('|') : typeof h[k] === 'object' ? JSON.stringify(h[k]) : h[k])).join(' · '))}</p>` : ''}`
       : '<p class="tnote">No home profile yet. The app asks for it before their next check-in.</p>';
     const pts = ['week', 'month', 'all'].map(k => { const rows = pointsRows(k); const me = rows && rows.find(r => r.code === code); const t = targetOf(k);
       return `<div><span>${k === 'week' ? 'This week' : k === 'month' ? 'This month' : 'All time'}</span><b>${me ? fmtN(me.points) : '–'}</b><small>${me ? (me.points ? ordinal(me.rank) + ' of ' + rows.length + ' · ' : '') + plural(num(me.goal_days) || 0, 'goal day') + (t ? ' · ' + pct(me.points, t) + ' of target' : '') : rows ? 'not in the table' : 'not loaded'}</small></div>`; }).join('');
@@ -1275,13 +1286,14 @@
   function tableHtml(ctx) {
     const list = ctx.V.length ? ctx.V : ctx.all;
     const shown = list.slice(0, TABLE_CAP);
-    const body = shown.map(x => '<tr>' + TABLE_COLS.map(c => {
+    const cols = tableCols();
+    const body = shown.map(x => '<tr>' + cols.map(c => {
       if (c === 'tsv' && x.tsv !== null) return `<td class="tsv n"><span class="dot" style="background:${tsvColour(x.tsv)}"></span>${esc(cell(x.r.tsv))}<span class="sr"> ${esc(tsvWord(x.tsv))}</span></td>`;
       return `<td${NUM_COLS.has(c) ? ' class="n"' : ''}${x.sane || c !== 'ts' ? '' : ' style="color:var(--bad)"'}>${esc(cell(x.r[c]))}</td>`;
     }).join('') + '</tr>').join('');
     const words = ctx.V.length ? rangeWords() : 'all dates';
     return `<section aria-labelledby="ctTitle"><div class="sect-h"><h2 id="ctTitle">Check-ins, newest first</h2><span class="tnote">${list.length > shown.length ? `Showing the latest ${fmtN(shown.length)} of ${fmtN(list.length)} in ${esc(words)}.` : plural(list.length, 'check-in') + ' in ' + esc(words) + '.'} Stored ids as in the downloads; the downloads have every check-in and every column.</span></div>
-      <div class="tablewrap" tabindex="0" role="region" aria-labelledby="ctTitle"><table><thead><tr>${TABLE_COLS.map(c => `<th scope="col"${NUM_COLS.has(c) ? ' class="n"' : ''}>${c}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div></section>`;
+      <div class="tablewrap" tabindex="0" role="region" aria-labelledby="ctTitle"><table><thead><tr>${cols.map(c => `<th scope="col"${NUM_COLS.has(c) ? ' class="n"' : ''}>${c}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div></section>`;
   }
 
   /* ================================================================ downloads */

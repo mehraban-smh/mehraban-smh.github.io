@@ -1,6 +1,6 @@
 /* HomePulse game layer: points, badges and the Bay Race (window.GAME). Self-contained: it reads SWITCH_CONFIG at
  * call time, returns HTML strings, and emits only these data-act values for app.js to handle:
- *   race-period (data-v="week|month"), race-how, tab (data-to="race|today|history|settings"), badges.
+ *   race-period (data-v="week|last_week|month"), race-how, tab (data-to="race|today|history|settings"), badges.
  * Points follow EXACTLY the rules the database uses (supabase-setup.sql, spec section 5); change both together:
  *   - rows with a ts more than 5 min in the future are ignored (they count once that time has come);
  *   - a check-in that the database has (it carries created_at, when the database received it) counts only if it
@@ -103,7 +103,7 @@ function points(votes, now){
   for(let k = 0; k < 7; k++) if(L.isGoal(ws + k)) weekGoalDays++;
   const t = L.days.get(td);
   return {
-    all_time: all, week: L.sum(ws, ws + 6), month: L.sum(m0, m1), today: t ? L.dayPts(t) : 0,
+    all_time: all, week: L.sum(ws, ws + 6), last_week: L.sum(ws - 7, ws - 1), month: L.sum(m0, m1), today: t ? L.dayPts(t) : 0,
     streak, best, goalDays, perVote,
     counted, checkins: L.rows.length,
     todayCount: t ? t.n : 0, todayAll: t ? t.all : 0, weekGoalDays,
@@ -308,13 +308,15 @@ function model(payload, period){
   const total = Math.max(num(+p.total, 0), rs.length);
   return { rs, me, hidden: !!(me0 && me0.hidden), target, total, from:keyDn(p.from), to:keyDn(p.to), period };
 }
-const when = period => period === 'month' ? 'this month' : 'this week';
+const when = period => period === 'month' ? 'this month' : period === 'last_week' ? 'last week' : 'this week';
+const periodOf = v => v === 'month' || v === 'last_week' ? v : 'week';
 function names(list){
   const n = list.map(r => esc(r.alias));
   return n.length === 1 ? n[0] : n.length === 2 ? n[0] + ' and ' + n[1] : n[0] + ' and ' + (n.length - 1) + ' others';
 }
 /* One-sentence standing: [headline, detail]. */
 function standing(M){
+  if(M.period === 'last_week') return finalStanding(M);
   const w = when(M.period), me = M.me, rs = M.rs;
   if(!rs.length) return ['Nobody has set off yet', 'Your next check-in starts the race ' + w];
   if(!me) return ['Check in to join the race', `${M.total} ${plural(M.total, 'runner')} ${w}`];
@@ -463,11 +465,29 @@ function stripSVG(M){
   }
   return `<svg class="gm-strip" viewBox="0 0 ${STRIP.W} ${STRIP.H}" aria-hidden="true" data-track="strip">${s}</svg>`;
 }
+/* Last week's race is over: the final standings, in the past tense. */
+function finalStanding(M){
+  const me = M.me, rs = M.rs;
+  if(!rs.length || rs.every(r => r.points === 0)) return ['Nobody scored last week', 'This week is a fresh start'];
+  if(!me) return ['Last week\'s final standings', `${M.total} ${plural(M.total, 'runner')}`];
+  if(!me.points) return ['You didn\'t score last week', 'This week is a fresh start'];
+  if(me.rank === 1) return [me.joint ? 'You shared first place last week' : 'You won last week!', `${nf(me.points)} points`];
+  return [`You finished ${me.joint ? 'joint ' : ''}${ord(me.rank)} of ${M.total} last week`, `${nf(me.points)} points`];
+}
+/* "Last week you finished 2nd with 370 points" (from last week's race), or '' when there is nothing to say */
+function lastWeekLine(lw){
+  if(!lw || !lw.me) return '';
+  const M = model(lw, 'last_week'), me = M.me;
+  if(!me || !me.points || !(me.rank > 0)) return '';
+  return `Last week you finished ${me.joint ? 'joint ' : ''}${ord(me.rank)} with ${nf(me.points)} points`;
+}
+/* this week's race has nobody on points yet (a new week has just begun) */
+const emptyWeek = (p, M) => p && periodOf(p.period) === 'week' && (!M.rs.length || M.rs.every(r => r.points === 0));
 
 /* ---------- HTML pieces ---------- */
 function seg(period){
   const b = (v, t) => `<button class="${period === v ? 'gm-on' : ''}" data-act="race-period" data-v="${v}" aria-pressed="${period === v}">${t}</button>`;
-  return `<div class="gm-seg" role="group" aria-label="Race period">${b('week', 'This week')}${b('month', 'This month')}</div>`;
+  return `<div class="gm-seg" role="group" aria-label="Race period">${b('week', 'This week')}${b('last_week', 'Last week')}${b('month', 'This month')}</div>`;
 }
 function rangeLine(M){
   const now = uk(Date.now()).dn;
@@ -476,7 +496,7 @@ function rangeLine(M){
   const span = M.period === 'month' ? MONTHS[a.getUTCMonth()] + ' ' + a.getUTCFullYear()
     : a.getUTCMonth() === b.getUTCMonth() ? `${a.getUTCDate()}–${b.getUTCDate()} ${MONTHS[a.getUTCMonth()]}` : `${shortDate(M.from)} – ${shortDate(M.to)}`;
   const left = M.to - now;
-  const tail = left < 0 ? 'Finished' : left === 0 ? 'Last day!' : left === 1 ? 'Ends tomorrow' : `${left + 1} days to go`;
+  const tail = M.period === 'last_week' || left < 0 ? 'Final standings' : left === 0 ? 'Last day!' : left === 1 ? 'Ends tomorrow' : `${left + 1} days to go`;
   return `${span} · ${tail}`;
 }
 function av(r, cls=''){ return `<span class="gm-av gm-c${r.colour}${r.is_me ? ' gm-me' : ''} ${cls}" aria-hidden="true">${esc(initials(r.alias))}</span>`; }
@@ -504,6 +524,7 @@ function listHTML(M){
 function toGo(M){
   if(!M.me || !M.target) return '';
   const left = M.target - M.me.points;
+  if(M.period === 'last_week') return left <= 0 ? `<span class="gm-made">${icon('flag')}You reached Mumbles lighthouse</span>` : '';
   if(left <= 0) return `<span class="gm-made">${icon('flag')}You've reached Mumbles lighthouse</span>`;
   return `<span>${nf(left)} ${plural(left, 'point')} to the lighthouse</span>`;
 }
@@ -512,38 +533,53 @@ function footHTML(M){
   const who = M && M.me ? `You race as <b>${esc(M.me.alias)}</b>, a Welsh wildlife name picked at random. ` : '';
   return `<p class="gm-foot">${icon('info')}<span>${who}Nobody in the race sees your name or your answers.</span></p>`;
 }
+/* opt: { period: 'week' | 'last_week' | 'month', lastWeek: last week's race payload (for the note on an empty week),
+ *        loading: true while the phone is online (no race yet means it is still on its way, not "offline") } */
 function raceHTML(payload, opt){
   opt = opt || {};
-  const period = (opt.period || (payload && payload.period)) === 'month' ? 'month' : 'week';
+  const period = periodOf(opt.period || (payload && payload.period));
   const head = `<header class="gm-head"><div class="gm-eyebrow">The Bay Race</div><h1 class="gm-h1">Marina to Mumbles</h1>`;
   const btns = `<div class="gm-btns"><button class="gm-btn" data-act="race-how">${icon('info')}How points work</button><button class="gm-btn" data-act="badges">${icon('medal')}My badges</button></div>`;
   if(!payload) return `<div class="gm-race gm-off">${head}<p class="gm-sub">Swansea Marina to Mumbles lighthouse</p></header>${seg(period)}
-    <section class="gm-card gm-map">${baySVG(null)}<div class="gm-veil"><div>${icon('wifi')}<b>The race is offline</b><span>It appears when your phone is online. Your check-ins still count and are sent when you're back.</span></div></div></section>${btns}</div>`;
+    <section class="gm-card gm-map">${baySVG(null)}<div class="gm-veil"><div>${opt.loading ? `${icon('refresh')}<b>Loading the race&hellip;</b><span>It appears here in a moment. Your check-ins count either way.</span>`
+      : `${icon('wifi')}<b>The race is offline</b><span>It appears when your phone is online. Your check-ins still count and are sent when you're back.</span>`}</div></div></section>${btns}</div>`;
   const M = model(payload, period), [h1, h2] = standing(M);
   const me = M.me;
   const sum = `<div class="gm-sum">` +
     (me ? `<div class="gm-mine"><b data-gm-count="${me.points}">${nf(me.points)}</b><span>points ${when(period)}</span></div>` : '') +
     `<div class="gm-say"><b>${h1}</b><span>${h2}</span>${me && M.rs.length > 1 && !M.rs.every(r => r.points === 0) ? toGo(M) : ''}</div></div>`;
-  return `<div class="gm-race" data-period="${period}">${head}<p class="gm-sub">${rangeLine(M)}</p></header>${seg(period)}
+  const lwl = emptyWeek(payload, M) ? lastWeekLine(opt.lastWeek) : '';
+  const fresh = emptyWeek(payload, M) ? `<section class="gm-card gm-new">${icon('flag')}<div><b>A new race started on Monday</b><span>${lwl ? lwl + '.' : 'Everyone starts again at Swansea Marina.'}</span>
+      <button class="gm-link" data-act="race-period" data-v="last_week">See last week&rsquo;s final standings</button></div></section>` : '';
+  return `<div class="gm-race" data-period="${period}">${head}<p class="gm-sub">${rangeLine(M)}</p></header>${seg(period)}${fresh}
     <section class="gm-card gm-map">${baySVG(M)}${sum}</section>
     ${M.rs.length ? `<section class="gm-card gm-board"><div class="gm-cap"><span>Standings</span><small>${M.total} ${plural(M.total, 'runner')} · finish at ${nf(M.target)}</small></div>${listHTML(M)}</section>` : ''}
     ${btns}${footHTML(M)}</div>`;
 }
-function raceMiniHTML(payload){
+function raceMiniHTML(payload, opt){
+  opt = opt || {};
   const head = (sub) => `<div class="gm-mhead"><span class="gm-eyebrow">The Bay Race${sub ? ' · ' + sub : ''}</span><span class="gm-go">Race ${icon('chev')}</span></div>`;
-  if(!payload) return `<button class="gm-mini gm-off" data-act="tab" data-to="race">${head('')}${stripSVG(null)}<span class="gm-mline">${icon('wifi')}The race shows here when you're online</span></button>`;
-  const period = payload.period === 'month' ? 'month' : 'week';
+  if(!payload) return `<button class="gm-mini gm-off" data-act="tab" data-to="race">${head('')}${stripSVG(null)}<span class="gm-mline">${opt.loading ? `${icon('refresh')}Loading the race&hellip;` : `${icon('wifi')}The race shows here when you're online`}</span></button>`;
+  const period = periodOf(payload.period);
   const M = model(payload, period), [h1, h2] = standing(M);
+  if(emptyWeek(payload, M)){
+    const lwl = lastWeekLine(opt.lastWeek);
+    return `<button class="gm-mini gm-fresh" data-act="race-period" data-v="last_week" aria-label="A new race started on Monday.${lwl ? ' ' + lwl + '.' : ''} See last week's final standings.">${head(when(period))}${stripSVG(M)}` +
+      `<span class="gm-mline"><b>A new race started on Monday</b><span>${lwl ? lwl + ' &middot; see the final standings' : 'Your next check-in gets you moving'}</span></span></button>`;
+  }
   const shown = M.rs.filter(r => (r.medal || (r.rank <= 3 && M.rs.length > 1)) && r !== M.me).slice(0, 3);
   const rows = shown.concat(M.me ? [M.me] : []).sort((a, b) => a.rank - b.rank || (a.is_me ? 1 : -1));
   return `<button class="gm-mini" data-act="tab" data-to="race" aria-label="The Bay Race: ${h1}. Open the race.">${head(when(period))}${stripSVG(M)}` +
     (rows.length ? `<ol class="gm-mlist">${rows.map(r => `<li class="${r.is_me ? 'gm-isme' : ''}"><span class="gm-rk">${rankCell(r)}</span>${av(r, 'gm-small')}<span class="gm-who"><b>${esc(r.alias)}</b>${r.is_me ? '<span class="gm-you">You</span>' : ''}</span><span class="gm-pts"><b>${nf(r.points)}</b><small>pts</small></span></li>`).join('')}</ol>` : '') +
     `<span class="gm-mline"><b>${h1}</b><span>${h2}</span></span></button>`;
 }
+/* All-time points (a new week never shows "0 points" to someone who has points), and this week's place in the race
+ * only while this week has points to rank on. */
 function pointsChipHTML(points, me){
-  const n = typeof points === 'number' ? points : points && typeof points === 'object' ? num(points.week, 0) : 0;
-  const rank = n > 0 && me && num(+me.rank, 0) > 0 ? +me.rank : 0;     // nobody ranks on zero points
-  return `<button class="gm-chip" data-act="tab" data-to="race" aria-label="${nf(n)} points this week${rank ? ', ' + ord(rank) + ' in the Bay Race' : ''}">${icon('star')}<b>${nf(n)}</b>${plural(n, 'point')}${rank ? `<i>·</i>${ord(rank)}` : ''}</button>`;
+  const o = points && typeof points === 'object' ? points : null;
+  const n = typeof points === 'number' ? points : o ? num(o.all_time, 0) : 0, week = o ? num(o.week, 0) : n;
+  const rank = week > 0 && me && num(+me.rank, 0) > 0 ? +me.rank : 0;     // nobody ranks on zero points
+  return `<button class="gm-chip" data-act="tab" data-to="race" aria-label="${nf(n)} ${plural(n, 'point')} in all${rank ? ', ' + ord(rank) + ' in the Bay Race this week' : ''}">${icon('star')}<b>${nf(n)}</b>${plural(n, 'point')}${rank ? `<i>·</i>${ord(rank)} this week` : ''}</button>`;
 }
 function badgesHTML(list){
   list = Array.isArray(list) ? list : [];

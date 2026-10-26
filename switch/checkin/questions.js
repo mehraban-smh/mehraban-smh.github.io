@@ -8,8 +8,8 @@
 const ACTS = [
   {id:'sleep',    n:'Sleeping',             met:0.7, ic:'sleep'},
   {id:'lying',    n:'Lying down',           met:0.8, ic:'lying'},
-  {id:'sit',      n:'Sitting relaxed',      met:1.0, ic:'sofa'},
-  {id:'desk',     n:'Desk work',            met:1.1, ic:'laptop'},
+  {id:'sit',      n:'Sitting relaxed',      met:1.0, ic:'actSit'},
+  {id:'desk',     n:'Desk work',            met:1.1, ic:'actDesk'},
   {id:'stand',    n:'Standing',             met:1.2, ic:'stand'},
   {id:'house',    n:'Cooking / housework',  met:1.8, ic:'pan'},
   {id:'walk',     n:'Walking about',        met:1.7, ic:'walk'},
@@ -41,17 +41,25 @@ const HEAT = [
   {id:'off',    n:'No, it&rsquo;s off',  k:'Heating off', ic:'flameOff'},
   {id:'unsure', n:'Not sure',            k:'Not sure if the heating is on', ic:'help'}
 ];
+/* "Always on" (a thermostat switching it) comes first; "less than 30 minutes" (lt30) is no longer offered, its words
+ * stay in HEAT_FOR_OLD for older check-ins. art: the picture key (icons.js), fb the icon until it is drawn. */
 const HEAT_FOR = [
-  {id:'lt30', n:'Less than 30 minutes'}, {id:'30_60', n:'30 minutes to an hour'}, {id:'1_2h', n:'1 to 2 hours'},
-  {id:'2_4h', n:'2 to 4 hours'}, {id:'gt4h', n:'More than 4 hours'}, {id:'unsure', n:'Not sure'}
+  {id:'always', n:'It&rsquo;s always on', h:'The thermostat switches it on and off', k:'Always on (thermostat)', art:'heat_for:always', fb:'stat'},
+  {id:'30_60',  n:'30 minutes to an hour', art:'heat_for:30_60', fb:'clock'},
+  {id:'1_2h',   n:'1 to 2 hours',          art:'heat_for:1_2h',  fb:'clock'},
+  {id:'2_4h',   n:'2 to 4 hours',          art:'heat_for:2_4h',  fb:'clock'},
+  {id:'gt4h',   n:'More than 4 hours',     art:'heat_for:gt4h',  fb:'clock'},
+  {id:'unsure', n:'Not sure',              art:'heat_for:unsure', fb:'help'}
 ];
+const HEAT_FOR_OLD = { lt30:'Less than 30 minutes' };
+const heatForWord = id => { const o = HEAT_FOR.find(x => x.id === id); return o ? (o.k || o.n) : HEAT_FOR_OLD[id] || ''; };
 /* the nearest outside wall, felt with the back of the hand */
 const WALL = [
-  {id:'cold',     n:'Cold',                  ic:'snow',       cls:'cold'},
-  {id:'cool',     n:'Cool',                  ic:'thermoLow',  cls:'cool'},
-  {id:'neutral',  n:'Neither cold nor warm', ic:'thermo',     cls:'mild'},
-  {id:'warm',     n:'Warm',                  ic:'thermoHigh', cls:'hot'},
-  {id:'no_reach', n:'I can&rsquo;t reach one', ic:'x'}
+  {id:'no_reach', n:'I can&rsquo;t reach one', ic:'wallFar'},
+  {id:'cold',     n:'Cold',                  ic:'wallCold',    cls:'cold'},
+  {id:'cool',     n:'Cool',                  ic:'wallCool',    cls:'cool'},
+  {id:'neutral',  n:'Neither cold nor warm', ic:'wallNeutral', cls:'mild'},
+  {id:'warm',     n:'Warm',                  ic:'wallWarm',    cls:'hot'}
 ];
 /* What the participant DID in the last 30 minutes (not how things are now). Shown as boxes (window, door,
  * heating, clothes and blankets) and rows on their own; within a box the two sides of a pair exclude each
@@ -77,24 +85,23 @@ const PAIRED = { win_open:'win_close', win_close:'win_open', door_open:'door_clo
 const NOTES = [
   {id:'hot_drink',n:'Hot drink',q:'I had a hot drink',ic:'mug'}, {id:'cold_drink',n:'Cold drink',q:'I had a cold drink',ic:'glass'},
   {id:'ate',n:'Ate something',q:'I ate something',ic:'fork'}, {id:'hungry',n:'Felt hungry',q:'I felt hungry',ic:'apple'},
-  {id:'tired',n:'Felt tired',q:'I felt tired',ic:'zzz'}, {id:'unwell',n:'Felt unwell',q:'I felt unwell',ic:'thermo'}
+  {id:'tired',n:'Felt tired',q:'I felt tired',ic:'zzz'}, {id:'unwell',n:'Felt unwell',q:'I felt unwell',ic:'unwell'}
 ];
 const NOTE_BOXES = [{n:'Drinks', ic:'mug', ids:['hot_drink','cold_drink']}, {n:'Food', ic:'fork', ids:['ate','hungry']}];
 const NOTE_SOLO = ['tired','unwell'];
 
-/* Every check-in asks these, in this order, all unanswered at the start. Three are asked only sometimes:
- * which heating (heat_src) and for how long (heat_for) only when the heating is on, and which heating only
- * when the home has more than one system (with exactly one it is filled in by itself); the thermostat
- * reading (stat) only when the home's thermostat shows the room temperature. */
-const FLOW_ALL = ['tsv','tp','ta','clo','act','room','air','sun','heat','heat_src','heat_for','stat','wall','actions','notes'];
+/* Every check-in asks these, in this order, all unanswered at the start. Two are asked only sometimes: which
+ * heating (heat_src) and for how long (heat_for) only when the heating is on, and which heating only when the
+ * home has more than one system (with exactly one it is filled in by itself). The thermostat reading of 1.0 is
+ * no longer asked (stat_temp_c is sent as null; older check-ins still show theirs). */
+const FLOW_ALL = ['tsv','tp','ta','clo','act','room','air','sun','heat','heat_src','heat_for','wall','actions','notes'];
 function flowFor(a, home){
   return FLOW_ALL.filter(q => q==='heat_src' ? a.heat==='on' && heatChoices(home).length > 1
     : q==='heat_for' ? a.heat==='on'
-    : q==='stat' ? !!home && home.stat_display==='yes'
     : true);
 }
 const QNAME = { tsv:'how you feel', tp:'your preference', ta:'acceptability', clo:'clothing', act:'activity', room:'room', air:'air movement', sun:'sunlight',
-  heat:'the heating', heat_src:'which heating', heat_for:'how long it has been on', stat:'the thermostat reading', wall:'the wall', actions:'what you did', notes:'what you had or felt' };
+  heat:'the heating', heat_src:'which heating', heat_for:'how long it has been on', wall:'the wall', actions:'what you did', notes:'what you had or felt' };
 const byId = (list,id) => list.find(x=>x.id===id);
 const tsvWord = v => (TSV.find(t=>t.v===v)||{}).w || '';
 const tsvColour = v => `var(--c${v<0?'-'+(-v):v})`;
@@ -114,7 +121,9 @@ function heatChoices(home){
 const HEAT_OTHER = {id:'other', n:'Something else', art:'unsure'};
 const heatSrcName = id => (byId(MAIN_HEATING, id) || byId(OTHER_HEATERS, id) || (id === 'other' ? HEAT_OTHER : {}));
 const heatSrcWord = ids => (ids||[]).map(id => { const o = heatSrcName(id); return o.k || o.n; }).filter(Boolean).join(', ');
-const STAT_MIN = 5, STAT_MAX = 35, STAT_STEP = 0.5;
+/* a picture that may not be drawn yet: the art (or icon) key when icons.js has it, else the fallback icon */
+const artx = (key, fb, cls='') => (typeof ART === 'object' && ART[key]) ? art(key, cls) : ic(fb, cls);
+const icx = (key, fb, cls='') => (typeof P === 'object' && P[key]) ? ic(key, cls) : ic(fb, cls);
 const statWord = v => typeof v === 'number' ? v.toFixed(1) + '&nbsp;&deg;C' : '';
 
 /* ---------- building blocks ---------- */
@@ -177,18 +186,7 @@ const Q = {
       nextBtn(ids.length > 0);
   },
   heat_for: () => qhead('Heating', 'How long has it been on?', 'Since it last came on.') +
-    `<div class="tiles c2 fill" role="radiogroup" aria-label="How long has the heating been on">${HEAT_FOR.map(o => `<button class="tile txt ${S.a.heat_for===o.id?'on':''}" role="radio" aria-checked="${S.a.heat_for===o.id}" data-act="pick" data-q="heat_for" data-v="${o.id}">${ic(o.id==='unsure' ? 'help' : 'clock')}<b>${o.n}</b></button>`).join('')}</div>`,
-  /* the thermostat's own reading: a big number with minus and plus, half a degree a step */
-  stat: () => {
-    const v = statShown();
-    return qhead('Thermostat', 'What does your thermostat show?', 'The room temperature on its screen, not the setting. If it shows two numbers, the room temperature is usually the bigger one.') +
-      `<div class="statq fill"><div class="stat-dev">${art('stat_display:yes','stat-art')}</div>
-        <div class="stat-num" role="group" aria-label="Thermostat reading"><button class="pm" data-act="stat" data-d="-1" aria-label="Half a degree lower" ${v <= STAT_MIN ? 'aria-disabled="true"' : ''}>${ic('minus')}</button>
-          <output aria-live="polite"><b>${v.toFixed(1)}</b><span>&deg;C</span></output>
-          <button class="pm" data-act="stat" data-d="1" aria-label="Half a degree higher" ${v >= STAT_MAX ? 'aria-disabled="true"' : ''}>${ic('plus')}</button></div>
-        <button class="chip wide ${S.a.stat === 'none' ? 'on' : ''}" data-act="stat-none">${ic('eyeOff')}I can&rsquo;t see it right now</button></div>` +
-      `<div class="actions"><button class="btn primary" data-act="stat-ok">That&rsquo;s the reading ${ic('chev')}</button></div>`;
-  },
+    `<div class="tiles c2 fill" role="radiogroup" aria-label="How long has the heating been on">${HEAT_FOR.map(o => `<button class="tile txt ${o.h ? 'wide2' : ''} ${S.a.heat_for===o.id?'on':''}" role="radio" aria-checked="${S.a.heat_for===o.id}" data-act="pick" data-q="heat_for" data-v="${o.id}">${artx(o.art, o.fb)}<span class="tt"><b>${o.n}</b>${o.h ? `<small>${o.h}</small>` : ''}</span></button>`).join('')}</div>`,
   wall: () => qhead('Outside wall', 'Touch the nearest outside wall with the back of your hand. How does it feel?', 'An outside wall has the outdoors on the other side.') +
     `<div class="rows fill" role="radiogroup" aria-label="How the outside wall feels">${WALL.map(o=>tallRow('wall',o,S.a.wall===o.id)).join('')}</div>`,
   actions: () => {
@@ -255,19 +253,16 @@ const OTHER_HEATERS = [
   {id:'none',n:'None of these'}
 ];
 const HEAT_PATTERN = [
+  {id:'always_on',   n:'Always on: the thermostat turns it on and off', h:'Set to a temperature and I rarely touch it', ic:'stat'},
   {id:'timer',       n:'On a timer at set times', ic:'clock'},
   {id:'when_needed', n:'I switch it on when I need it', ic:'power'},
   {id:'most_day',    n:'On most of the day', ic:'sun'},
   {id:'rarely',      n:'I rarely use it', ic:'moon'},
   {id:'not_me',      n:'Someone else controls it', ic:'users'}
 ];
-const PAYMENT = [
-  {id:'prepay',     n:'Prepayment meter', h:'I top up', ic:'card'},
-  {id:'bill',       n:'Bill or Direct Debit', ic:'doc'},
-  {id:'in_rent',    n:'Included in my rent', ic:'home'},
-  {id:'unsure',     n:'Not sure', ic:'help'},
-  {id:'prefer_not', n:'Prefer not to say', ic:'lock'}
-];
+/* 1.0 also asked how energy is paid for (payment), whether the thermostat shows the room temperature
+ * (stat_display) and whether the bedroom radiator has a dial (bedroom_trv). They are no longer asked; answers
+ * already stored stay in the profile untouched (the app keeps every key it does not know when it saves). */
 const CONTROLS = [
   {id:'room_stat',  n:'A thermostat on the wall'},
   {id:'smart',      n:'Smart thermostat', h:'Hive, Nest, tado and similar'},
@@ -276,18 +271,16 @@ const CONTROLS = [
   {id:'none',       n:'None of these'},
   {id:'unsure',     n:'Not sure'}
 ];
-const STAT_DISPLAY = [{id:'yes',n:'Yes'},{id:'no',n:'No'},{id:'no_stat',n:'I don&rsquo;t have a thermostat'}];
-const BEDROOM_TRV = [{id:'yes',n:'Yes'},{id:'no',n:'No'},{id:'no_radiator',n:'No radiator in my bedroom'},{id:'unsure',n:'Not sure'}];
 const WALL_INS = [
-  {id:'cavity',   n:'Filled cavity walls'},
-  {id:'external', n:'Insulation on the outside', h:'Render or cladding'},
-  {id:'internal', n:'Insulation on the inside'},
-  {id:'none',     n:'No insulation'},
-  {id:'unsure',   n:'Not sure'}
+  {id:'cavity',   n:'Filled cavity walls',      h:'Two layers of brick, the gap filled'},
+  {id:'external', n:'Insulation on the outside', h:'Render or cladding over the walls'},
+  {id:'internal', n:'Insulation on the inside', h:'Insulated boards inside the rooms'},
+  {id:'none',     n:'No insulation',            h:'Solid walls, or an empty cavity'},
+  {id:'unsure',   n:'Not sure',                 h:'A guess is fine'}
 ];
-const LOFT = [{id:'yes',n:'Yes'},{id:'no',n:'No'},{id:'no_loft',n:'No loft',h:'e.g. a flat below another home'},{id:'unsure',n:'Not sure'}];
-const GLAZING = [{id:'single',n:'Single'},{id:'double',n:'Double'},{id:'triple',n:'Triple'},{id:'mixed',n:'A mix'},{id:'unsure',n:'Not sure'}];
-const WINDOWS_OPEN = [{id:'yes',n:'Yes, all of them'},{id:'some',n:'Some of them'},{id:'no',n:'No'}];
+const LOFT = [{id:'yes',n:'Yes',h:'A thick soft layer up there'},{id:'no',n:'No',h:'Bare boards or a thin layer'},{id:'no_loft',n:'No loft',h:'e.g. a flat below another home'},{id:'unsure',n:'Not sure',h:'A guess is fine'}];
+const GLAZING = [{id:'single',n:'Single',h:'One sheet of glass'},{id:'double',n:'Double',h:'Two sheets, a gap between'},{id:'triple',n:'Triple',h:'Three sheets'},{id:'mixed',n:'A mix',h:'Some of each'},{id:'unsure',n:'Not sure',h:'A guess is fine'}];
+const WINDOWS_OPEN = [{id:'yes',n:'Yes, all of them',h:'Every window opens'},{id:'some',n:'Some of them',h:'Some are stuck or fixed'},{id:'no',n:'No',h:'Sealed or stuck shut'}];
 const DAMP = [
   {id:'bedroom',n:'Bedroom'},{id:'living',n:'Living room'},{id:'kitchen',n:'Kitchen'},{id:'bathroom',n:'Bathroom'},
   {id:'elsewhere',n:'Elsewhere'},{id:'none',n:'No'},{id:'unsure',n:'Not sure'}
