@@ -338,11 +338,10 @@ Lists are joined with `|`, and stored ids are kept (the Labels sheet translates 
   Numbers are real numbers. SheetJS 0.18.5 is loaded from cdnjs with an integrity hash; if it cannot load, use
   Download CSV.
 
-## Later: room sensor data
+## Room sensor data
 
-Each home has one or two Tapo sensors, in the living room and (where there are two) the bedroom. Export from the
-Tapo app at 1-minute resolution, resample to 5 minutes, and load into `sensor_readings` (participant, room, ts,
-temperature_c, humidity_pct), one row per participant, room and timestamp; `room` is `living` or `bedroom` (the
-check-ins' room ids, `living` when left out), so a home's two sensors can log the same moment. The dashboard can
-then join readings to check-ins by participant, room and time. Live readings from a smart thermostat or a Zigbee hub cannot reach a phone web app directly (no browser on
+Each home has one or two Tapo sensors, in the living room and (where there are two) the bedroom. Their readings are
+not sent to the database: the research team exports them from the Tapo app and aligns them with the check-ins
+afterwards, by participant, room (each check-in records which room the participant is in: `room`, `living` or
+`bedroom` for the sensor rooms) and time. The `sensor_readings` table in `supabase-setup.sql` is unused. Live readings from a smart thermostat or a Zigbee hub cannot reach a phone web app directly (no browser on
 iPhone can talk to those devices); that would need the hub's own cloud service and a server-side import.

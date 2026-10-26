@@ -1291,42 +1291,16 @@ revoke all on sequence public.participant_seq from anon, authenticated;
 -- ===================================================================================================
 -- Room sensors (next phase)
 -- ===================================================================================================
--- 5-minute room readings from the Tapo T315 exports. A home has one or two sensors, in the living room and the
--- bedroom, so a reading is one row per participant, room and timestamp: two sensors may log the same moment.
--- room uses the check-in's room ids (comfort_votes.room): living | bedroom.
+-- 5-minute room readings from the Tapo T315 exports, one row per participant per timestamp.
 create table if not exists public.sensor_readings (
   participant    text not null,
-  room           text not null default 'living',
   ts             timestamptz not null,
   temperature_c  numeric(4,1),
   humidity_pct   numeric(4,1),
+  room           text,
   source         text default 'tapo_t315',
-  primary key (participant, room, ts)
+  primary key (participant, ts)
 );
--- Projects set up before (key participant + ts, room optional): readings without a room were the living room,
--- the room becomes required, and the key gains the room. Only the old two-column key is replaced; a second
--- run finds the new one and changes nothing.
-update public.sensor_readings set room = 'living' where room is null;
-alter table public.sensor_readings alter column room set default 'living';
-alter table public.sensor_readings alter column room set not null;
-do $$
-declare v_name text; v_cols text[];
-begin
-  select c.conname, array_agg(a.attname::text order by k.ord) into v_name, v_cols
-    from pg_constraint c
-    cross join lateral unnest(c.conkey) with ordinality as k(attnum, ord)
-    join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.attnum
-   where c.conrelid = 'public.sensor_readings'::regclass and c.contype = 'p'
-   group by c.conname;
-  if v_name is null then
-    alter table public.sensor_readings add constraint sensor_readings_pkey primary key (participant, room, ts);
-  elsif v_cols = array['participant', 'ts'] then
-    execute format('alter table public.sensor_readings drop constraint %I', v_name);
-    alter table public.sensor_readings add constraint sensor_readings_pkey primary key (participant, room, ts);
-  elsif v_cols <> array['participant', 'room', 'ts'] then
-    raise notice 'sensor_readings has a primary key on (%), left as it is', array_to_string(v_cols, ', ');
-  end if;
-end $$;
 alter table public.sensor_readings enable row level security;
 drop policy if exists "researchers can read readings" on public.sensor_readings;
 create policy "researchers can read readings"
