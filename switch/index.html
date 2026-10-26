@@ -103,7 +103,9 @@ var APP_NAME = 'HomePulse';
   The app itself is English only for now: the Welsh text says so and quotes the app's button labels in English.
   Facts on this page must agree with the app (switch/checkin) and config.js: 45-minute gap, daily goal 4,
   points 10 / +20 / +50, 15 counted check-ins a day, default reminder hours weekdays 17:00-22:30 and weekends
-  09:00-22:30. Study dates are not given anywhere on purpose (not set yet).
+  09:00-22:30. The study runs 15 December 2026 to 15 January 2027 (hero facts, How it works, At a glance,
+  Who can take part, FAQ #faq-length). Data: held by Swansea University, stored securely in the UK (a UK cloud
+  database run for the study, not the University's own servers).
 -->
 <style>
   :root{
@@ -511,8 +513,9 @@ var APP_NAME = 'HomePulse';
         <li><svg class="ic"><use href="#i-star"/></svg><span lang="en">Took part with the earlier check-in app? <a href="#faq-before">Here&rsquo;s what changes</a></span><span lang="cy">Wedi cymryd rhan gyda’r ap blaenorol? <a href="#faq-before">Dyma beth sy’n newid</a></span></li>
       </ul>
       <ul class="facts">
-        <li><span class="tile-ic"><svg class="ic"><use href="#i-clock"/></svg></span><span lang="en"><b>A minute or two</b><small>per check-in</small></span><span lang="cy"><b>Munud neu ddwy</b><small>i bob cofnod</small></span></li>
+        <li><span class="tile-ic"><svg class="ic"><use href="#i-clock"/></svg></span><span lang="en"><b>Under a minute</b><small>per check-in</small></span><span lang="cy"><b>Llai na munud</b><small>i bob cofnod</small></span></li>
         <li><span class="tile-ic"><svg class="ic"><use href="#i-target"/></svg></span><span lang="en"><b>4 a day</b><small>the daily goal</small></span><span lang="cy"><b>4 y dydd</b><small>y nod dyddiol</small></span></li>
+        <li><span class="tile-ic"><svg class="ic"><use href="#i-cal"/></svg></span><span lang="en"><b>One month</b><small>15 Dec 2026 &ndash; 15 Jan 2027</small></span><span lang="cy"><b>Un mis</b><small>15 Rhag 2026 &ndash; 15 Ion 2027</small></span></li>
         <li><span class="tile-ic"><svg class="ic"><use href="#i-phone"/></svg></span><span lang="en"><b>Your phone</b><small>nothing to download</small></span><span lang="cy"><b>Eich ffôn</b><small>dim byd i’w lawrlwytho</small></span></li>
       </ul>
     </div>
@@ -595,21 +598,22 @@ var APP_NAME = 'HomePulse';
     <div class="sec-head">
       <p class="eyebrow"><span lang="en">How it works</span><span lang="cy">Sut mae’n gweithio</span></p>
       <h2 id="how-title"><span lang="en">Five steps, a few minutes a day</span><span lang="cy">Pum cam, ychydig funudau’r dydd</span></h2>
-      <p class="sub"><span lang="en">There is no diary to keep. You answer a few quick questions on your phone while you are at home, and a small sensor records the room.</span><span lang="cy">Does dim dyddiadur i’w gadw. Rydych chi’n ateb ychydig o gwestiynau cyflym ar eich ffôn tra byddwch chi gartref, ac mae synhwyrydd bach yn cofnodi amodau’r ystafell.</span></p>
+      <p class="sub"><span lang="en">There is no diary to keep. You answer a few quick questions on your phone while you are at home, and a small sensor records the room. The study runs for one month, from 15 December 2026 to 15 January 2027.</span><span lang="cy">Does dim dyddiadur i’w gadw. Rydych chi’n ateb ychydig o gwestiynau cyflym ar eich ffôn tra byddwch chi gartref, ac mae synhwyrydd bach yn cofnodi amodau’r ystafell. Mae’r astudiaeth yn para mis, o 15 Rhagfyr 2026 i 15 Ionawr 2027.</span></p>
     </div>
     <div class="how">
       <ol class="steps">
         <li><div lang="en"><span class="label">Once &middot; a few minutes</span><h3>Join with a short home profile</h3><p>Tell us a little about yourself and your home: the kind of home, roughly how old it is, who lives there, how it is heated and controlled, its walls and windows, and which way your bedroom faces. Every question needs an answer, and most offer &ldquo;Not sure&rdquo;. You also choose a 4-digit PIN, so you can sign in on another phone later.</p></div><div lang="cy"><span class="label">Unwaith &middot; ychydig funudau</span><h3>Ymuno â phroffil byr o’ch cartref</h3><p>Dywedwch ychydig wrthon ni amdanoch chi a’ch cartref: pa fath o gartref yw e, tua pa mor hen yw e, pwy sy’n byw yno, sut mae’n cael ei wresogi a’i reoli, ei waliau a’i ffenestri, ac i ba gyfeiriad mae’ch ystafell wely’n wynebu. Mae angen ateb pob cwestiwn, ac mae modd ateb <span lang="en" data-keep>&ldquo;Not sure&rdquo;</span> (ddim yn siŵr) i’r rhan fwyaf ohonyn nhw. Byddwch chi hefyd yn dewis rhif PIN 4 digid, er mwyn i chi allu mewngofnodi ar ffôn arall yn nes ymlaen.</p></div></li>
         <li><div lang="en"><span class="label">Usually within a day</span><h3>The team approves your sign-up</h3><p>The research team checks each sign-up and approves it, usually within a day. The app shows you when you can start.</p></div><div lang="cy"><span class="label">Fel arfer o fewn diwrnod</span><h3>Mae’r tîm yn cymeradwyo’ch cofrestriad</h3><p>Mae’r tîm ymchwil yn gwirio pob cofrestriad ac yn ei gymeradwyo, fel arfer o fewn diwrnod. Bydd yr ap yn dangos i chi pryd gallwch chi ddechrau.</p></div></li>
         <li><div lang="en"><span class="label">For the whole study</span><h3>A small sensor in your home</h3><p>A temperature and humidity sensor goes in your main living space, where it takes a reading every few minutes. It has an e-ink display, needs no attention, and is collected at the end of the study.</p></div><div lang="cy"><span class="label">Drwy gydol yr astudiaeth</span><h3>Synhwyrydd bach yn eich cartref</h3><p>Bydd synhwyrydd tymheredd a lleithder yn cael ei osod yn eich prif ystafell fyw, lle bydd yn cymryd darlleniad bob ychydig funudau. Mae ganddo sgrin e-inc, does dim angen gwneud dim ag e, a chaiff ei gasglu ar ddiwedd yr astudiaeth.</p></div></li>
-        <li><div lang="en"><span class="label">A few times a day</span><h3>Short check-ins while you are at home</h3><p>Your phone reminds you during the hours you choose, at most about once an hour. Each check-in is 12 short questions (up to 14 when your heating is on), mostly a single tap, about how you feel, what you are wearing and doing, and your room. The daily goal is 4 check-ins.</p><p class="need">On a phone or tablet, notifications must be turned on before you can check in: the study needs answers from different times of the day, and the reminders make that possible. On a computer you can check in without them.</p></div><div lang="cy"><span class="label">Ychydig o weithiau’r dydd</span><h3>Cofnodion byr tra byddwch chi gartref</h3><p>Bydd eich ffôn yn eich atgoffa yn ystod yr oriau rydych chi’n eu dewis, tua unwaith yr awr ar y mwyaf. Mae pob cofnod yn cynnwys 12 cwestiwn byr (hyd at 14 pan fydd eich gwres ymlaen), a’r rhan fwyaf yn un tap yn unig, am sut rydych chi’n teimlo, beth rydych chi’n ei wisgo a’i wneud, a’ch ystafell. Y nod dyddiol yw 4 cofnod.</p><p class="need">Ar ffôn neu lechen, mae’n rhaid troi hysbysiadau ymlaen cyn y gallwch chi gofnodi: mae angen atebion o wahanol adegau o’r dydd ar yr astudiaeth, a’r nodiadau atgoffa sy’n gwneud hynny’n bosibl. Ar gyfrifiadur, gallwch chi gofnodi hebddyn nhw.</p></div></li>
+        <li><div lang="en"><span class="label">A few times a day</span><h3>Short check-ins while you are at home</h3><p>Your phone reminds you during the hours you choose, at most about once an hour. Each check-in takes under a minute: 12 short questions (up to 14 when your heating is on), mostly a single tap, about how you feel, what you are wearing and doing, and your room. The daily goal is 4 check-ins.</p><p class="need">On a phone or tablet, notifications must be turned on before you can check in: the study needs answers from different times of the day, and the reminders make that possible. On a computer you can check in without them.</p></div><div lang="cy"><span class="label">Ychydig o weithiau’r dydd</span><h3>Cofnodion byr tra byddwch chi gartref</h3><p>Bydd eich ffôn yn eich atgoffa yn ystod yr oriau rydych chi’n eu dewis, tua unwaith yr awr ar y mwyaf. Mae pob cofnod yn cymryd llai na munud: 12 cwestiwn byr (hyd at 14 pan fydd eich gwres ymlaen), a’r rhan fwyaf yn un tap yn unig, am sut rydych chi’n teimlo, beth rydych chi’n ei wisgo a’i wneud, a’ch ystafell. Y nod dyddiol yw 4 cofnod.</p><p class="need">Ar ffôn neu lechen, mae’n rhaid troi hysbysiadau ymlaen cyn y gallwch chi gofnodi: mae angen atebion o wahanol adegau o’r dydd ar yr astudiaeth, a’r nodiadau atgoffa sy’n gwneud hynny’n bosibl. Ar gyfrifiadur, gallwch chi gofnodi hebddyn nhw.</p></div></li>
         <li><div lang="en"><span class="label">Every week</span><h3>Points, badges and the Bay Race</h3><p>Every check-in earns points, and reaching your daily goal earns a bonus. Under an anonymous Welsh-wildlife name, you race the other participants along Swansea Bay, from the Marina to Mumbles lighthouse.</p></div><div lang="cy"><span class="label">Bob wythnos</span><h3>Pwyntiau, bathodynnau a Ras y Bae</h3><p>Mae pob cofnod yn ennill pwyntiau, ac mae cyrraedd eich nod dyddiol yn ennill pwyntiau ychwanegol. Dan ffugenw sy’n dod o fywyd gwyllt Cymru, byddwch chi’n rasio yn erbyn y cyfranogwyr eraill ar hyd Bae Abertawe, o’r Marina i oleudy’r Mwmbwls.</p></div></li>
       </ol>
       <aside class="card glance" aria-labelledby="glance-title">
         <h3 id="glance-title"><span lang="en">At a glance</span><span lang="cy">Yn gryno</span></h3>
         <dl>
+          <div><dt><span lang="en">When</span><span lang="cy">Pryd</span></dt><dd><span lang="en">One month, from 15 December 2026 to 15 January 2027</span><span lang="cy">Un mis, o 15 Rhagfyr 2026 i 15 Ionawr 2027</span></dd></div>
           <div><dt><span lang="en">Joining</span><span lang="cy">Ymuno</span></dt><dd><span lang="en">A few minutes, once</span><span lang="cy">Ychydig funudau, unwaith</span></dd></div>
-          <div><dt><span lang="en">Each check-in</span><span lang="cy">Pob cofnod</span></dt><dd><span lang="en">A minute or two, only while you are at home</span><span lang="cy">Munud neu ddwy, dim ond pan fyddwch chi gartref</span></dd></div>
+          <div><dt><span lang="en">Each check-in</span><span lang="cy">Pob cofnod</span></dt><dd><span lang="en">Under a minute, only while you are at home</span><span lang="cy">Llai na munud, dim ond pan fyddwch chi gartref</span></dd></div>
           <div><dt><span lang="en">Reminders</span><span lang="cy">Nodiadau atgoffa</span></dt><dd><span lang="en">Needed on phones and tablets. Only in the hours you choose, never within 45 minutes of your last check-in</span><span lang="cy">Yn angenrheidiol ar ffonau a llechi. Dim ond yn yr oriau rydych chi’n eu dewis, byth o fewn 45 munud i’ch cofnod diwethaf</span></dd></div>
           <div><dt><span lang="en">At home</span><span lang="cy">Gartref</span></dt><dd><span lang="en">One small sensor in your living room</span><span lang="cy">Un synhwyrydd bach yn eich ystafell fyw</span></dd></div>
           <div><dt><span lang="en">Taking a break</span><span lang="cy">Cymryd seibiant</span></dt><dd><span lang="en">Pause from the app any time</span><span lang="cy">Oedi o’r ap unrhyw bryd</span></dd></div>
@@ -837,7 +841,7 @@ var APP_NAME = 'HomePulse';
     <div class="sec-head">
       <p class="eyebrow"><span lang="en">Who can take part</span><span lang="cy">Pwy all gymryd rhan</span></p>
       <h2 id="who-title"><span lang="en">Adults in Wales with a smartphone</span><span lang="cy">Oedolion yng Nghymru sydd â ffôn clyfar</span></h2>
-      <p class="sub"><span lang="en">You do not need a new home, a smart thermostat or any technical know-how.</span><span lang="cy">Does dim angen cartref newydd, thermostat clyfar nac unrhyw wybodaeth dechnegol arnoch chi.</span></p>
+      <p class="sub"><span lang="en">You do not need a new home, a smart thermostat or any technical know-how. The study runs from 15 December 2026 to 15 January 2027.</span><span lang="cy">Does dim angen cartref newydd, thermostat clyfar nac unrhyw wybodaeth dechnegol arnoch chi. Mae’r astudiaeth yn rhedeg o 15 Rhagfyr 2026 i 15 Ionawr 2027.</span></p>
     </div>
     <div class="who-grid">
       <div class="card">
@@ -920,7 +924,7 @@ var APP_NAME = 'HomePulse';
     <div class="sec-head">
       <p class="eyebrow"><span lang="en">Your data</span><span lang="cy">Eich data</span></p>
       <h2 id="data-title"><span lang="en">What we collect, and what we don&rsquo;t</span><span lang="cy">Beth rydyn ni’n ei gasglu, a’r hyn nad ydyn ni’n ei gasglu</span></h2>
-      <p class="sub"><span lang="en">We ask only for what the research needs, and you can pause or stop at any time.</span><span lang="cy">Dim ond yr hyn sydd ei angen ar yr ymchwil rydyn ni’n ei ofyn, a gallwch chi oedi neu roi’r gorau iddi unrhyw bryd.</span></p>
+      <p class="sub"><span lang="en">Your data is held by Swansea University and stored securely in the UK. We ask only for what the research needs, and you can pause or stop at any time.</span><span lang="cy">Prifysgol Abertawe sy’n cadw eich data, ac mae’n cael ei storio’n ddiogel yn y DU. Dim ond yr hyn sydd ei angen ar yr ymchwil rydyn ni’n ei ofyn, a gallwch chi oedi neu roi’r gorau iddi unrhyw bryd.</span></p>
     </div>
     <div class="data">
       <div class="code-card">
@@ -969,7 +973,7 @@ var APP_NAME = 'HomePulse';
         </div>
       </div>
       <ul class="dtiles">
-        <li><span class="tile-ic"><svg class="ic"><use href="#i-lock"/></svg></span><h3><span lang="en">Stored securely in the UK</span><span lang="cy">Wedi’u storio’n ddiogel yn y DU</span></h3><p><span lang="en">Check-ins travel over an encrypted connection to a secure database in the UK, and are used only for this research.</span><span lang="cy">Mae cofnodion yn teithio dros gysylltiad wedi’i amgryptio i gronfa ddata ddiogel yn y DU, ac yn cael eu defnyddio ar gyfer yr ymchwil hon yn unig.</span></p></li>
+        <li><span class="tile-ic"><svg class="ic"><use href="#i-lock"/></svg></span><h3><span lang="en">Held by Swansea University</span><span lang="cy">Yng ngofal Prifysgol Abertawe</span></h3><p><span lang="en">Swansea University holds your data and is responsible for it. It travels over an encrypted connection to a secure cloud database in the UK, run for this study, and is used only for this research.</span><span lang="cy">Prifysgol Abertawe sy’n cadw eich data ac sy’n gyfrifol amdano. Mae’n teithio dros gysylltiad wedi’i amgryptio i gronfa ddata ddiogel yn y cwmwl yn y DU, sy’n cael ei rhedeg ar gyfer yr astudiaeth hon, a chaiff ei ddefnyddio ar gyfer yr ymchwil hon yn unig.</span></p></li>
         <li><span class="tile-ic"><svg class="ic"><use href="#i-pin"/></svg></span><h3><span lang="en">Only half your postcode</span><span lang="cy">Hanner eich cod post yn unig</span></h3><p><span lang="en">The first half, such as SA1 or CF10, which covers thousands of homes. The app does not track where you are: it simply asks whether you are at home.</span><span lang="cy">Yr hanner cyntaf, fel SA1 neu CF10, sy’n cynnwys miloedd o gartrefi. Dydy’r ap ddim yn olrhain ble rydych chi: mae’n gofyn a ydych chi gartref, a dyna’r cyfan.</span></p></li>
         <li><span class="tile-ic"><svg class="ic"><use href="#i-tag"/></svg></span><h3><span lang="en">An anonymous name in the race</span><span lang="cy">Ffugenw yn y ras</span></h3><p><span lang="en">Your Bay Race name is picked at random from Welsh wildlife, never made from your name or code. Other participants only ever see that name and your race progress.</span><span lang="cy">Caiff eich enw yn Ras y Bae ei ddewis ar hap o fyd natur Cymru, a dydy e byth yn cael ei wneud o’ch enw na’ch cod. Dim ond yr enw hwnnw a’ch cynnydd yn y ras y mae cyfranogwyr eraill yn eu gweld.</span></p></li>
         <li><span class="tile-ic"><svg class="ic"><use href="#i-eye"/></svg></span><h3><span lang="en">Seen by the research team</span><span lang="cy">Y tîm ymchwil sy’n eu gweld</span></h3><p><span lang="en">The research team sees your answers together with your profile, to run the study and to keep in touch with you.</span><span lang="cy">Mae’r tîm ymchwil yn gweld eich atebion ynghyd â’ch proffil, er mwyn cynnal yr astudiaeth a chadw mewn cysylltiad â chi.</span></p></li>
@@ -987,11 +991,18 @@ var APP_NAME = 'HomePulse';
       <p class="sub"><span lang="en">Something else? <a href="#contact">Get in touch with the team</a>.</span><span lang="cy">Rhywbeth arall? <a href="#contact">Cysylltwch â’r tîm</a>.</span></p>
     </div>
     <div class="faq">
+      <details id="faq-length">
+        <summary><span lang="en">How long does the study last?</span><span lang="cy">Am faint mae’r astudiaeth yn para?</span><span class="chev"><svg class="ic"><use href="#i-chev"/></svg></span></summary>
+        <div class="faq-a">
+          <div lang="en"><p>One month, from 15 December 2026 to 15 January 2027. Reminders stop after 15 January, and the team then arranges with you to collect the sensor.</p></div>
+          <div lang="cy"><p>Mis, o 15 Rhagfyr 2026 i 15 Ionawr 2027. Daw’r nodiadau atgoffa i ben ar ôl 15 Ionawr, ac wedyn bydd y tîm yn trefnu gyda chi i gasglu’r synhwyrydd.</p></div>
+        </div>
+      </details>
       <details id="faq-time">
         <summary><span lang="en">How long does a check-in take?</span><span lang="cy">Faint o amser mae cofnod yn ei gymryd?</span><span class="chev"><svg class="ic"><use href="#i-chev"/></svg></span></summary>
         <div class="faq-a">
-          <div lang="en"><p>About a minute or two. Most questions are a single tap, and &ldquo;Same as last time&rdquo; fills in your clothes in one go if you have not changed.</p><p>Joining takes a few minutes, once.</p></div>
-          <div lang="cy"><p>Tua munud neu ddwy. Un tap yw’r rhan fwyaf o’r cwestiynau, ac mae <span lang="en" data-keep>&ldquo;Same as last time&rdquo;</span> yn llenwi’ch dillad i gyd ar unwaith os nad ydych chi wedi newid.</p><p>Mae ymuno’n cymryd ychydig funudau, unwaith.</p></div>
+          <div lang="en"><p>Under a minute. Most questions are a single tap, and &ldquo;Same as last time&rdquo; fills in your clothes in one go if you have not changed.</p><p>Joining takes a few minutes, once.</p></div>
+          <div lang="cy"><p>Llai na munud. Un tap yw’r rhan fwyaf o’r cwestiynau, ac mae <span lang="en" data-keep>&ldquo;Same as last time&rdquo;</span> yn llenwi’ch dillad i gyd ar unwaith os nad ydych chi wedi newid.</p><p>Mae ymuno’n cymryd ychydig funudau, unwaith.</p></div>
         </div>
       </details>
       <details id="faq-often">
@@ -1067,8 +1078,8 @@ var APP_NAME = 'HomePulse';
       <details id="faq-answers">
         <summary><span lang="en">What happens to my answers?</span><span lang="cy">Beth sy’n digwydd i’m hatebion?</span><span class="chev"><svg class="ic"><use href="#i-chev"/></svg></span></summary>
         <div class="faq-a">
-          <div lang="en"><p>They are filed under your participant code, never your name, and sent to a secure database in the UK, used only for this research. If your phone has no signal, the check-in is kept on the phone and sent as soon as it is back online.</p><p>More in <a href="#data">Your data</a>.</p></div>
-          <div lang="cy"><p>Cânt eu cadw dan eich cod cyfranogwr, byth dan eich enw, a’u hanfon i gronfa ddata ddiogel yn y DU, sy’n cael ei defnyddio ar gyfer yr ymchwil hon yn unig. Os nad oes signal gan eich ffôn, caiff y cofnod ei gadw ar y ffôn a’i anfon cyn gynted ag y bydd ar-lein eto.</p><p>Mwy yn <a href="#data">Eich data</a>.</p></div>
+          <div lang="en"><p>They are filed under your participant code, never your name, and held by Swansea University in a secure cloud database in the UK, used only for this research. If your phone has no signal, the check-in is kept on the phone and sent as soon as it is back online.</p><p>More in <a href="#data">Your data</a>.</p></div>
+          <div lang="cy"><p>Cânt eu cadw dan eich cod cyfranogwr, byth dan eich enw, ac maen nhw yng ngofal Prifysgol Abertawe mewn cronfa ddata ddiogel yn y cwmwl yn y DU, sy’n cael ei defnyddio ar gyfer yr ymchwil hon yn unig. Os nad oes signal gan eich ffôn, caiff y cofnod ei gadw ar y ffôn a’i anfon cyn gynted ag y bydd ar-lein eto.</p><p>Mwy yn <a href="#data">Eich data</a>.</p></div>
         </div>
       </details>
       <details id="faq-leave">

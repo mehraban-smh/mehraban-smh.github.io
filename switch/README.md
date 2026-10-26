@@ -3,7 +3,9 @@
 HomePulse is the participant app of the SWITCH personal
 thermal comfort study, EPSRC SWITCH to Net Zero Buildings, Swansea University. Version 1.0 (October 2026)
 replaced the 0.4.0 "SWITCH comfort check-in". The name is `appName` in `config.js`; the folder and the URLs stay
-`switch/`. It is a separate project from Home Comfort NY (`homecomfort-ny/`): its own Supabase project, look,
+`switch/`. The study runs for one month, 15 December 2026 to 15 January 2027 (`studyStart` / `studyEnd` in
+`config.js`; reminders stop once 15 January is over in the UK, and the dashboard offers a "Study period" range).
+It is a separate project from Home Comfort NY (`homecomfort-ny/`): its own Supabase project, look,
 reminder workflow, secrets and browser storage (`switch_` keys). Never share code, data or keys between them.
 
 Three pages, all unlisted (no links from the main site, `noindex` on every page):
@@ -34,7 +36,7 @@ the browser it is opened in.
    on 0.4.0 has its check-ins refused: they stay on the phone, and 1.0 sends them once the participant has signed in.
 5. Close by hand any old open issue titled "N new participant(s) waiting for approval" (without "HomePulse:").
 6. Tell the participants to open the app: "One more step" (their email and a new 4-digit PIN), then "Tell us about
-   your home". When the end date is known, set `studyEnd: "YYYY-MM-DD"` in `config.js`.
+   your home".
 
 ## One-time setup (a new project; about 15 minutes)
 

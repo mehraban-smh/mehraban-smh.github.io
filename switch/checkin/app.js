@@ -882,7 +882,7 @@ const SCREENS = {
   today: () => {
     const list = votes(), l = list[0], pts = gamePoints(list), open = nextOpen();
     lockShown = !!open;
-    const last = l ? `Last one <span data-ago="${esc(l.ts)}">${agoWord(l.ts)}</span>${typeof l.tsv === 'number' ? ' &middot; ' + tsvWord(l.tsv).toLowerCase() : ''}` : 'Takes about a minute';
+    const last = l ? `Last one <span data-ago="${esc(l.ts)}">${agoWord(l.ts)}</span>${typeof l.tsv === 'number' ? ' &middot; ' + tsvWord(l.tsv).toLowerCase() : ''}` : 'Takes under a minute';
     const cta = open ? `<button class="cta wait" data-act="start"><span class="cta-ic">${ic('clock')}</span><span class="cta-t"><b>Next check-in at ${fmt(open)}</b><span>They open ${GAP_MIN} minutes after the last one &middot; ${last}</span></span></button>`
       : `<button class="cta" data-act="start"><span class="cta-ic">${ic('bell')}</span><span class="cta-t"><b>Check in now</b><span>${gateWord() || last}</span></span>${ic('chev','go')}</button>`;
     const notif = !['on','unconfigured'].includes(PUSH.status()) && !studyOver();

@@ -27,6 +27,6 @@ self.SWITCH_CONFIG = {
   timeZone: "Europe/London",
   appName: "HomePulse",
   studyName: "SWITCH home comfort study",
-  studyStart: null, studyEnd: null,  // optional "YYYY-MM-DD"; when studyEnd is set, reminders stop after it (UK time)
+  studyStart: "2026-12-15", studyEnd: "2027-01-15",  // one month (UK dates); reminders stop after studyEnd ends in the UK
   appVersion: "1.1.0"
 };
