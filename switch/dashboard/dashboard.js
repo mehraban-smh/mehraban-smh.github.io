@@ -42,7 +42,7 @@
   const NUM_COLS = new Set(['tsv', 'clo', 'met', 'seconds', 'tz_offset_min', 'stat_temp_c', 'comfort_score']);
   // the on-screen table: question order, legacy columns left out
   const TABLE_COLS = ['participant', 'local_time', 'prompt', 'at_home', 'tsv', 'preference', 'acceptability', 'clo', 'garments', 'met', 'activity', 'room', 'air', 'sun', 'heating_on', 'heating_src', 'heating_for', 'stat_temp_c', 'wall', 'actions', 'notes', 'same_as_last', 'seconds', 'app_version', 'ts', 'tz_offset_min', 'created_at', 'client_id', 'id'];
-  const PCOLS = ['code', 'name', 'email', 'alias', 'alias_colour', 'race_hidden', 'approved', 'gender', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity', 'created_at', 'updated_at', 'notified_at'];
+  const PCOLS = ['code', 'name', 'email', 'alias', 'alias_colour', 'lang', 'approved', 'gender', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity', 'created_at', 'updated_at', 'notified_at'];
   const PNUM = new Set(['birth_year', 'height_cm', 'weight_kg', 'alias_colour']);
   const HOME_KEYS = ['postcode_area', 'home_type', 'flat_position', 'tenure', 'year_built', 'floors', 'bedrooms', 'floor_area_m2', 'epc', 'adults', 'children', 'pets', 'bedroom_share',
     'main_heating', 'other_heaters', 'heating_pattern', 'payment', 'controls', 'stat_display', 'setpoint_c', 'bedroom_trv', 'wall_insulation', 'loft', 'glazing', 'windows_open', 'damp',
@@ -69,6 +69,7 @@
     notes: { hot_drink: 'Hot drink', cold_drink: 'Cold drink', ate: 'Ate something', hungry: 'Felt hungry', tired: 'Felt tired', unwell: 'Felt unwell', none: 'None of these' },
     gender: { woman: 'Woman', man: 'Man', non_binary: 'Non-binary', self_describe: 'Another identity', prefer_not: 'Prefer not to say' },
     sensitivity: { cold: 'Feels the cold easily', average: 'About average', warm: 'Feels the heat easily' },
+    lang: { en: 'English', cy: 'Cymraeg (Welsh)' },
     age: { a18: '18–24', a25: '25–34', a35: '35–44', a45: '45–54', a55: '55–64', a65: '65–74', a75: '75 or older' },
     home_type: { detached: 'Detached', semi: 'Semi-detached', end_terrace: 'End of terrace', mid_terrace: 'Terraced (mid-terrace)', bungalow: 'Bungalow', flat: 'Flat or maisonette' },
     flat_position: { basement: 'Basement', ground: 'Ground floor', middle: 'Middle floor', top: 'Top floor' },
@@ -100,6 +101,8 @@
   L.heating_src = Object.assign({}, L.main_heating, L.other_heaters, { other: 'Something else', main: 'The main heating (not named)', unsure: 'Not sure' });
   delete L.heating_src.none;
   const NOT_SURE = '__unsure', NOT_ANSWERED = '__na';
+  // the app's language (participants.lang); '–' before the database has the column
+  const langWord = l => l === 'en' || l === 'cy' ? L.lang[l] : '–';
   // Home questions the app no longer asks (dropped after 1.0): older answers are kept, shown only where someone gave
   // one, marked as no longer asked, and still exported.
   const RETIRED = new Set(['payment', 'stat_display', 'bedroom_trv']);
@@ -684,7 +687,7 @@
     if (pu) flags.push(`<i class="flag pause" title="Reminders paused until ${esc(fmtStamp(new Date(pu).toISOString()))}">Paused</i>`);
     const qd = quietDays(e);
     if (qd !== null && qd >= QUIET_DAYS) flags.push(e.last ? `<i class="flag quiet">Quiet ${qd} days</i>` : `<i class="flag quiet" title="Approved, no check-in in the ${qd} days since signing up">No check-ins · ${qd} days</i>`);
-    if (p && p.race_hidden) flags.push('<i class="flag hid" title="Hidden from others in the Bay Race">Race hidden</i>');
+    if (p && p.lang === 'cy') flags.push('<i class="flag hid" title="Uses the app in Welsh">Cymraeg</i>');
     const sub = [p && p.alias ? p.alias : '', e.last ? 'last ' + ago(e.last.t) : 'no check-ins yet'].filter(Boolean).join(' · ');
     return `<li><button class="p" type="button" data-act="sel" data-code="${esc(e.code)}" data-fk="p-${esc(e.code)}"${st.sel === e.code ? ' aria-current="true"' : ''}>
       <b>${esc(e.code)}${p && p.name ? ' · ' + esc(p.name) : ''}</b><span class="cnt">${fmtN(e.rows.length)}</span><small>${esc(sub)}</small>${flags.length ? `<span class="flags">${flags.join('')}</span>` : ''}</button></li>`;
@@ -776,7 +779,7 @@
     const rows = list.filter(r => { const p = r && person(String(r.code || '').toUpperCase()); return !!p && (dbStale() || !!p.approved); })
       .map(r => Object.assign({}, r, { code: String(r.code || '').toUpperCase(), points: num(r.points) || 0 }));
     // people with no row yet (no check-in in the period) still belong in the table, on 0
-    st.people.filter(p => p.approved || dbStale()).forEach(p => { const c = String(p.code).toUpperCase(); if (!rows.some(r => r.code === c)) rows.push({ code: c, alias: p.alias, race_hidden: p.race_hidden, checkins: 0, counted: 0, goal_days: 0, full_weeks: 0, points: 0 }); });
+    st.people.filter(p => p.approved || dbStale()).forEach(p => { const c = String(p.code).toUpperCase(); if (!rows.some(r => r.code === c)) rows.push({ code: c, alias: p.alias, checkins: 0, counted: 0, goal_days: 0, full_weeks: 0, points: 0 }); });
     rows.sort((a, b) => b.points - a.points || a.code.localeCompare(b.code, undefined, { numeric: true }));
     let rank = 0, prev = null;
     rows.forEach((r, i) => { if (r.points !== prev) { rank = i + 1; prev = r.points; } r.rank = rank; });
@@ -817,7 +820,7 @@
         ptsTile = tile('Points this week', fmtN(tot), 'in all', lead && lead.points ? 'leader ' + esc(lead.code) + (lead.alias ? ' ' + esc(lead.alias) : '') + ' · ' + fmtN(lead.points) : 'nobody has scored yet');
       } else {
         const me = wk.find(r => r.code === sel);
-        ptsTile = me ? tile('Points this week', fmtN(me.points), '', me.points ? ordinal(me.rank) + ' of ' + wk.length + (me.race_hidden ? ' · hidden from others' : '') : 'no points yet this week') : '';
+        ptsTile = me ? tile('Points this week', fmtN(me.points), '', me.points ? ordinal(me.rank) + ' of ' + wk.length : 'no points yet this week') : '';
       }
     }
     return `<section class="tiles" aria-label="Key figures for ${esc(rangeWords())}">${tile('Check-ins', fmtN(n), '', delta || '&nbsp;')}${second}${perTile}${remTile}${ptsTile}</section>`;
@@ -1151,11 +1154,11 @@
     if (!rows) body = `<p class="tnote">${st.pointsErr ? 'The points could not be loaded: ' + esc(st.pointsErr) + '. Refresh to try again.' : 'No points yet.'}</p>`;
     else if (!rows.length) body = '<p class="tnote">Nobody is approved yet.</p>';
     else {
-      body = `<div class="tablewrap" style="max-height:440px"><table class="ptable"><thead><tr><th scope="col">Rank</th><th scope="col">Code</th><th scope="col">Name</th><th scope="col">Alias</th><th scope="col">In the race</th><th scope="col" class="n">Check-ins</th><th scope="col" class="n">Counted</th><th scope="col" class="n">Goal days</th><th scope="col" class="n">Full weeks</th><th scope="col" class="n">Points</th>${target ? '<th scope="col">Of target</th>' : ''}</tr></thead><tbody>
+      body = `<div class="tablewrap" style="max-height:440px"><table class="ptable"><thead><tr><th scope="col">Rank</th><th scope="col">Code</th><th scope="col">Name</th><th scope="col">Alias</th><th scope="col">Language</th><th scope="col" class="n">Check-ins</th><th scope="col" class="n">Counted</th><th scope="col" class="n">Goal days</th><th scope="col" class="n">Full weeks</th><th scope="col" class="n">Points</th>${target ? '<th scope="col">Of target</th>' : ''}</tr></thead><tbody>
         ${rows.map(r => { const p = person(r.code); const c = p && num(p.alias_colour) !== null ? RUNNER[num(p.alias_colour) % RUNNER.length] : null; const ratio = target ? Math.min(1, r.points / target) : 0;
-          return `<tr><td class="rank">${r.points && r.rank <= 3 ? `<span class="medal m${r.rank}" aria-label="${ordinal(r.rank)}">${r.rank}</span>` : esc(ordinal(r.rank))}</td><td><button class="lnkcode" type="button" data-act="sel" data-code="${esc(r.code)}" style="color:var(--accent);font-family:var(--mono);font-weight:600">${esc(r.code)}</button></td><td style="font-family:var(--sans)">${esc(p ? p.name : '')}</td><td style="font-family:var(--sans)">${c ? `<span class="dot" style="background:${c}"></span>` : ''}${esc(r.alias || (p && p.alias) || '–')}</td><td style="font-family:var(--sans)">${(r.race_hidden != null ? r.race_hidden : p && p.race_hidden) ? '<span class="flag hid">Hidden</span>' : 'Shown'}</td><td class="n">${fmtN(num(r.checkins) || 0)}</td><td class="n">${fmtN(num(r.counted) || 0)}</td><td class="n">${fmtN(num(r.goal_days) || 0)}</td><td class="n">${fmtN(num(r.full_weeks) || 0)}</td><td class="n"><b>${fmtN(r.points)}</b></td>${target ? `<td class="prog"${tipA(pct(r.points, target) + ' of ' + fmtN(target))}><div class="meter"><i style="width:${(100 * ratio).toFixed(1)}%;background:${r.points >= target ? 'var(--teal)' : 'var(--accent)'}"></i></div></td>` : ''}</tr>`; }).join('')}
+          return `<tr><td class="rank">${r.points && r.rank <= 3 ? `<span class="medal m${r.rank}" aria-label="${ordinal(r.rank)}">${r.rank}</span>` : esc(ordinal(r.rank))}</td><td><button class="lnkcode" type="button" data-act="sel" data-code="${esc(r.code)}" style="color:var(--accent);font-family:var(--mono);font-weight:600">${esc(r.code)}</button></td><td style="font-family:var(--sans)">${esc(p ? p.name : '')}</td><td style="font-family:var(--sans)">${c ? `<span class="dot" style="background:${c}"></span>` : ''}${esc(r.alias || (p && p.alias) || '–')}</td><td style="font-family:var(--sans)">${esc(langWord(p && p.lang))}</td><td class="n">${fmtN(num(r.checkins) || 0)}</td><td class="n">${fmtN(num(r.counted) || 0)}</td><td class="n">${fmtN(num(r.goal_days) || 0)}</td><td class="n">${fmtN(num(r.full_weeks) || 0)}</td><td class="n"><b>${fmtN(r.points)}</b></td>${target ? `<td class="prog"${tipA(pct(r.points, target) + ' of ' + fmtN(target))}><div class="meter"><i style="width:${(100 * ratio).toFixed(1)}%;background:${r.points >= target ? 'var(--teal)' : 'var(--accent)'}"></i></div></td>` : ''}</tr>`; }).join('')}
         </tbody></table></div>
-        <p class="fnote">${PTS.checkin} points a counted check-in (at least ${Number(cfg.checkinGapMin) || 45} minutes after the one before, up to ${PTS.dailyCap} a day), +${PTS.goalDay} for each day with ${GOAL} or more (a goal day), +${PTS.fullWeek} for a Monday–Sunday week of goal days, counted in the period that holds its Sunday. The rank counts everyone approved, including people hidden from the race; participants never see codes or names, and hidden people only see themselves.</p>`;
+        <p class="fnote">${PTS.checkin} points a counted check-in (at least ${Number(cfg.checkinGapMin) || 45} minutes after the one before, up to ${PTS.dailyCap} a day), +${PTS.goalDay} for each day with ${GOAL} or more (a goal day), +${PTS.fullWeek} for a Monday–Sunday week of goal days, counted in the period that holds its Sunday. Every approved participant is in the race and the rank; participants see aliases only, never codes or names.</p>`;
     }
     return `<section class="charts" style="grid-template-columns:minmax(0,1fr)">${fig('pts', 'Points and the Bay Race', sub, body, { wide: true, btns })}</section>`;
   }
@@ -1166,7 +1169,7 @@
   const setBand = v => { const r = Math.round(v); return r <= 17 ? 'le17' : r >= 24 ? 'ge24' : String(r); };
   // [key, title, kind]: kind p = participant column, multi = several answers, area / setp = binned numbers
   const HOME_GROUPS = [
-    ['The people', [['gender', 'Gender', 'p'], ['sensitivity', 'Thermal sensitivity', 'p'], ['age', 'Age', 'age']]],
+    ['The people', [['gender', 'Gender', 'p'], ['sensitivity', 'Thermal sensitivity', 'p'], ['age', 'Age', 'age'], ['lang', 'App language', 'p']]],
     ['Area and home', [['postcode_area', 'Postcode area', 'free'], ['home_type', 'Home type'], ['flat_position', 'Flat position (flats only)'], ['tenure', 'Tenure']]],
     ['Age and size', [['year_built', 'Year built'], ['floors', 'Floors'], ['bedrooms', 'Bedrooms'], ['floor_area_m2', 'Floor area', 'area'], ['epc', 'EPC rating']]],
     ['Who lives here', [['adults', 'Adults'], ['children', 'Children'], ['pets', 'Pets'], ['bedroom_share', 'Sharing the bedroom']]],
@@ -1264,7 +1267,7 @@
       f('Bay Race alias', p.alias ? (colour ? `<span class="dot" style="background:${colour}"></span>` : '') + esc(p.alias) : ''),
       f('Status', status), f('Registered', esc(fmtStamp(p.created_at))), f('Profile updated', esc(fmtStamp(p.updated_at)), true), f('Team notified', p.notified_at ? esc(fmtStamp(p.notified_at)) : 'Not yet', true),
       f('PIN and devices', esc(pinWords(code))), f('Reminders', esc(reminderWords(code))),
-      f('Bay Race', p.race_hidden ? 'Hidden from others (sees their own place)' : 'Shown'), f('Last check-in', last ? esc(ago(last.t) + ' (' + fmtStamp(last.r.ts) + ')') : 'None yet'),
+      f('Language', esc(langWord(p.lang))), f('Last check-in', last ? esc(ago(last.t) + ' (' + fmtStamp(last.r.ts) + ')') : 'None yet'),
       f('Gender', esc(lab('gender', p.gender))), f('Age', age !== null ? String(age) : ''), f('Height', num(p.height_cm) !== null ? round1(num(p.height_cm)) + ' cm' : ''), f('Weight', num(p.weight_kg) !== null ? round1(num(p.weight_kg)) + ' kg' : ''),
       f('Thermal sensitivity', esc(lab('sensitivity', p.sensitivity)))
     ].join('');
@@ -1369,9 +1372,9 @@
     const pHeader = [...PCOLS, ...extraP, ...DERIVED, ...HOME_KEYS, ...extraH];
     const pointsSheet = () => {
       const keys = ['week', 'month', 'all'], byCode = new Map();
-      keys.forEach(k => { const rows = pointsRows(k); if (rows) rows.forEach(r => { if (!byCode.has(r.code)) byCode.set(r.code, { code: r.code, alias: r.alias || (person(r.code) || {}).alias, race_hidden: r.race_hidden ? 'yes' : 'no' }); const o = byCode.get(r.code), s = k === 'all' ? 'all_time' : k; o[s + '_rank'] = r.rank; o[s + '_points'] = r.points; o[s + '_checkins'] = num(r.checkins); o[s + '_counted'] = num(r.counted); o[s + '_goal_days'] = num(r.goal_days); o[s + '_full_weeks'] = num(r.full_weeks); }); });
+      keys.forEach(k => { const rows = pointsRows(k); if (rows) rows.forEach(r => { if (!byCode.has(r.code)) byCode.set(r.code, { code: r.code, alias: r.alias || (person(r.code) || {}).alias, lang: (person(r.code) || {}).lang || '' }); const o = byCode.get(r.code), s = k === 'all' ? 'all_time' : k; o[s + '_rank'] = r.rank; o[s + '_points'] = r.points; o[s + '_checkins'] = num(r.checkins); o[s + '_counted'] = num(r.counted); o[s + '_goal_days'] = num(r.goal_days); o[s + '_full_weeks'] = num(r.full_weeks); }); });
       const per = pointsPeriods();
-      const header = ['code', 'alias', 'race_hidden']; keys.forEach(k => { const s = k === 'all' ? 'all_time' : k; header.push(s + '_rank', s + '_points', s + '_checkins', s + '_counted', s + '_goal_days', s + '_full_weeks'); });
+      const header = ['code', 'alias', 'lang']; keys.forEach(k => { const s = k === 'all' ? 'all_time' : k; header.push(s + '_rank', s + '_points', s + '_checkins', s + '_counted', s + '_goal_days', s + '_full_weeks'); });
       return { rows: [...byCode.values()].sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true })), header, note: 'week ' + dnKey(per.week.from) + ' to ' + dnKey(per.week.to) + '; month ' + dnKey(per.month.from) + ' to ' + dnKey(per.month.to) + '; all time from ' + dnKey(per.all.from) };
     };
     if (st.sel === 'ALL') {

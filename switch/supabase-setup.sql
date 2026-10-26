@@ -23,6 +23,12 @@
 --     the dashboard alike.
 --   - registering a phone for reminders takes the device's key instead of the participant code.
 --   - participant codes no longer break after P99 (P99 is followed by P100).
+-- Later changes, applied the same way by re-running this file:
+--   - the Bay Race is no longer optional: everyone approved is in it (race_hidden is set back to false and
+--     set_race_hidden() changes nothing any more; older apps may still call it).
+--   - each participant has a language for the app and the reminders: lang, 'en' (English) or 'cy' (Welsh).
+--   - the default reminder hours are 07:00-22:00 every day (they were 17:00-22:30 on weekdays, 09:00-22:30 at
+--     weekends). Phones still on the old defaults are moved once, the first time this runs (app_migrations).
 
 create extension if not exists pgcrypto;
 
@@ -65,7 +71,8 @@ create table if not exists public.participants (
   home          jsonb,                           -- the home profile (see above); null until given
   alias         text,                            -- anonymous name in the Bay Race, unique
   alias_colour  smallint check (alias_colour between 0 and 7),
-  race_hidden   boolean not null default false,  -- "Show me in the Bay Race" switched off
+  race_hidden   boolean not null default false,  -- no longer used: everyone approved is in the Bay Race (kept, always false)
+  lang          text not null default 'en' check (lang in ('en', 'cy')),   -- the app's language: en English, cy Welsh
   approved      boolean not null default false,  -- set from the dashboard; nothing is accepted from the code until then
   notified_at   timestamptz,                     -- set by notify.js once the team has been told about this registration
   created_at    timestamptz not null default now(),
@@ -86,6 +93,9 @@ alter table public.participants add column if not exists home jsonb;
 alter table public.participants add column if not exists alias text;
 alter table public.participants add column if not exists alias_colour smallint check (alias_colour between 0 and 7);
 alter table public.participants add column if not exists race_hidden boolean not null default false;
+alter table public.participants add column if not exists lang text not null default 'en' check (lang in ('en', 'cy'));
+-- The Bay Race is no longer optional: nobody is hidden from it any more (a second run finds nobody to change).
+update public.participants set race_hidden = false where race_hidden;
 create unique index if not exists participants_alias_unique on public.participants (alias);
 create sequence if not exists public.participant_seq start 1;
 alter table public.participants enable row level security;
@@ -325,7 +335,7 @@ drop function if exists public.sw_sign_in(text, text);
 drop function if exists public.sw_sign_in(text, text, text);
 create or replace function public.sw_sign_in(p_email text, p_pin text, p_code text default null)
 returns table(status text, tries_left integer, wait_min integer, code text, name text, is_new boolean,
-              approved boolean, home jsonb, device_key text, pin_set boolean, alias text)
+              approved boolean, home jsonb, device_key text, pin_set boolean, alias text, lang text)
 language plpgsql security definer set search_path = public as $$
 #variable_conflict use_column
 declare
@@ -333,12 +343,12 @@ declare
   p record; pin record; f record; v_salt text; v_key text;
 begin
   if p_pin is null or p_pin !~ '^[0-9]{4}$' then
-    return query select 'pin_needed'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text;
+    return query select 'pin_needed'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text, null::text;
     return;
   end if;
-  select x.code, x.name, x.approved, x.home, x.alias into p from public.participants x where x.email = v_email;
+  select x.code, x.name, x.approved, x.home, x.alias, x.lang into p from public.participants x where x.email = v_email;
   if not found then
-    return query select 'not_found'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text;
+    return query select 'not_found'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text, null::text;
     return;
   end if;
   -- One row per participant holds the PIN (when there is one) and the count of wrong tries; locked, so two
@@ -346,38 +356,38 @@ begin
   insert into public.participant_pins (code) values (p.code) on conflict (code) do nothing;
   select x.salt, x.pin_hash, x.failures, x.lock_count, x.locked_until into pin from public.participant_pins x where x.code = p.code for update;
   if pin.locked_until is not null and pin.locked_until > now() then
-    return query select 'locked'::text, 0, greatest(1, ceil(extract(epoch from pin.locked_until - now()) / 60))::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text;
+    return query select 'locked'::text, 0, greatest(1, ceil(extract(epoch from pin.locked_until - now()) / 60))::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text, null::text;
     return;
   end if;
   if pin.pin_hash is null then                               -- no PIN yet: this one becomes theirs, with their code
     if nullif(trim(coalesce(p_code, '')), '') is null then
-      return query select 'code_needed'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text;
+      return query select 'code_needed'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text, null::text;
       return;
     end if;
     if upper(trim(p_code)) <> p.code then
       select * into f from public.sw_pin_failure(p.code);
-      return query select case when f.locked then 'locked' else 'code_needed' end::text, f.tries_left, f.wait_min, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text;
+      return query select case when f.locked then 'locked' else 'code_needed' end::text, f.tries_left, f.wait_min, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text, null::text;
       return;
     end if;
     if public.sw_weak_pin(p_pin) then
-      return query select 'weak_pin'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text;
+      return query select 'weak_pin'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text, null::text;
       return;
     end if;
     v_salt := replace(gen_random_uuid()::text, '-', '');
     update public.participant_pins x set salt = v_salt, pin_hash = public.sw_hash(v_salt || ':' || p_pin), failures = 0, lock_count = 0,
            locked_until = null, updated_at = now() where x.code = p.code;
     v_key := public.sw_new_key(p.code);
-    return query select 'ok'::text, null::integer, null::integer, p.code::text, p.name::text, false, coalesce(p.approved, false), p.home::jsonb, v_key, true, p.alias::text;
+    return query select 'ok'::text, null::integer, null::integer, p.code::text, p.name::text, false, coalesce(p.approved, false), p.home::jsonb, v_key, true, p.alias::text, p.lang::text;
     return;
   end if;
   if public.sw_hash(pin.salt || ':' || p_pin) <> pin.pin_hash then
     select * into f from public.sw_pin_failure(p.code);
-    return query select case when f.locked then 'locked' else 'wrong' end::text, f.tries_left, f.wait_min, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text;
+    return query select case when f.locked then 'locked' else 'wrong' end::text, f.tries_left, f.wait_min, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text, null::text;
     return;
   end if;
   update public.participant_pins x set failures = 0, lock_count = 0, locked_until = null, updated_at = now() where x.code = p.code;
   v_key := public.sw_new_key(p.code);
-  return query select 'ok'::text, null::integer, null::integer, p.code::text, p.name::text, false, coalesce(p.approved, false), p.home::jsonb, v_key, false, p.alias::text;
+  return query select 'ok'::text, null::integer, null::integer, p.code::text, p.name::text, false, coalesce(p.approved, false), p.home::jsonb, v_key, false, p.alias::text, p.lang::text;
 end $$;
 revoke all on function public.sw_sign_in(text, text, text) from public, anon, authenticated;
 
@@ -385,7 +395,7 @@ revoke all on function public.sw_sign_in(text, text, text) from public, anon, au
 -- was code_needed (see sw_sign_in for the outcome). The earlier two-argument version is dropped above.
 create or replace function public.participant_sign_in(p_email text, p_pin text, p_code text default null)
 returns table(status text, tries_left integer, wait_min integer, code text, name text, is_new boolean,
-              approved boolean, home jsonb, device_key text, pin_set boolean, alias text)
+              approved boolean, home jsonb, device_key text, pin_set boolean, alias text, lang text)
 language sql security definer set search_path = public as $$
   select * from public.sw_sign_in(p_email, p_pin, p_code);
 $$;
@@ -397,20 +407,24 @@ grant execute on function public.participant_sign_in(text, text, text) to anon, 
 -- nothing. An email already registered is a sign-in with that PIN (the same outcome row as sw_sign_in,
 -- without a participant code: a participant with no PIN gets code_needed and signs in instead), so one
 -- email is always one participant. An unknown email without a name is pin_needed or not_found, as signing in.
--- The 0.4.0 version (seven arguments, no PIN) is dropped, and so is this one, as its result may change.
+-- p_lang is the app's language for this participant: 'en' (English, also when left out) or 'cy' (Welsh).
+-- The 0.4.0 version (seven arguments, no PIN) and the 1.0 / 1.1 version (no p_lang) are dropped, and so is this
+-- one, as its result may change.
 drop function if exists public.register_participant(text, text, text, integer, numeric, numeric, text);
 drop function if exists public.register_participant(text, text, text, integer, numeric, numeric, text, jsonb, text);
+drop function if exists public.register_participant(text, text, text, integer, numeric, numeric, text, jsonb, text, text);
 create or replace function public.register_participant(
   p_email text, p_name text default null, p_gender text default null, p_birth_year integer default null,
   p_height_cm numeric default null, p_weight_kg numeric default null, p_sensitivity text default null,
-  p_home jsonb default null, p_pin text default null)
+  p_home jsonb default null, p_pin text default null, p_lang text default 'en')
 returns table(status text, tries_left integer, wait_min integer, code text, name text, is_new boolean,
-              approved boolean, home jsonb, device_key text, pin_set boolean, alias text)
+              approved boolean, home jsonb, device_key text, pin_set boolean, alias text, lang text)
 language plpgsql security definer set search_path = public as $$
 #variable_conflict use_column
 declare
   v_email text := lower(trim(coalesce(p_email, '')));
   v_code text; v_alias text; v_salt text; v_key text; n bigint;
+  v_lang text := lower(trim(coalesce(nullif(trim(p_lang), ''), 'en')));
 begin
   if v_email !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' or length(v_email) > 254 then
     raise exception 'That does not look like an email address' using errcode = '22023';
@@ -424,9 +438,10 @@ begin
     return;
   end if;
   perform public.sw_check_profile(p_name, p_birth_year, p_height_cm, p_weight_kg, p_home);
+  if v_lang not in ('en', 'cy') then raise exception 'Unknown language "%" (en or cy)', p_lang using errcode = '22023'; end if;
   if p_pin is null or p_pin !~ '^[0-9]{4}$' then raise exception 'Please choose a 4-digit PIN' using errcode = '22023'; end if;
   if public.sw_weak_pin(p_pin) then
-    return query select 'weak_pin'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text;
+    return query select 'weak_pin'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text, null::text;
     return;
   end if;
   loop                                       -- never truncated: P99, P100, ... and never a code that is taken
@@ -435,9 +450,9 @@ begin
     exit when not exists (select 1 from public.participants x where x.code = v_code);
   end loop;
   begin
-    insert into public.participants (code, email, name, gender, birth_year, height_cm, weight_kg, sensitivity, home)
+    insert into public.participants (code, email, name, gender, birth_year, height_cm, weight_kg, sensitivity, home, lang)
       values (v_code, v_email, trim(p_name), left(trim(p_gender), 40), p_birth_year, p_height_cm, p_weight_kg,
-              case when p_sensitivity in ('cold', 'average', 'warm') then p_sensitivity end, p_home)
+              case when p_sensitivity in ('cold', 'average', 'warm') then p_sensitivity end, p_home, v_lang)
       returning alias into v_alias;
   exception when unique_violation then       -- the same email joined a moment ago (two taps): sign in instead
     return query select * from public.sw_sign_in(v_email, p_pin);
@@ -446,10 +461,10 @@ begin
   v_salt := replace(gen_random_uuid()::text, '-', '');
   insert into public.participant_pins (code, salt, pin_hash) values (v_code, v_salt, public.sw_hash(v_salt || ':' || p_pin));
   v_key := public.sw_new_key(v_code);
-  return query select 'ok'::text, null::integer, null::integer, v_code, trim(p_name), true, false, p_home, v_key, true, v_alias;
+  return query select 'ok'::text, null::integer, null::integer, v_code, trim(p_name), true, false, p_home, v_key, true, v_alias, v_lang;
 end $$;
-revoke all on function public.register_participant(text, text, text, integer, numeric, numeric, text, jsonb, text) from public;
-grant execute on function public.register_participant(text, text, text, integer, numeric, numeric, text, jsonb, text) to anon, authenticated;
+revoke all on function public.register_participant(text, text, text, integer, numeric, numeric, text, jsonb, text, text) from public;
+grant execute on function public.register_participant(text, text, text, integer, numeric, numeric, text, jsonb, text, text) to anon, authenticated;
 
 -- The participant's own profile for a signed-in device (the same on every device). A key that is not
 -- (or no longer) valid is refused (28000), so the app asks to sign in again.
@@ -457,16 +472,16 @@ drop function if exists public.my_profile(text);
 drop function if exists public.sw_profile(text);
 create or replace function public.sw_profile(p_code text)
 returns table(code text, name text, approved boolean, gender text, birth_year integer, height_cm numeric, weight_kg numeric,
-              sensitivity text, home jsonb, alias text, alias_colour smallint, race_hidden boolean)
+              sensitivity text, home jsonb, alias text, alias_colour smallint, race_hidden boolean, lang text)
 language sql stable security definer set search_path = public as $$
-  select x.code, x.name, x.approved, x.gender, x.birth_year, x.height_cm, x.weight_kg, x.sensitivity, x.home, x.alias, x.alias_colour, x.race_hidden
+  select x.code, x.name, x.approved, x.gender, x.birth_year, x.height_cm, x.weight_kg, x.sensitivity, x.home, x.alias, x.alias_colour, false, x.lang
     from public.participants x where x.code = p_code;
 $$;
 revoke all on function public.sw_profile(text) from public, anon, authenticated;
 
 create or replace function public.my_profile(p_key text)
 returns table(code text, name text, approved boolean, gender text, birth_year integer, height_cm numeric, weight_kg numeric,
-              sensitivity text, home jsonb, alias text, alias_colour smallint, race_hidden boolean)
+              sensitivity text, home jsonb, alias text, alias_colour smallint, race_hidden boolean, lang text)
 language plpgsql security definer set search_path = public as $$
 declare v_code text := public.sw_code_of(p_key);
 begin
@@ -477,13 +492,14 @@ revoke all on function public.my_profile(text) from public;
 grant execute on function public.my_profile(text) to anon, authenticated;
 
 -- "My home" in Settings, and "Tell us about your home" for participants who joined before 1.0.
--- p_fields holds only what changes, any of: name, gender, birth_year, height_cm, weight_kg, sensitivity.
+-- p_fields holds only what changes, any of: name, gender, birth_year, height_cm, weight_kg, sensitivity, lang
+-- ('en' or 'cy').
 -- p_home is the whole home profile (it replaces the stored one), or null to leave it. The same checks as
 -- joining. Returns the profile afterwards.
 drop function if exists public.update_my_profile(text, jsonb, jsonb);
 create or replace function public.update_my_profile(p_key text, p_fields jsonb default '{}'::jsonb, p_home jsonb default null)
 returns table(code text, name text, approved boolean, gender text, birth_year integer, height_cm numeric, weight_kg numeric,
-              sensitivity text, home jsonb, alias text, alias_colour smallint, race_hidden boolean)
+              sensitivity text, home jsonb, alias text, alias_colour smallint, race_hidden boolean, lang text)
 language plpgsql security definer set search_path = public as $$
 #variable_conflict use_column
 declare
@@ -494,8 +510,11 @@ begin
   if v_code is null then raise exception 'This device is not signed in' using errcode = '28000'; end if;
   if jsonb_typeof(f) <> 'object' then raise exception 'p_fields must be a JSON object' using errcode = '22023'; end if;
   select k into bad from jsonb_object_keys(f) k
-   where k <> all (array['name', 'gender', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity']) limit 1;
+   where k <> all (array['name', 'gender', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity', 'lang']) limit 1;
   if bad is not null then raise exception 'Unknown field "%"', bad using errcode = '22023'; end if;
+  if f ? 'lang' and coalesce(lower(trim(f->>'lang')), '') not in ('en', 'cy') then
+    raise exception 'Unknown language "%" (en or cy)', f->>'lang' using errcode = '22023';
+  end if;
   if f ? 'name' then
     v_name := trim(f->>'name');
     if coalesce(v_name, '') = '' then raise exception 'Please give your name' using errcode = '22023'; end if;
@@ -511,6 +530,7 @@ begin
     height_cm   = case when f ? 'height_cm' then v_h else x.height_cm end,
     weight_kg   = case when f ? 'weight_kg' then v_w else x.weight_kg end,
     sensitivity = case when f ? 'sensitivity' then (case when f->>'sensitivity' in ('cold', 'average', 'warm') then f->>'sensitivity' end) else x.sensitivity end,
+    lang        = case when f ? 'lang' then lower(trim(f->>'lang')) else x.lang end,
     home        = case when p_home is null or jsonb_typeof(p_home) = 'null' then x.home else p_home end,
     updated_at  = now()
   where x.code = v_code;
@@ -929,9 +949,8 @@ revoke all on function public.my_points(text) from public;
 grant execute on function public.my_points(text) to anon, authenticated;
 
 -- The Bay Race for this week, last week (p_period 'last_week': the Monday to Sunday before, target 470) or this
--- month. Approved participants only, by alias (never a code or a
--- name); those who switched "Show me in the Bay Race" off are left out for everyone else, but still see
--- the race and their own place (me.hidden). Runners are ranked by points (equal points share a place).
+-- month. Every approved participant, by alias (never a code or a name): the race is no longer optional, so
+-- race_hidden is ignored and me.hidden is always false (kept for older apps). Runners are ranked by points (equal points share a place).
 -- checkins = counted check-ins in the period. A caller who is not approved (yet) gets only their own
 -- points: no runners, total 0, me.rank null.
 drop function if exists public.race(text, text);
@@ -949,14 +968,14 @@ begin
   r as (select p.code, p.alias, p.alias_colour, p.race_hidden, coalesce(x.points, 0) as points,
                coalesce(x.counted, 0) as checkins, coalesce(x.goal_days, 0) as goal_days
           from public.participants p left join pts x on x.participant = p.code
-         where v_ok and p.approved and (not p.race_hidden or p.code = v_code)),
+         where v_ok and p.approved),
   k as (select r.*, (rank() over (order by r.points desc))::integer as rk from r)
   select json_build_object(
     'period', per.period, 'from', per.day_from, 'to', per.day_to, 'target', per.target,
     'total', (select count(*) from k),
     'me', (select json_build_object('alias', p.alias, 'colour', p.alias_colour,
                                     'points', coalesce((select x.points from pts x where x.participant = v_code), 0),
-                                    'rank', (select k.rk from k where k.code = v_code), 'hidden', p.race_hidden)
+                                    'rank', (select k.rk from k where k.code = v_code), 'hidden', false)
              from public.participants p where p.code = v_code),
     'runners', coalesce((select json_agg(json_build_object('alias', k.alias, 'colour', k.alias_colour, 'points', k.points,
                                                            'checkins', k.checkins, 'goal_days', k.goal_days, 'rank', k.rk,
@@ -968,15 +987,15 @@ end $$;
 revoke all on function public.race(text, text) from public;
 grant execute on function public.race(text, text) to anon, authenticated;
 
--- Settings > "Show me in the Bay Race". Returns what is stored now.
+-- Settings > "Show me in the Bay Race" in apps before the race became compulsory. Kept so they keep working: it
+-- changes nothing and answers false (shown in the race). An unknown key is still 28000, as for every keyed call.
 create or replace function public.set_race_hidden(p_key text, p_hidden boolean)
 returns boolean
 language plpgsql security definer set search_path = public as $$
-declare v_code text := public.sw_code_of(p_key); v boolean;
+declare v_code text := public.sw_code_of(p_key);
 begin
   if v_code is null then raise exception 'This device is not signed in' using errcode = '28000'; end if;
-  update public.participants x set race_hidden = coalesce(p_hidden, false), updated_at = now() where x.code = v_code returning x.race_hidden into v;
-  return v;
+  return false;                              -- nothing is stored: everyone approved is in the race
 end $$;
 revoke all on function public.set_race_hidden(text, boolean) from public;
 grant execute on function public.set_race_hidden(text, boolean) to anon, authenticated;
@@ -1026,10 +1045,10 @@ create table if not exists public.push_subscriptions (
   tz              text,                          -- the phone's time zone, e.g. Europe/London (the sender reads
                                                  --   home hours in it; null: config.js timeZone)
   tz_offset_min   integer not null default 0,    -- the phone's offset from UTC when it last reported (for reference)
-  weekday_start   text not null default '17:00', -- home hours, on the phone's clock
-  weekday_end     text not null default '22:30',
-  weekend_start   text not null default '09:00',
-  weekend_end     text not null default '22:30',
+  weekday_start   text not null default '07:00', -- home hours, on the phone's clock (default 07:00-22:00 every day)
+  weekday_end     text not null default '22:00',
+  weekend_start   text not null default '07:00',
+  weekend_end     text not null default '22:00',
   weekday2_start  text,                          -- optional second window for participants who want a more
   weekday2_end    text,                          --   customised schedule, "HH:MM" on the phone's clock,
   weekend2_start  text,                          --   null when unused. The sender reminds inside either
@@ -1045,6 +1064,10 @@ create table if not exists public.push_subscriptions (
   updated_at      timestamptz not null default now()
 );
 alter table public.push_subscriptions alter column interval_min set default 60;
+alter table public.push_subscriptions alter column weekday_start set default '07:00';
+alter table public.push_subscriptions alter column weekday_end set default '22:00';
+alter table public.push_subscriptions alter column weekend_start set default '07:00';
+alter table public.push_subscriptions alter column weekend_end set default '22:00';
 -- Projects set up with an earlier version of this file get the newer columns here.
 alter table public.push_subscriptions add column if not exists weekday2_start text;
 alter table public.push_subscriptions add column if not exists weekday2_end text;
@@ -1057,6 +1080,31 @@ alter table public.push_subscriptions add column if not exists last_prompt_at ti
 alter table public.push_subscriptions add column if not exists last_vote_at timestamptz;
 alter table public.push_subscriptions add column if not exists user_agent text;
 create index if not exists push_subscriptions_participant on public.push_subscriptions (participant);
+
+-- One-time changes to existing rows. Each runs once ever, however often this file is run again: its name is
+-- recorded here in the same block. Nobody but the database owner (and the secret key) can see this table.
+create table if not exists public.app_migrations (
+  name     text primary key,
+  done_at  timestamptz not null default now()
+);
+alter table public.app_migrations enable row level security;          -- no policies
+revoke all on public.app_migrations from anon, authenticated;
+grant select, insert, update, delete on public.app_migrations to service_role;
+
+-- The default reminder hours became 07:00-22:00 every day. Phones still on the old defaults (weekdays
+-- 17:00-22:30, weekends 09:00-22:30, no second windows) move to the new ones, once: a participant who later
+-- chooses 17:00-22:30 again on purpose keeps it. Phones with any other hours are not touched. updated_at is
+-- left alone (it says when the phone itself last talked to the database).
+do $$
+begin
+  if not exists (select 1 from public.app_migrations m where m.name = 'reminder_hours_0700_2200') then
+    update public.push_subscriptions s
+       set weekday_start = '07:00', weekday_end = '22:00', weekend_start = '07:00', weekend_end = '22:00'
+     where s.weekday_start = '17:00' and s.weekday_end = '22:30' and s.weekend_start = '09:00' and s.weekend_end = '22:30'
+       and s.weekday2_start is null and s.weekday2_end is null and s.weekend2_start is null and s.weekend2_end is null;
+    insert into public.app_migrations (name) values ('reminder_hours_0700_2200') on conflict (name) do nothing;
+  end if;
+end $$;
 
 alter table public.push_subscriptions enable row level security;
 
@@ -1130,8 +1178,8 @@ drop function if exists public.save_push_subscription(text, text, text, text, te
 create or replace function public.save_push_subscription(
   p_key text, p_endpoint text, p_p256dh text, p_auth text,
   p_tz text default null, p_tz_offset_min integer default null,
-  p_weekday_start text default '17:00', p_weekday_end text default '22:30',
-  p_weekend_start text default '09:00', p_weekend_end text default '22:30',
+  p_weekday_start text default '07:00', p_weekday_end text default '22:00',
+  p_weekend_start text default '07:00', p_weekend_end text default '22:00',
   p_weekday2_start text default null, p_weekday2_end text default null,
   p_weekend2_start text default null, p_weekend2_end text default null,
   p_interval_min integer default 60, p_user_agent text default null)
@@ -1140,10 +1188,10 @@ language plpgsql security definer set search_path = public as $$
 #variable_conflict use_column
 declare
   v_code text;
-  ws text := coalesce(public.push_hhmm(p_weekday_start, 'Weekdays from'), '17:00');
-  we text := coalesce(public.push_hhmm(p_weekday_end, 'Weekdays until'), '22:30');
-  es text := coalesce(public.push_hhmm(p_weekend_start, 'Weekends from'), '09:00');
-  ee text := coalesce(public.push_hhmm(p_weekend_end, 'Weekends until'), '22:30');
+  ws text := coalesce(public.push_hhmm(p_weekday_start, 'Weekdays from'), '07:00');     -- missing: the defaults
+  we text := coalesce(public.push_hhmm(p_weekday_end, 'Weekdays until'), '22:00');
+  es text := coalesce(public.push_hhmm(p_weekend_start, 'Weekends from'), '07:00');
+  ee text := coalesce(public.push_hhmm(p_weekend_end, 'Weekends until'), '22:00');
   ws2 text := public.push_hhmm(p_weekday2_start, 'Weekdays, second period, from');
   we2 text := public.push_hhmm(p_weekday2_end, 'Weekdays, second period, until');
   es2 text := public.push_hhmm(p_weekend2_start, 'Weekends, second period, from');

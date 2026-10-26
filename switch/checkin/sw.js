@@ -7,7 +7,7 @@
 importScripts('../config.js');
 const CFG = self.SWITCH_CONFIG || {};
 const APP = CFG.appName || 'HomePulse';
-const CACHE = 'switch-checkin-v14';
+const CACHE = 'switch-checkin-v16';
 const BASE = new URL('../', self.registration.scope).pathname;   // /switch/
 
 self.addEventListener('install', () => self.skipWaiting());
@@ -36,22 +36,36 @@ self.addEventListener('fetch', e => {
   })());
 });
 
+/* The reminder's words come with the push (send.js: title, body, lang, actions, in the participant's language).
+ * Without them (an older sender), the words of the language this phone uses: the app keeps it in the 'switch-prefs'
+ * cache. The action ids never change: 'open' and 'away'. */
+const TEXTS = {
+  en: { title: `${APP}: how does your home feel?`, body: 'A quick comfort check-in, under a minute.',
+        actions: [{ action: 'open', title: "I'm home" }, { action: 'away', title: 'Not home' }] },
+  cy: { title: `${APP}: sut mae'ch cartref yn teimlo?`, body: "Cofnodwch sut rydych chi'n teimlo — llai na munud.",
+        actions: [{ action: 'open', title: 'Rydw i gartref' }, { action: 'away', title: 'Dydw i ddim gartref' }] }
+};
+async function phoneLang() {
+  try { const c = await caches.open('switch-prefs'), r = await c.match('lang'); return r && (await r.text()) === 'cy' ? 'cy' : 'en'; }
+  catch (err) { return 'en'; }
+}
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (err) { d = { body: e.data ? e.data.text() : '' }; }
-  const options = {
-    body: d.body || 'A quick comfort check-in, about a minute.',
-    icon: 'icon-192.png',
-    badge: 'icon-192.png',
-    tag: /^switch/.test(d.tag || '') ? d.tag : 'switch-checkin',   // never another study's tag: both apps live on one site
-    renotify: true,
-    data: { url: d.url || './?from=push', participant: d.participant || '', sentAt: d.sentAt || '' },
-    actions: [
-      { action: 'open', title: "I'm home" },
-      { action: 'away', title: 'Not home' }
-    ]
-  };
-  e.waitUntil(self.registration.showNotification(d.title || `${APP}: how does your home feel?`, options));
+  e.waitUntil((async () => {
+    const lang = d.lang === 'cy' || d.lang === 'en' ? d.lang : await phoneLang(), T = TEXTS[lang];
+    const acts = Array.isArray(d.actions) && d.actions.length ? d.actions.filter(a => a && (a.action === 'open' || a.action === 'away') && a.title) : [];
+    await self.registration.showNotification(d.title || T.title, {
+      body: d.body || T.body,
+      lang: lang === 'cy' ? 'cy' : 'en-GB',
+      icon: 'icon-192.png',
+      badge: 'icon-192.png',
+      tag: /^switch/.test(d.tag || '') ? d.tag : 'switch-checkin',   // never another study's tag: both apps live on one site
+      renotify: true,
+      data: { url: d.url || './?from=push', participant: d.participant || '', sentAt: d.sentAt || '' },
+      actions: acts.length ? acts : T.actions
+    });
+  })());
 });
 
 self.addEventListener('notificationclick', e => {

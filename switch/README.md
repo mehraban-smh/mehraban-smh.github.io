@@ -163,7 +163,7 @@ shortcut since 1.0; `same_as_last` is always false; clothing has a one-tap "Same
 | Can you feel air moving around you? | `air` | `still`, `slight`, `draughty` |
 | Is the sun shining on you? | `sun` | `yes`, `no`, `dark` |
 | Is your heating on right now? (1.0) | `heating_on` | `on`, `off`, `unsure` |
-| Which heating is on? (1.0, only when on and the home has more than one system) | `heating_src` | the home's `main_heating` / `other_heaters` ids, `other` |
+| Which heating is on? (1.0–1.1 only, when on and the home had more than one system; empty from 1.2) | `heating_src` | the home's `main_heating` / `other_heaters` ids, `other` |
 | How long has it been on? (1.0, only when on) | `heating_for` | `always` (the thermostat switches it on and off; added 1.1), `30_60`, `1_2h`, `2_4h`, `gt4h`, `unsure` (`lt30` in 1.0 check-ins only) |
 | Touch the nearest outside wall… how does it feel? (1.0) | `wall` | `no_reach` (listed first), `cold`, `cool`, `neutral`, `warm` |
 
@@ -182,7 +182,11 @@ The answers dropped in 0.4.0 stay in the `comfort`, `comfort_score`, `humidity` 
 
 The app has four tabs: **Today** (Check in now, the daily goal of 4 and the weekly goal of 7 goal days, the week,
 reminders, points, the Bay Race and the latest badge), **Race**, **My check-ins** (charts and every check-in; tap one
-for the details) and **Settings** (reminder hours, "Show me in the Bay Race", My home, account, sign out). The
+for the details) and **Settings** (Language / Iaith, reminder hours, My home, account, sign out). Since 1.2 the app
+is in English and Welsh: the language is the first choice on the welcome screen, can be changed any time in
+Settings, and is kept on the device (`switch_lang`) and on the account (`participants.lang`, `en` or `cy`), so other
+devices and the reminders follow it; `?lang=cy` from the Welsh study page shows the app in Welsh. The Welsh text is
+in `checkin/i18n.js` and should be checked by a fluent speaker before it is promoted. The
 service worker caches the app's files (network first), so it opens without a connection. When changing JS or CSS,
 bump `?v=` in `checkin/index.html` and the cache name in `checkin/sw.js` (and `?v=` in `dashboard/index.html` when
 `switch-api.js` or `config.js` change).
@@ -200,10 +204,13 @@ Participants waiting for approval see only themselves in the race.
 
 The Bay Race runs from Swansea Marina to Mumbles lighthouse, this week, last week (final standings) or this month;
 the lighthouse is the daily
-goal every day plus the full-week bonus (470 points a week). Participants appear only as their alias; "Show me in
-the Bay Race" off (`race_hidden`) hides a participant from everyone else (they still see the race and their own
-place). Badges (first check-in, daily goal, three in a row, full week, early bird, night owl, 50 and 100 check-ins,
-10 different days, 10 wall answers) are private. No prizes are promised; the points are stored so the team can run
+goal every day plus the full-week bonus (470 points a week). Taking part in the race is not optional (since 1.2;
+`race_hidden` is ignored): every approved participant appears, but only as their alias and its animal picture, shown
+in Welsh in the Welsh app; nobody sees another participant's name, code or answers. Badges are private (36 in nine groups since 1.2: getting started; 10 to 200 check-ins; 5 to 31 goal days; streaks of 3 to 31
+days; 2 to 4 full weeks; times of day; check-ins started from a reminder; taking part (10 and 14 different days, the
+outside-wall question); and the season: 21 December, Christmas Day, New Year's Day and the last day). They are worked
+out on the phone from the participant's own check-ins and reward taking part only, never particular answers (the list
+and rules are in `checkin/game.js`). No prizes are promised; the points are stored so the team can run
 a reward scheme later (the dashboard lists them by code).
 
 Every Monday the week's race and goals start again from zero. So that a new week never looks like lost data, the
@@ -229,8 +236,9 @@ see "The reminder clock" below), which runs two scripts in `switch/push/`:
   participant is still registered and approved, reminders are on and not paused, at least 45 minutes
   (`checkinGapMin`) have passed since the participant's last check-in on **any** of their devices (each check-in
   moves `last_vote_at` on all their phones), it has not had a reminder yet in this clock hour (nor in the last 45
-  minutes), and the phone's local time is inside the participant's home hours (weekdays 17:00–22:30 and weekends
-  09:00–22:30 unless they change it in the app, with an optional **second window** for weekdays and for weekends,
+  minutes), and the phone's local time is inside the participant's home hours (07:00–22:00 every day unless they
+  change it in the app; 1.0 used weekdays 17:00–22:30 and weekends 09:00–22:30, and phones still on those were moved
+  to the new default once in 1.2), with an optional **second window** for weekdays and for weekends,
   stored in `weekday2_start/end` and `weekend2_start/end`). The gap is 45 minutes rather than an hour because the
   clock runs on the hour: with a 60-minute gap, anyone who checked in a few minutes after a reminder would always
   miss the next one. Every window must end after it starts (for "until midnight" the app asks for 23:59). A run in

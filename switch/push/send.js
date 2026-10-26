@@ -33,7 +33,9 @@
  *   VAPID_PRIVATE_KEY          the 43-character private key that pairs with vapidPublicKey in config.js
  * The project URL, the VAPID public key, the reminder interval (reminderIntervalMin), the check-in gap
  * (checkinGapMin), the study's time zone (timeZone), its last day (studyEnd) and the app's name (appName,
- * in the notification title) are public and are read from ../config.js.
+ * in the notification title) are public and are read from ../config.js. Each reminder is in the participant's
+ * language (participants.lang, English or Welsh; English when the database has no lang yet), and the push
+ * carries its words (title, body, lang, and the two buttons as actions) for the service worker to show.
  * Optional:
  *   FORCE_PARTICIPANT  send to this code right now, ignoring every rule (manual test run). A forced
  *                      reminder is not recorded, so it never holds back a scheduled one.
@@ -47,8 +49,9 @@ const path = require('path');
 /* ---- the rules. Kept free of secrets and network so the self-test below can run them anywhere ---- */
 const MIN = 60000;
 const STUDY_ZONE = 'Europe/London';                 // when config.js has no timeZone
-// The app's defaults (DEFAULT_HOURS in checkin/app.js), used for a main-window bound that is missing.
-const DEFAULT_HOURS = { weekday_start: '17:00', weekday_end: '22:30', weekend_start: '09:00', weekend_end: '22:30' };
+// The app's defaults (DEFAULT_HOURS in checkin/app.js; 07:00-22:00 every day, the same as the database's column
+// defaults), used for a main-window bound that is missing.
+const DEFAULT_HOURS = { weekday_start: '07:00', weekday_end: '22:00', weekend_start: '07:00', weekend_end: '22:00' };
 const toMin = hhmm => { const m = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(String(hhmm || '').trim()); return m ? (+m[1]) * 60 + (+m[2]) : null; };
 const LATE_START_MIN = 5;                            // grace for a run that starts late; below the :07 backup run
 // The browser push services (the same list as push_endpoint_ok() in supabase-setup.sql).
@@ -137,6 +140,18 @@ function dayEndsAt(ymd, zone) {
   return new Date(guess - (shown - guess));                               // shift by the zone's offset at that moment
 }
 
+/* What the notification says, in the participant's language (participants.lang: 'en' English, 'cy' Welsh;
+ * anything else is English). It travels in the push so the service worker shows it: title, body, lang (for the
+ * notification's lang attribute) and actions (the two buttons; the ids "open" and "away" never change). */
+const WORDS = {
+  en: { title: n => `${n}: how does your home feel?`, body: 'A quick comfort check-in, under a minute.', open: "I'm home", away: 'Not home' },
+  cy: { title: n => `${n}: sut mae'ch cartref yn teimlo?`, body: "Cofnodwch sut rydych chi'n teimlo — llai na munud.", open: 'Rydw i gartref', away: 'Dydw i ddim gartref' }
+};
+function notice(lang, appName) {
+  const l = lang === 'cy' ? 'cy' : 'en', w = WORDS[l];
+  return { lang: l, title: w.title(appName), body: w.body, actions: [{ action: 'open', title: w.open }, { action: 'away', title: w.away }] };
+}
+
 /* ---- the public settings in ../config.js (read as text: values must stay "double-quoted" and numbers plain) ---- */
 const config = fs.readFileSync(path.join(__dirname, '..', 'config.js'), 'utf8');
 const cfgVal = k => (config.match(new RegExp(k + ':\\s*"([^"]*)"')) || [])[1] || '';
@@ -192,8 +207,18 @@ function selfTest() {
     // main-window bounds: seconds are fine, a missing or broken bound takes the app's default, never "any time"
     ['main window stored as HH:MM:SS', { ...one, weekday_start: '17:00:00', weekday_end: '22:30:00' }, weekday('03:00'), 'outside home hours'],
     ['main window stored as HH:MM:SS, inside', { ...one, weekday_start: '17:00:00', weekday_end: '22:30:00' }, weekday('18:00'), 'send'],
-    ['main window bounds missing: default 17:00-22:30', { ...one, weekday_start: null, weekday_end: '' }, weekday('03:00'), 'outside home hours'],
-    ['main window bounds broken: default 17:00-22:30', { ...one, weekday_start: 'teatime', weekday_end: 'late' }, weekday('18:00'), 'send'],
+    ['main window bounds missing: default 07:00-22:00', { ...one, weekday_start: null, weekday_end: '' }, weekday('03:00'), 'outside home hours'],
+    ['main window bounds broken: default 07:00-22:00', { ...one, weekday_start: 'teatime', weekday_end: 'late' }, weekday('18:00'), 'send'],
+    // the default hours, 07:00-22:00 every day (a phone row that lost its hours)
+    ['default hours: weekday 06:59 is outside', { ...one, weekday_start: null, weekday_end: null }, weekday('06:59'), 'outside home hours'],
+    ['default hours: weekday 07:00 sends', { ...one, weekday_start: null, weekday_end: null }, weekday('07:00'), 'send'],
+    ['default hours: weekday 12:00 sends (no longer evenings only)', { ...one, weekday_start: null, weekday_end: null }, weekday('12:00'), 'send'],
+    ['default hours: weekday 22:00 sends', { ...one, weekday_start: null, weekday_end: null }, weekday('22:00'), 'send'],
+    ['default hours: weekday 22:30 is outside (the old default end)', { ...one, weekday_start: null, weekday_end: null }, weekday('22:30'), 'outside home hours'],
+    ['default hours: weekend 07:00 sends (the old default started at 09:00)', { ...one, weekend_start: null, weekend_end: null }, weekend('07:00'), 'send'],
+    ['default hours: weekend 22:15 is outside', { ...one, weekend_start: null, weekend_end: null }, weekend('22:15'), 'outside home hours'],
+    ['the new defaults as stored hours, weekday 08:00', { ...one, weekday_start: '07:00', weekday_end: '22:00', weekend_start: '07:00', weekend_end: '22:00' }, weekday('08:00'), 'send'],
+    ['17:00-22:30 chosen on purpose still means 17:00-22:30 (08:00 outside)', one, weekday('08:00'), 'outside home hours'],
     // "until midnight" saved by an older app as 00:00, or a window past midnight: until 23:59, as the app reads it
     ['main window 18:00-00:00 (older app): 23:30 is inside', { ...one, weekday_start: '18:00', weekday_end: '00:00' }, weekday('23:30'), 'send'],
     ['main window 18:00-00:00 (older app): 17:30 is outside', { ...one, weekday_start: '18:00', weekday_end: '00:00' }, weekday('17:30'), 'outside home hours'],
@@ -261,7 +286,27 @@ function selfTest() {
     if (got !== want) bad++;
     console.log(`${got === want ? 'ok  ' : 'FAIL'} ${name}: ${got}${got === want ? '' : ` (expected: ${want})`}`);
   }
-  console.log(bad ? `${bad} of ${cases.length} checks failed` : `all ${cases.length} checks passed`);
+  // the notification's words in both languages (title, body, the two buttons, the lang attribute)
+  const en = notice('en', 'HomePulse'), cy = notice('cy', 'HomePulse');
+  const words = [
+    ['English title', en.title, 'HomePulse: how does your home feel?'],
+    ['English body', en.body, 'A quick comfort check-in, under a minute.'],
+    ['English buttons', en.actions.map(a => a.action + '=' + a.title).join(' | '), "open=I'm home | away=Not home"],
+    ['English lang', en.lang, 'en'],
+    ['Welsh title', cy.title, "HomePulse: sut mae'ch cartref yn teimlo?"],
+    ['Welsh body', cy.body, "Cofnodwch sut rydych chi'n teimlo — llai na munud."],
+    ['Welsh buttons (same ids)', cy.actions.map(a => a.action + '=' + a.title).join(' | '), 'open=Rydw i gartref | away=Dydw i ddim gartref'],
+    ['Welsh lang', cy.lang, 'cy'],
+    ['no language stored: English', notice(undefined, 'HomePulse').title, 'HomePulse: how does your home feel?'],
+    ['an unknown language: English', notice('fr', 'HomePulse').lang, 'en'],
+    ['the app name comes from config.js', notice('cy', 'Cwtch').title, "Cwtch: sut mae'ch cartref yn teimlo?"]
+  ];
+  for (const [name, got, want] of words) {
+    if (got !== want) bad++;
+    console.log(`${got === want ? 'ok  ' : 'FAIL'} words: ${name}: ${got}${got === want ? '' : ` (expected: ${want})`}`);
+  }
+  const total = cases.length + words.length;
+  console.log(bad ? `${bad} of ${total} checks failed` : `all ${total} checks passed`);
   process.exit(bad ? 1 : 0);
 }
 if (process.env.SELFTEST) selfTest();
@@ -324,13 +369,13 @@ const rest = restOf(TABLE);
 
 // Page by page: Supabase returns at most "max rows" (1000 by default) per request, and a short read must
 // never leave the participants at the end of the list without reminders.
-async function readAll(table, query, what) {
+async function readAll(table, query, what, soft) {
   const out = [];
   for (let from = 0; ;) {
     const r = await fetch(restOf(table)(`?${query}&limit=1000&offset=${from}`), { headers });
     if (r.status === 401 || r.status === 403) fail(`Supabase refused the secret key (${r.status}). Check the SUPABASE_SERVICE_ROLE_KEY secret: ${await r.text()}`);
     if (r.status === 404) fail(`table ${table} was not found. Run supabase-setup.sql again in the SQL editor: ${await r.text()}`);
-    if (!r.ok) fail(`could not read ${what} (${r.status}): ${await r.text()}`);
+    if (!r.ok) { const t = await r.text(); if (soft && r.status === 400) throw new Error(t); fail(`could not read ${what} (${r.status}): ${t}`); }
     const page = await r.json();
     if (!page.length) break;
     out.push(...page);
@@ -342,8 +387,13 @@ async function readAll(table, query, what) {
 async function main() {
   const now = new Date();
   const subs = await readAll(TABLE, 'select=*&order=participant,endpoint', 'subscriptions');
-  // Who may still be reminded: registered participants and whether they are approved (never a name or email).
-  const people = new Map((await readAll('participants', 'select=code,approved&order=code', 'participants')).map(p => [p.code, p.approved === true]));
+  // Who may still be reminded: registered participants, whether they are approved, and their language (never a
+  // name or email). A database not yet updated for lang gives a 400: then every reminder is in English.
+  let rows;
+  try { rows = await readAll('participants', 'select=code,approved,lang&order=code', 'participants', true); }
+  catch (e) { console.log('participants.lang is missing (run supabase-setup.sql again): every reminder in English'); rows = await readAll('participants', 'select=code,approved&order=code', 'participants'); }
+  const people = new Map(rows.map(p => [p.code, p.approved === true]));
+  const langs = new Map(rows.map(p => [p.code, p.lang]));
   const summary = {};
   let sent = 0, removed = 0;
   for (const sub of subs) {
@@ -353,16 +403,19 @@ async function main() {
     catch (e) { verdict = 'could not decide'; console.error(`could not decide for ${sub.participant}: ${e.message}`); }   // one odd row never stops the rest
     summary[verdict] = (summary[verdict] || 0) + 1;
     if (verdict !== 'send') continue;
+    const words = notice(langs.get(sub.participant), APP_NAME);
     const payload = JSON.stringify({
-      title: `${APP_NAME}: how does your home feel?`,
-      body: 'A quick comfort check-in, about a minute.',
+      title: words.title,
+      body: words.body,
+      lang: words.lang,
+      actions: words.actions,
       url: './?from=push',
       participant: sub.participant,
       tag: 'switch-checkin',
       sentAt: now.toISOString()
     });
     const at = rest(`?endpoint=eq.${encodeURIComponent(sub.endpoint)}`);
-    if (DRY) { console.log(`[dry run] would send to ${sub.participant} (${localClock(now, sub.tz, ZONE).text})`); continue; }
+    if (DRY) { console.log(`[dry run] would send to ${sub.participant} (${localClock(now, sub.tz, ZONE).text}, ${words.lang})`); continue; }
     try {
       // timeout: a push service that never answers must not hold up everyone after this phone
       await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload, { TTL: 25 * 60, urgency: 'high', timeout: 15000 });

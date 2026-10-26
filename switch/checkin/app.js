@@ -13,7 +13,7 @@ const START = (URLQ.get('start') || '').toLowerCase();     // ?start=join or ?st
 const KEY = 'switch_comfort_proto_v1';                      // check-ins kept on this phone (the dashboard's local mode reads it too)
 const APPROVED_KEY = 'switch_approved';
 const HOME_KEY = 'switch_home';                             // the home profile (participants.home, metric)
-const ME_KEY = 'switch_me';                                 // the rest of my_profile: gender, birth year, height, weight, sensitivity, alias, race_hidden
+const ME_KEY = 'switch_me';                                 // the rest of my_profile: gender, birth year, height, weight, sensitivity, alias
 const REG_KEY = 'switch_reg';                               // the join wizard's draft (never the PIN), removed once saved
 const PENDING_KEY = 'switch_pending';                       // switch-api.js: check-ins waiting to be sent
 const RACE_KEY = p => 'switch_race_' + p;                   // the last race payload of each period, so the Race tab opens at once and offline
@@ -38,7 +38,7 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 const MONTHS_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const LS = { get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} } };
-const SS = { get(k){ try{ return sessionStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ sessionStorage.setItem(k,v); }catch(e){} } };
+const SS = { get(k){ try{ return sessionStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ sessionStorage.setItem(k,v); }catch(e){} }, del(k){ try{ sessionStorage.removeItem(k); }catch(e){} } };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const quiet = p => { try{ p && p.catch && p.catch(()=>{}); }catch(e){} };
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -48,21 +48,22 @@ const hasGame = () => typeof window.GAME === 'object' && !!window.GAME;
 /* ---------- times ---------- */
 const hm = s => { const m = /^(\d{1,2}):(\d{2})/.exec(s||''); return m ? [Number(m[1]), Number(m[2])] : null; };
 function startOfDay(d){ const c = new Date(d); c.setHours(0,0,0,0); return c; }
-const shortDate = d => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+/* dates in the app's language (i18n.js): "Monday 26 Oct" / "Dydd Llun 26 Hyd" */
+const shortDate = d => `${I18N.dayName(d)} ${d.getDate()} ${I18N.monthName(d.getMonth(), true)}`;
 function dayTitle(d){
   const now = new Date(), y = new Date(now); y.setDate(y.getDate()-1);
-  return dayKey(d)===dayKey(now) ? 'Today' : dayKey(d)===dayKey(y) ? 'Yesterday' : shortDate(d);
+  return dayKey(d)===dayKey(now) ? tr('Today') : dayKey(d)===dayKey(y) ? tr('Yesterday') : shortDate(d);
 }
-const dateWord = d => `${dayTitle(d)} at ${fmt(d)}`;
+const dateWord = d => tr('{day} at {time}', { day: dayTitle(d), time: fmt(d) });
 function agoWord(ts){
   const mins = Math.max(0, Math.round((Date.now() - new Date(ts)) / 60000));
-  if(mins < 1) return 'just now';
-  if(mins < 60) return mins + ' min ago';
-  if(mins < 24*60){ const h = Math.round(mins/60); return h + (h===1 ? ' hour ago' : ' hours ago'); }
+  if(mins < 1) return tr('just now');
+  if(mins < 60) return tr('{n} min ago', { n: mins });
+  if(mins < 24*60){ const h = Math.round(mins/60); return trn(h, '{n} hour ago', '{n} hours ago'); }
   const days = Math.round((startOfDay(new Date()) - startOfDay(new Date(ts))) / 86400000);
-  return days <= 1 ? 'yesterday' : days + ' days ago';
+  return days <= 1 ? tr('yesterday') : tr('{n} days ago', { n: days });
 }
-const secsWord = s => !s ? '' : s < 90 ? `${s} second${s===1?'':'s'}` : `${Math.floor(s/60)} min ${s%60} s`;
+const secsWord = s => !s ? '' : s < 90 ? trn(s, '{n} second', '{n} seconds') : tr('{m} min {s} s', { m: Math.floor(s/60), s: s%60 });
 
 /* ---------- who is using this phone ---------- */
 /* ?p= is no longer read: check-ins need this device's key, which only joining or signing in gives. */
@@ -73,7 +74,7 @@ const firstName = () => (NAME || '').trim().split(/\s+/)[0] || '';
 function greeting(){
   const h = new Date().getHours();
   const g = h < 5 ? 'Good evening' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-  return g + (firstName() ? ', ' + esc(firstName()) : '');
+  return tr(g) + (firstName() ? ', ' + esc(firstName()) : '');
 }
 const homeProfile = () => readJSON(HOME_KEY);
 const meProfile = () => readJSON(ME_KEY) || {};
@@ -124,7 +125,7 @@ function seed(){
       rows.push({ id:'ex'+(i++), p:PARTICIPANT, ts:t.toISOString(), type: k % 2 ? 'scheduled' : 'self', home:'long', example:true, same:false,
         tsv, tp: tsv < 0 ? 'warmer' : tsv > 0 ? 'cooler' : 'same', ta: Math.abs(tsv) >= 2 ? 'unacceptable' : 'acceptable',
         garments:s[5], clo:cloOf(s[5]), act:s[4], met:byId(ACTS,s[4]).met, room:s[3], air: k===1 ? 'draughty' : k===3 ? 'slight' : 'still', sun:s[6],
-        heat:s[7], heat_src: on ? ['gas_combi'] : null, heat_for: on ? ['always','1_2h','2_4h'][k % 3] : null, stat: null,
+        heat:s[7], heat_src: null, heat_for: on ? ['always','1_2h','2_4h'][k % 3] : null, stat: null,
         wall: tsv < 0 ? 'cold' : k % 2 ? 'cool' : 'neutral', actions: k===1 ? ['heat_up'] : k===4 ? ['layer_off'] : [], notes: k===4 ? ['hot_drink'] : [], secs: 24 + (i*7 % 30) });
     });
   }
@@ -191,11 +192,11 @@ async function homeReady(opener){
   if(!SWITCH.live || meKnown()) return true;
   if(navigator.onLine !== false){
     busy(opener, true);
-    const t = setTimeout(() => showToast({ title:'Loading your home profile&hellip;', kind:'info', ms:6000 }), 300);
+    const t = setTimeout(() => showToast({ title:tr('Loading your home profile&hellip;'), kind:'info', ms:6000, tag:'profile' }), 300);
     profileWait = profileWait || Promise.race([refreshProfile(), new Promise(r => setTimeout(r, 6000))]).finally(() => { profileWait = null; });
     await profileWait;
     clearTimeout(t); busy(opener, false);
-    if(TOAST && /Loading your home/.test(TOAST.o.title)) closeToast();
+    if(TOAST && TOAST.o.tag === 'profile') closeToast();
   }
   return meKnown() || !!homeProfile();
 }
@@ -203,7 +204,7 @@ async function homeReady(opener){
  * (from a reminder too, over Today). Nobody checks in before their home profile is complete. */
 async function startSession(mode, opener, anyway){
   if(needsKey()){ go('signin'); return; }
-  if(!(await homeReady(opener))){ showToast({ title:'Your home profile has not loaded yet', sub:'Check the connection, then try again', kind:'error' }); return; }
+  if(!(await homeReady(opener))){ showToast({ title:tr('Your home profile has not loaded yet'), sub:tr('Check the connection, then try again'), kind:'error' }); return; }
   if(needsKey()){ go('signin'); return; }                   // reading the profile found the key no longer works
   if(needsProfile()){ startProfile(); render(); return; }
   const from = TABS.includes(S.screen) ? S.screen : 'today';
@@ -215,10 +216,10 @@ async function startSession(mode, opener, anyway){
 }
 function waitSheet(open, opener){
   const l = lastVote(), mins = Math.max(1, Math.ceil((open - Date.now()) / 60000));
-  openSheet(`<div class="sh-head"><div><div class="eyebrow">Not yet</div><b id="sheetTitle">Come back at ${fmt(open)}</b></div><button class="x" data-act="sheet-close" aria-label="Close">${ic('x')}</button></div>
-    <div class="sh-body"><div class="wait-time">${ic('clock')}<div><b>${fmt(open)}</b><span>Your next check-in opens in ${mins} minute${mins===1?'':'s'}</span></div></div>
-      <p class="sub">You checked in at ${fmt(new Date(l.ts))}. Check-ins open ${GAP_MIN} minutes after the last one, on any of your devices, so each one tells the study something new about your day.</p>
-      <div class="actions"><button class="btn primary" data-act="sheet-close">OK</button></div></div>`, '.sh-body [data-act="sheet-close"]', opener);
+  openSheet(`<div class="sh-head"><div><div class="eyebrow">${tr('Not yet')}</div><b id="sheetTitle">${tr('Come back at {time}', { time: fmt(open) })}</b></div><button class="x" data-act="sheet-close" aria-label="${tr('Close')}">${ic('x')}</button></div>
+    <div class="sh-body"><div class="wait-time">${ic('clock')}<div><b>${fmt(open)}</b><span>${trn(mins, 'Your next check-in opens in {n} minute', 'Your next check-in opens in {n} minutes')}</span></div></div>
+      <p class="sub">${tr('You checked in at {time}. Check-ins open {gap} minutes after the last one, on any of your devices, so each one tells the study something new about your day.', { time: fmt(new Date(l.ts)), gap: GAP_MIN })}</p>
+      <div class="actions"><button class="btn primary" data-act="sheet-close">${tr('OK')}</button></div></div>`, '.sh-body [data-act="sheet-close"]', opener);
 }
 /* The questions of FLOW_ALL every time, all starting unanswered (clothing offers "Same as last time"). */
 function beginQuestions(){
@@ -231,16 +232,15 @@ function beginQuestions(){
 /* The current step is found again by its id when the list changes (an answer, or the profile arriving mid-way). */
 function refreshFlow(){
   const cur = S.flow[S.i];
-  S.flow = flowFor(S.a, homeProfile());
+  S.flow = flowFor(S.a);
   const j = cur ? S.flow.indexOf(cur) : -1;
   if(j >= 0) S.i = j; else if(S.i > S.flow.length-1) S.i = Math.max(0, S.flow.length-1);
 }
-/* Heating off or unsure: which heating and how long are not asked (and forgotten). Heating on in a home with
- * one system: that system, without asking; with none in the profile: nothing to ask, left empty. */
+/* Heating off or unsure: how long it has been on is not asked (and forgotten). Which heating is no longer asked. */
 function heatRules(){
   const a = S.a;
-  if(a.heat !== 'on'){ delete a.heat_src; delete a.heat_for; }
-  else { const ch = heatChoices(homeProfile()); if(ch.length <= 1) a.heat_src = ch.length ? [ch[0].id] : null; }
+  delete a.heat_src;
+  if(a.heat !== 'on') delete a.heat_for;
   refreshFlow();
 }
 const answered = (a, q) => (q==='clo' || q==='heat_src') ? Array.isArray(a[q]) && a[q].length > 0
@@ -401,13 +401,13 @@ function nextReminder(){
   return c;
 }
 /* "23:42", or "01:42 tomorrow" (the end of a pause, at most a few hours ahead) */
-const untilWord = d => fmt(d) + (dayKey(d)===dayKey(new Date()) ? '' : ' tomorrow');
+const untilWord = d => dayKey(d)===dayKey(new Date()) ? fmt(d) : tr('{time} tomorrow', { time: fmt(d) });
 function whenWord(d){
   const now = new Date(), tom = new Date(now); tom.setDate(tom.getDate()+1);
   const k = dayKey(d);
-  if(k===dayKey(now)) return 'today at ' + fmt(d);
-  if(k===dayKey(tom)) return 'tomorrow at ' + fmt(d);
-  return 'on ' + DAYS[d.getDay()] + ' at ' + fmt(d);
+  if(k===dayKey(now)) return tr('today at {time}', { time: fmt(d) });
+  if(k===dayKey(tom)) return tr('tomorrow at {time}', { time: fmt(d) });
+  return tr('{day} at {time}', { day: I18N.onDay(d), time: fmt(d) });
 }
 
 /* ---------- building blocks of the main screens ---------- */
@@ -415,7 +415,7 @@ const head = (eyebrow, title, sub='') => `<div class="q tab-head"><div class="ey
 function syncLine(){
   const n = SWITCH.pending().filter(r => r.participant === PARTICIPANT).length;
   const cls = !SWITCH.live ? 'local' : n ? 'wait' : '';
-  const txt = !SWITCH.live ? 'stored on this phone only' : n ? n + ' waiting to send' : 'all check-ins sent';
+  const txt = !SWITCH.live ? tr('stored on this phone only') : n ? tr('{n} waiting to send', { n }) : tr('all check-ins sent');
   return `<span class="sync ${cls}"><i aria-hidden="true"></i>${txt}</span>`;
 }
 function refreshSync(){ $$('[data-sync]').forEach(el => { el.innerHTML = syncLine(); }); }
@@ -425,22 +425,22 @@ function statusCard(){
   let icon = 'bell', title, sub;
   if(store.paused && new Date(store.paused) > now){
     icon = 'pause';
-    if(store.pausedWhy==='manual'){ title = 'Paused until you&rsquo;re back'; sub = 'Back home? Tap Check in now.' + (on ? ` Otherwise reminders resume ${whenWord(nextReminder())}.` : ''); }
-    else { title = `Paused until ${untilWord(new Date(store.paused))}`; sub = `No reminders on this phone while you&rsquo;re out.${on ? ` Next one ${whenWord(nextReminder())}.` : ''}`; }
+    if(store.pausedWhy==='manual'){ title = tr('Paused until you&rsquo;re back'); sub = tr('Back home? Tap Check in now.') + (on ? tr(' Otherwise reminders resume {when}.', { when: whenWord(nextReminder()) }) : ''); }
+    else { title = tr('Paused until {until}', { until: untilWord(new Date(store.paused)) }); sub = tr('No reminders on this phone while you&rsquo;re out.') + (on ? tr(' Next one {when}.', { when: whenWord(nextReminder()) }) : ''); }
   }
-  else if(studyOver()){ icon = 'checkc'; title = 'The study has ended'; sub = 'Reminders have stopped. Thank you for taking part.'; }
-  else if(on){ title = `Next reminder ${whenWord(nextReminder())}`; sub = daysWord(hours()); }
-  else if(st==='unconfigured'){ icon = 'clock'; title = `Next check-in window ${whenWord(nextReminder())}`; sub = 'Reminders start once the study database is connected'; }
-  else if(st==='off'){ title = PUSH.lost() ? 'Reminders have stopped' : 'Turn on reminders'; sub = PUSH.lost() ? 'Tap to turn them on again' : 'A nudge once an hour while you&rsquo;re at home'; }
-  else if(st==='install'){ icon = 'download'; title = PUSH.inApp ? 'Open this page in Safari' : 'Add the app to your Home Screen'; sub = 'Reminders need it on your Home Screen'; }
-  else if(st==='blocked'){ icon = 'bellOff'; title = 'Reminders are blocked'; sub = 'Allow notifications to turn them on'; }
-  else { icon = 'bellOff'; title = 'Reminders aren&rsquo;t available here'; sub = PUSH.iosOld ? 'They need iOS 16.4 or later' : 'Use Chrome on Android or Safari on iPhone'; }
+  else if(studyOver()){ icon = 'checkc'; title = tr('The study has ended'); sub = tr('Reminders have stopped. Thank you for taking part.'); }
+  else if(on){ title = tr('Next reminder {when}', { when: whenWord(nextReminder()) }); sub = daysWord(hours()); }
+  else if(st==='unconfigured'){ icon = 'clock'; title = tr('Next check-in window {when}', { when: whenWord(nextReminder()) }); sub = tr('Reminders start once the study database is connected'); }
+  else if(st==='off'){ title = PUSH.lost() ? tr('Reminders have stopped') : tr('Turn on reminders'); sub = PUSH.lost() ? tr('Tap to turn them on again') : tr('A nudge once an hour while you&rsquo;re at home'); }
+  else if(st==='install'){ icon = 'download'; title = PUSH.inApp ? tr('Open this page in Safari') : tr('Add the app to your Home Screen'); sub = tr('Reminders need it on your Home Screen'); }
+  else if(st==='blocked'){ icon = 'bellOff'; title = tr('Reminders are blocked'); sub = tr('Allow notifications to turn them on'); }
+  else { icon = 'bellOff'; title = tr('Reminders aren&rsquo;t available here'); sub = PUSH.iosOld ? tr('They need iOS 16.4 or later') : tr('Use Chrome on Android or Safari on iPhone'); }
   return `<button class="status" data-act="go-reminders">${ic(icon)}<div><b>${title}</b><span>${sub}</span></div>${ic('chev','go')}</button>`;
 }
 /* "Weekdays 17:00–22:30 · Weekends 09:00–22:30", or "Every day ..." when the two are the same */
 function daysWord(h){
   const wd = hoursWord(h, 'weekday'), we = hoursWord(h, 'weekend');
-  return wd === we ? `Every day ${wd}` : `Weekdays ${wd} &middot; Weekends ${we}`;
+  return wd === we ? tr('Every day {h}', { h: wd }) : tr('Weekdays {wd} &middot; Weekends {we}', { wd, we });
 }
 /* Notifications are part of the study: without them nobody is reminded to check in. Until they are on,
  * Today leads with this card, and the first "Check in now" of a visit asks for them (notifSheet). Whatever
@@ -460,54 +460,55 @@ const notifGate = () => HANDHELD && !studyOver() && ['off','blocked','install','
 function gateWord(){
   if(!notifGate()) return '';
   const st = PUSH.status();
-  if(st === 'install') return PUSH.inApp ? 'First, open this page in Safari' : `First, add ${APP} to your Home Screen`;
-  if(st === 'blocked') return 'First, allow notifications';
-  return st === 'off' && !notifTrouble ? 'First, turn on notifications' : '';
+  if(st === 'install') return PUSH.inApp ? tr('First, open this page in Safari') : tr('First, add {app} to your Home Screen', { app: APP });
+  if(st === 'blocked') return tr('First, allow notifications');
+  return st === 'off' && !notifTrouble ? tr('First, turn on notifications') : '';
 }
-const TEAM_LINE = `Questions? Email the research team at ${TEAM}.`;
 /* the app's own address, to open in Safari (no query: the Home Screen app starts from the manifest anyway) */
 const APP_URL = location.origin + location.pathname;
-const copyLinkBox = () => `<div class="copylink"><input class="in" readonly value="${esc(APP_URL)}" aria-label="The link to ${APP}"><button class="btn secondary" type="button" data-act="copy-link">${ic('copy')} Copy link</button></div>`;
+const copyLinkBox = () => `<div class="copylink"><input class="in" readonly value="${esc(APP_URL)}" aria-label="${tr('The link to {app}', { app: APP })}"><button class="btn secondary" type="button" data-act="copy-link">${ic('copy')} ${tr('Copy link')}</button></div>`;
 /* iPhone or iPad, outside the Home Screen app: how to get there. Inside another app's browser (Gmail, WhatsApp,
  * Facebook, Instagram, the Google app) or Chrome, Firefox or Edge there is no Add to Home Screen, so Safari first.
  * signedIn: this person already uses the app here (they sign in again in the Home Screen app; nothing is carried
  * over from Safari, and nothing sensitive is shown). */
 function installSteps(signedIn){
-  const last = signedIn ? `<li><div>Open <b>${APP}</b> from your Home Screen, choose <b>I have registered before</b> and sign in with your email and the PIN you use here. Your check-ins come with you.</div></li>`
-    : `<li><div>Open <b>${APP}</b> from your Home Screen and join there (or sign in, if you have joined before).</div></li>`;
-  const add = `<li><div>In Safari, tap the <b>Share</b> button ${ic('share','inl')}, then <b>Add to Home Screen</b> and <b>Add</b>.</div></li>`;
-  if(PUSH.inApp) return `<ol class="steps"><li><div>Open this page in <b>Safari</b>: tap <b>&middot;&middot;&middot;</b> or the share button and choose <b>Open in Safari</b> (or <b>Open in browser</b>). No such option? Copy the link below, open Safari and paste it into the address bar.</div></li>${add}${last}</ol>${copyLinkBox()}`;
-  return `<ol class="steps"><li><div>Tap the <b>Share</b> button ${ic('share','inl')} in Safari&rsquo;s toolbar.</div></li><li><div>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</div></li>${last}</ol>
-    <p class="note">No <b>Add to Home Screen</b>? This page may be open inside another app: copy the link and open it in Safari.</p>${copyLinkBox()}`;
+  const v = { app: APP, share: ic('share','inl') };
+  const last = signedIn ? `<li><div>${tr('Open <b>{app}</b> from your Home Screen, choose <b>I have registered before</b> and sign in with your email and the PIN you use here. Your check-ins come with you.', v)}</div></li>`
+    : `<li><div>${tr('Open <b>{app}</b> from your Home Screen and join there (or sign in, if you have joined before).', v)}</div></li>`;
+  const add = `<li><div>${tr('In Safari, tap the <b>Share</b> button {share}, then <b>Add to Home Screen</b> and <b>Add</b>.', v)}</div></li>`;
+  if(PUSH.inApp) return `<ol class="steps"><li><div>${tr('Open this page in <b>Safari</b>: tap <b>&middot;&middot;&middot;</b> or the share button and choose <b>Open in Safari</b> (or <b>Open in browser</b>). No such option? Copy the link below, open Safari and paste it into the address bar.')}</div></li>${add}${last}</ol>${copyLinkBox()}`;
+  return `<ol class="steps"><li><div>${tr('Tap the <b>Share</b> button {share} in Safari&rsquo;s toolbar.', v)}</div></li><li><div>${tr('Choose <b>Add to Home Screen</b>, then <b>Add</b>.')}</div></li>${last}</ol>
+    <p class="note">${tr('No <b>Add to Home Screen</b>? This page may be open inside another app: copy the link and open it in Safari.')}</p>${copyLinkBox()}`;
 }
 /* Notifications could not be switched on in this visit for a technical reason, not by choice: the phone's push
  * service failed (Android without Google services, for example), the service worker never started, the database
  * or the connection failed, or the database refused the phone. A phone or tablet may then check in without them
  * ("Check in this time"), and Today keeps offering to try again. In memory only: the next visit tries afresh. */
 let notifTrouble = '';
-const TROUBLE_TEXT = `Your phone couldn&rsquo;t switch on reminders. You can still check in this time. Please email ${TEAM} so we can help.`;
+const troubleText = () => tr('Your phone couldn&rsquo;t switch on reminders. You can still check in this time. Please email {team} so we can help.', { team: TEAM });
 /* this check-in may go ahead without notifications: always on a computer; on a phone or tablet only when they
  * cannot be had (not supported here, or switching them on failed) */
 const notifCanSkip = () => !HANDHELD || PUSH.status() === 'unsupported' || (PUSH.status() === 'off' && !!notifTrouble);
 function notifHelp(st){
-  if(st === 'blocked') return { icon:'bellOff', title:'Notifications are blocked',
-    html: (PUSH.ios ? `<p>${APP} is not allowed to send notifications on this ${/iPad/.test(navigator.userAgent) || navigator.platform === 'MacIntel' ? 'iPad' : 'iPhone'}.</p><ol class="steps"><li><div>Open <b>Settings</b>, then <b>Notifications</b>.</div></li><li><div>Find <b>${APP}</b> and turn on <b>Allow Notifications</b>.</div></li><li><div>Come back here and tap <b>I&rsquo;ve turned them on</b>.</div></li></ol>`
-      : `<p>${APP} is not allowed to send notifications on this phone.</p><ol class="steps"><li><div>Touch and hold the <b>${APP}</b> icon, then tap <b>App info</b> (or &#9432;).</div></li><li><div>Tap <b>Notifications</b> and turn them on.</div></li><li><div>Come back here and tap <b>I&rsquo;ve turned them on</b>.</div></li></ol><p class="note">Using it in Chrome instead? Tap the icon to the left of the address, then <b>Permissions</b> (or <b>Site settings</b>) &rsaquo; <b>Notifications</b> &rsaquo; <b>Allow</b>.</p>`),
-    btn: `<button class="btn primary" data-act="notif-recheck">${ic('refresh')} I&rsquo;ve turned them on</button>` };
-  if(st === 'install') return { icon:'download', title: PUSH.inApp ? 'Open this page in Safari' : 'Add the app to your Home Screen',
-    html: `<p>On ${PUSH.device()}, notifications only work in the Home Screen app.</p>${installSteps(!!PARTICIPANT)}` };
-  if(st === 'unsupported') return { icon:'bellOff', title:'Reminders don&rsquo;t work here',
-    html: HANDHELD ? (PUSH.iosOld ? `<p>Reminders from ${APP} need iOS&nbsp;16.4 or later, and this ${PUSH.device()} has an older version. You can still check in.</p>`
-        : `<p>This browser can&rsquo;t show reminders. You can still check in.</p><p class="note">On Android, opening this page in <b>Chrome</b> usually fixes it.</p>`) + `<p class="note">Please email ${TEAM} so we can help.</p>`
-      : `<p>On Android, open the app in Chrome. On iPhone, open it in Safari and add it to your Home Screen.</p>` };
-  return { icon:'bell', title: PUSH.lost() ? 'Notifications have stopped' : 'Turn on notifications',
-    html: `<p>${APP} reminds you to check in, about once an hour while you&rsquo;re at home. The study needs them${HANDHELD ? ', so on a phone or tablet check-ins start once they are on' : ''}.</p><p class="note">${ic('clock','inl')} ${daysWord(hours())} to start with. You can change the hours in Settings.</p>`,
-    btn: `<button class="btn primary" data-act="notif-on">${ic('bell')} Turn on notifications</button>` };
+  const v = { app: APP, team: TEAM };
+  if(st === 'blocked') return { icon:'bellOff', title:tr('Notifications are blocked'),
+    html: (PUSH.ios ? `<p>${tr(/iPad/.test(navigator.userAgent) || navigator.platform === 'MacIntel' ? '{app} is not allowed to send notifications on this iPad.' : '{app} is not allowed to send notifications on this iPhone.', v)}</p><ol class="steps"><li><div>${tr('Open <b>Settings</b>, then <b>Notifications</b>.')}</div></li><li><div>${tr('Find <b>{app}</b> and turn on <b>Allow Notifications</b>.', v)}</div></li><li><div>${tr('Come back here and tap <b>I&rsquo;ve turned them on</b>.')}</div></li></ol>`
+      : `<p>${tr('{app} is not allowed to send notifications on this phone.', v)}</p><ol class="steps"><li><div>${tr('Touch and hold the <b>{app}</b> icon, then tap <b>App info</b> (or &#9432;).', v)}</div></li><li><div>${tr('Tap <b>Notifications</b> and turn them on.')}</div></li><li><div>${tr('Come back here and tap <b>I&rsquo;ve turned them on</b>.')}</div></li></ol><p class="note">${tr('Using it in Chrome instead? Tap the icon to the left of the address, then <b>Permissions</b> (or <b>Site settings</b>) &rsaquo; <b>Notifications</b> &rsaquo; <b>Allow</b>.')}</p>`),
+    btn: `<button class="btn primary" data-act="notif-recheck">${ic('refresh')} ${tr('I&rsquo;ve turned them on')}</button>` };
+  if(st === 'install') return { icon:'download', title: PUSH.inApp ? tr('Open this page in Safari') : tr('Add the app to your Home Screen'),
+    html: `<p>${tr('On {dev}, notifications only work in the Home Screen app.', { dev: tr(PUSH.device()) })}</p>${installSteps(!!PARTICIPANT)}` };
+  if(st === 'unsupported') return { icon:'bellOff', title:tr('Reminders don&rsquo;t work here'),
+    html: HANDHELD ? (PUSH.iosOld ? `<p>${tr('Reminders from {app} need iOS&nbsp;16.4 or later, and this {dev} has an older version. You can still check in.', { app: APP, dev: tr(PUSH.device()) })}</p>`
+        : `<p>${tr('This browser can&rsquo;t show reminders. You can still check in.')}</p><p class="note">${tr('On Android, opening this page in <b>Chrome</b> usually fixes it.')}</p>`) + `<p class="note">${tr('Please email {team} so we can help.', v)}</p>`
+      : `<p>${tr('On Android, open the app in Chrome. On iPhone, open it in Safari and add it to your Home Screen.')}</p>` };
+  return { icon:'bell', title: PUSH.lost() ? tr('Notifications have stopped') : tr('Turn on notifications'),
+    html: `<p>${tr(HANDHELD ? '{app} reminds you to check in, about once an hour while you&rsquo;re at home. The study needs them, so on a phone or tablet check-ins start once they are on.' : '{app} reminds you to check in, about once an hour while you&rsquo;re at home. The study needs them.', v)}</p><p class="note">${ic('clock','inl')} ${tr('{days} to start with. You can change the hours in Settings.', { days: daysWord(hours()) })}</p>`,
+    btn: `<button class="btn primary" data-act="notif-on">${ic('bell')} ${tr('Turn on notifications')}</button>` };
 }
 function notifCard(){
   const st = PUSH.status(), n = notifHelp(st), trouble = st === 'off' && notifTrouble;
-  return `<section class="notif${st === 'off' && !trouble ? '' : ' warn'}" aria-labelledby="notifH"><div class="nt-top">${ic(n.icon)}<div><div class="eyebrow">Needed for the study</div><b id="notifH">${n.title}</b></div></div>
-    <div class="nt-body">${n.html}</div><div class="msg${trouble ? ' warn' : ''}" id="notifCardMsg" role="status"${trouble ? '' : ' hidden'}>${trouble ? ic('alert') + '<div>' + TROUBLE_TEXT + '</div>' : ''}</div>
+  return `<section class="notif${st === 'off' && !trouble ? '' : ' warn'}" aria-labelledby="notifH"><div class="nt-top">${ic(n.icon)}<div><div class="eyebrow">${tr('Needed for the study')}</div><b id="notifH">${n.title}</b></div></div>
+    <div class="nt-body">${n.html}</div><div class="msg${trouble ? ' warn' : ''}" id="notifCardMsg" role="status"${trouble ? '' : ' hidden'}>${trouble ? ic('alert') + '<div>' + troubleText() + '</div>' : ''}</div>
     ${n.btn || ''}</section>`;
 }
 /* Before a check-in. On a phone or tablet: the way to get notifications on, and nothing that skips them by choice
@@ -517,16 +518,16 @@ function notifCard(){
 function notifSheet(opener, mode){
   const st = PUSH.status(), gate = HANDHELD, md = mode === 'scheduled' ? ' data-mode="scheduled"' : '';
   const failed = gate && st === 'off' && !!notifTrouble, cant = gate && st === 'unsupported';
-  const n = failed ? { title:'Reminders couldn&rsquo;t be switched on', html:`<div class="msg warn">${ic('alert')}<div>${TROUBLE_TEXT}</div></div><p class="note">You can try again now, or later from Today or Settings.</p>` } : notifHelp(st);
+  const n = failed ? { title:tr('Reminders couldn&rsquo;t be switched on'), html:`<div class="msg warn">${ic('alert')}<div>${troubleText()}</div></div><p class="note">${tr('You can try again now, or later from Today or Settings.')}</p>` } : notifHelp(st);
   if(!gate) SS.set(NOTIF_ASKED_KEY, '1');
   const then = b => b ? b.replace('data-act=', `data-then="start"${md} data-act=`) : '';
   const anyway = label => `<button class="btn primary" data-act="start-anyway"${md}>${label}</button>`;
-  const acts = failed ? anyway('Check in this time') + then(`<button class="btn link" data-act="notif-on">${ic('refresh')} Try again</button>`)
-    : cant ? anyway('Check in this time') + `<button class="btn link" data-act="sheet-close">Not now</button>`
-    : gate ? `${then(n.btn)}<button class="btn link" data-act="sheet-close">${n.btn ? 'Not now' : 'OK'}</button>`
-    : st === 'off' ? `<button class="btn primary" data-act="notif-on" data-then="start"${md}>${ic('bell')} Turn on and check in</button><button class="btn link" data-act="start-anyway"${md}>Check in without them</button>`
-    : anyway('Check in anyway');
-  openSheet(`<div class="sh-head"><div><div class="eyebrow">${gate ? 'To check in on this ' + PUSH.device(true) : 'Before you check in'}</div><b id="sheetTitle">${n.title}</b></div><button class="x" data-act="sheet-close" aria-label="Close">${ic('x')}</button></div>
+  const acts = failed ? anyway(tr('Check in this time')) + then(`<button class="btn link" data-act="notif-on">${ic('refresh')} ${tr('Try again')}</button>`)
+    : cant ? anyway(tr('Check in this time')) + `<button class="btn link" data-act="sheet-close">${tr('Not now')}</button>`
+    : gate ? `${then(n.btn)}<button class="btn link" data-act="sheet-close">${n.btn ? tr('Not now') : tr('OK')}</button>`
+    : st === 'off' ? `<button class="btn primary" data-act="notif-on" data-then="start"${md}>${ic('bell')} ${tr('Turn on and check in')}</button><button class="btn link" data-act="start-anyway"${md}>${tr('Check in without them')}</button>`
+    : anyway(tr('Check in anyway'));
+  openSheet(`<div class="sh-head"><div><div class="eyebrow">${gate ? tr(PUSH.device(true) === 'tablet' ? 'To check in on this tablet' : 'To check in on this phone') : tr('Before you check in')}</div><b id="sheetTitle">${n.title}</b></div><button class="x" data-act="sheet-close" aria-label="${tr('Close')}">${ic('x')}</button></div>
     <div class="sh-body nt-body">${n.html}<div class="msg" id="notifMsg" role="status" hidden></div>
     <div class="actions">${acts}</div></div>`, '#sheet .actions .btn', opener);
 }
@@ -548,8 +549,8 @@ async function turnOnNotifs(b, thenStart, mode){
     busy(b, false);
     if(err.kind === 'signin') return;                                  // keyLost() has opened the sign-in
     if(!HANDHELD){                                                     // a computer: the check-in goes ahead
-      if(thenStart){ closeSheet(); startSession(mode); showToast({ title:'Notifications are not on', sub:'You can turn them on from Today or Settings', kind:'info' }); }
-      else notifMsg(err.message || 'Something went wrong, please try again.');
+      if(thenStart){ closeSheet(); startSession(mode); showToast({ title:tr('Notifications are not on'), sub:tr('You can turn them on from Today or Settings'), kind:'info' }); }
+      else notifMsg(err.message || tr('Something went wrong, please try again.'));
       return; }
     notifTrouble = err.kind || 'error';                                // a technical reason, not a choice: this check-in may go ahead
     if(SHEET_OPEN) notifSheet(null, mode); else rerender();           // the Today card and Settings now say so, with "Try again"
@@ -557,19 +558,19 @@ async function turnOnNotifs(b, thenStart, mode){
   }
   if(r === 'on'){
     notifTrouble = '';
-    showToast({ title:'Notifications are on', sub: daysWord(hours()).replace(/&ndash;/g, '–').replace(/&middot;/g, '·') });
+    showToast({ title:tr('Notifications are on'), sub: daysWord(hours()).replace(/&ndash;/g, '–').replace(/&middot;/g, '·') });
     if(thenStart){ closeSheet(); startSession(mode); }
-    else { rerender(); if(S.screen === 'settings') remMsg(`Notifications are on. ${daysWord(hours())}; change the hours below.`, 'ok'); }
+    else { rerender(); if(S.screen === 'settings') remMsg(tr('Notifications are on. {days}; change the hours below.', { days: daysWord(hours()) }), 'ok'); }
     return;
   }
   busy(b, false);
   if(HANDHELD){                                           // phones and tablets: no check-in without them by choice
-    if(r === 'dismissed') return notifMsg('Notifications were not allowed. Tap the button again and choose <b>Allow</b>.');
+    if(r === 'dismissed') return notifMsg(tr('Notifications were not allowed. Tap the button again and choose <b>Allow</b>.'));
     if(SHEET_OPEN) notifSheet(null, mode); else rerender();   // blocked now: the steps to allow them
     return;
   }
-  if(thenStart){ closeSheet(); startSession(mode); showToast({ title:'Notifications are not on', sub:'You can turn them on from Today or Settings', kind:'info' }); }   // a computer: the check-in goes ahead
-  else if(r === 'dismissed') notifMsg('Notifications were not allowed. Tap the button again and choose <b>Allow</b>.');
+  if(thenStart){ closeSheet(); startSession(mode); showToast({ title:tr('Notifications are not on'), sub:tr('You can turn them on from Today or Settings'), kind:'info' }); }   // a computer: the check-in goes ahead
+  else if(r === 'dismissed') notifMsg(tr('Notifications were not allowed. Tap the button again and choose <b>Allow</b>.'));
   else rerender();
 }
 /* a progress ring (outer ring first), drawn in the app's own colours */
@@ -587,12 +588,14 @@ function ring(size, stroke, rings, center, label){
 function goalCard(list, pts){
   const g = goals(list, pts), t = g.t, w = g.w;
   const rg = ring(112, 11, [{ value:w/WEEK_GOAL, cls:'wk' }, { value:t/GOAL, cls:'dy' }],
-    `<b>${w}<small>/${WEEK_GOAL}</small></b><span>days</span>`, `${w} of ${WEEK_GOAL} goal days this week, ${t} of ${GOAL} check-ins today`);
-  const dayLine = t > GOAL ? ['above your goal, keep going!', t + ' today'] : t === GOAL ? ['today &middot; goal met, more are welcome', t + ' of ' + GOAL] : ['today so far', t + ' of ' + GOAL];
-  const streak = g.streak ? `<b>${g.streak}-day goal streak</b><span>Best: ${g.best} day${g.best===1?'':'s'}</span>` : `<b>No streak yet</b><span>${g.best ? `Best: ${g.best} day${g.best===1?'':'s'}` : `${GOAL} check-ins in a day starts one`}</span>`;
-  return `<section class="goalcard" aria-label="Your goals">
+    `<b>${w}<small>/${WEEK_GOAL}</small></b><span>${tr('days')}</span>`, tr('{w} of {wg} goal days this week, {t} of {g} check-ins today', { w, wg: WEEK_GOAL, t, g: GOAL }));
+  const of = tr('{t} of {g}', { t, g: GOAL });
+  const dayLine = t > GOAL ? [tr('above your goal, keep going!'), tr('{t} today', { t })] : t === GOAL ? [tr('today &middot; goal met, more are welcome'), of] : [tr('today so far'), of];
+  const best = n => trn(n, 'Best: {n} day', 'Best: {n} days');
+  const streak = g.streak ? `<b>${trn(g.streak, '{n}-day goal streak', '{n}-day goal streak')}</b><span>${best(g.best)}</span>` : `<b>${tr('No streak yet')}</b><span>${g.best ? best(g.best) : tr('{g} check-ins in a day starts one', { g: GOAL })}</span>`;
+  return `<section class="goalcard" aria-label="${tr('Your goals')}">
     <div class="goal-top">${rg}<div class="goal-leg">
-      <div class="gl"><i class="dot wk" aria-hidden="true"></i><span><b>${w} of ${WEEK_GOAL} days</b><span>this week with ${GOAL} check-ins${w >= WEEK_GOAL ? ' &middot; goal met' : ''}</span></span></div>
+      <div class="gl"><i class="dot wk" aria-hidden="true"></i><span><b>${tr('{w} of {wg} days', { w, wg: WEEK_GOAL })}</b><span>${tr('this week with {g} check-ins', { g: GOAL })}${w >= WEEK_GOAL ? tr(' &middot; goal met') : ''}</span></span></div>
       <div class="gl"><i class="dot dy" aria-hidden="true"></i><span><b>${dayLine[1]}</b><span>${dayLine[0]}</span></span></div>
       <div class="gl streak">${ic('flame')}<span>${streak}</span></div>
     </div></div>
@@ -611,24 +614,24 @@ function weekStrip(list, g){
     const count = {}; day.forEach(v => { if(typeof v.tsv==='number') count[v.tsv] = (count[v.tsv]||0)+1; });
     const top = Object.entries(count).sort((a,b) => b[1]-a[1] || Math.abs(+a[0])-Math.abs(+b[0]))[0];
     const isToday = d.getTime() === today.getTime(), goal = !future && g.isGoal(k);
-    cols += `<div class="wd ${isToday?'today':''} ${future?'future':''} ${goal?'goal':''}" title="${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}: ${day.length} check-in${day.length===1?'':'s'}${goal?', goal reached':''}"><span class="dn">${DAYS[d.getDay()][0]}</span>${top ? face(Number(top[0]), {plain:true}) : '<span class="none"></span>'}<span class="dc ${day.length?'':'zero'}">${future ? '&middot;' : goal ? ic('check') + day.length : day.length}</span></div>`;
+    cols += `<div class="wd ${isToday?'today':''} ${future?'future':''} ${goal?'goal':''}" title="${trn(day.length, '{date}: {n} check-in', '{date}: {n} check-ins', { date: shortDate(d) })}${goal ? tr(', goal reached') : ''}"><span class="dn">${I18N.dayInitial(d)}</span>${top ? face(Number(top[0]), {plain:true}) : '<span class="none"></span>'}<span class="dc ${day.length?'':'zero'}">${future ? '&middot;' : goal ? ic('check') + day.length : day.length}</span></div>`;
   }
-  return `<div class="week"><div class="wk-head"><span class="eyebrow">This week</span><span>${ic('check','inl')} = daily goal</span></div><div class="wk-days">${cols}</div></div>`;
+  return `<div class="week"><div class="wk-head"><span class="eyebrow">${tr('This week')}</span><span>${ic('check','inl')} ${tr('= daily goal')}</span></div><div class="wk-days">${cols}</div></div>`;
 }
 /* Points this week, this month and all time, the race (top three and you), the latest badge */
 function gameToday(list, pts){
   if(!pts) return '';
   const pay = racePayload('week');
   const latest = GAME.badges(list, new Date()).filter(b => b.got).sort((a, b) => a.at < b.at ? 1 : -1)[0];
-  const nf = n => Math.round(n || 0).toLocaleString('en-GB');
-  return `<div class="stats pts" aria-label="Your points"><div class="stat"><b>${nf(pts.week)}</b><span>this week</span></div><div class="stat"><b>${nf(pts.month)}</b><span>this month</span></div><div class="stat"><b>${nf(pts.all_time)}</b><span>points in all</span></div></div>
+  const nf = I18N.numf;
+  return `<div class="stats pts" aria-label="${tr('Your points')}"><div class="stat"><b>${nf(pts.week)}</b><span>${tr('this week')}</span></div><div class="stat"><b>${nf(pts.month)}</b><span>${tr('this month')}</span></div><div class="stat"><b>${nf(pts.all_time)}</b><span>${tr('points in all')}</span></div></div>
     ${GAME.raceMiniHTML(pay, { lastWeek: racePayload('last_week'), loading: navigator.onLine !== false })}
-    ${latest ? `<button class="row badge-row" data-act="badges">${ic('medal')}<div><b>Latest badge: ${esc(latest.name)}</b><span>${esc(latest.desc)}</span></div>${ic('chev','go')}</button>` : ''}`;
+    ${latest ? `<button class="row badge-row" data-act="badges">${ic('medal')}<div><b>${tr('Latest badge: {name}', { name: esc(latest.name) })}</b><span>${esc(latest.desc)}</span></div>${ic('chev','go')}</button>` : ''}`;
 }
 /* ---- My check-ins: three small charts and the list ---- */
 const BAR_H = 40;                                           // tallest bar, px
 function charts(list){
-  if(list.length < 2) return `<div class="viz"><div class="vc wide empty">${ic('bulb')}<div>Your charts appear here after a couple of check-ins.</div></div></div>`;
+  if(list.length < 2) return `<div class="viz"><div class="vc wide empty">${ic('bulb')}<div>${tr('Your charts appear here after a couple of check-ins.')}</div></div></div>`;
   const cnt = {}; list.forEach(v => { if(typeof v.tsv==='number') cnt[v.tsv] = (cnt[v.tsv]||0)+1; });
   const maxS = Math.max(1, ...Object.values(cnt));
   const sens = TSV.map(t => { const c = cnt[t.v]||0;
@@ -637,17 +640,17 @@ function charts(list){
   const today = startOfDay(new Date());
   const days = []; for(let i=13; i>=0; i--){ const d = new Date(today); d.setDate(d.getDate()-i); days.push({ d, c: byDay[dayKey(d)]||0 }); }
   const maxD = Math.max(GOAL, ...days.map(x => x.c));
-  const dcols = days.map((x, i) => `<div class="col ${i===13?'today':''} ${x.c >= GOAL ? 'goal' : ''}" title="${DAYS[x.d.getDay()]} ${x.d.getDate()} ${MONTHS[x.d.getMonth()]}: ${x.c}"><span class="n">${x.c||''}</span><i class="b ${x.c?'':'zero'}" style="${x.c ? `height:${Math.max(4, Math.round(x.c/maxD*BAR_H))}px` : ''}"></i></div>`).join('');
+  const dcols = days.map((x, i) => `<div class="col ${i===13?'today':''} ${x.c >= GOAL ? 'goal' : ''}" title="${shortDate(x.d)}: ${x.c}"><span class="n">${x.c||''}</span><i class="b ${x.c?'':'zero'}" style="${x.c ? `height:${Math.max(4, Math.round(x.c/maxD*BAR_H))}px` : ''}"></i></div>`).join('');
   const f = days[0].d;
   const pc = { cooler:0, same:0, warmer:0 }; let pn = 0;
   list.forEach(v => { if(v.tp in pc){ pc[v.tp]++; pn++; } });
   const pct = k => pn ? Math.round(pc[k]/pn*100) : 0;
   return `<div class="viz">
-    <div class="vc"><div class="cap">Sensation</div><div class="bars">${sens}</div><div class="axis">${TSV.map(t => `<span>${signed(t.v)}</span>`).join('')}</div></div>
-    <div class="vc"><div class="cap">Check-ins per day</div><div class="bars"><span class="goal-line" style="bottom:${Math.round(GOAL/maxD*BAR_H)+14}px"></span>${dcols}</div><div class="axis ends"><span>${f.getDate()} ${MONTHS[f.getMonth()]}</span><span class="td">Today</span></div></div>
-    <div class="vc wide"><div class="cap">Preference<small>${pn} check-in${pn===1?'':'s'}</small></div>
+    <div class="vc"><div class="cap">${tr('Sensation')}</div><div class="bars">${sens}</div><div class="axis">${TSV.map(t => `<span>${signed(t.v)}</span>`).join('')}</div></div>
+    <div class="vc"><div class="cap">${tr('Check-ins per day')}</div><div class="bars"><span class="goal-line" style="bottom:${Math.round(GOAL/maxD*BAR_H)+14}px"></span>${dcols}</div><div class="axis ends"><span>${f.getDate()} ${I18N.monthName(f.getMonth(), true)}</span><span class="td">${tr('Today')}</span></div></div>
+    <div class="vc wide"><div class="cap">${tr('Preference')}<small>${trn(pn, '{n} check-in', '{n} check-ins')}</small></div>
       <div class="pbar"><i class="pc" style="flex-grow:${pc.cooler}"></i><i class="pn" style="flex-grow:${pc.same}"></i><i class="pw" style="flex-grow:${pc.warmer}"></i></div>
-      <div class="legend"><span><i class="pc"></i>Cooler <b>${pct('cooler')}%</b></span><span><i class="pn"></i>No change <b>${pct('same')}%</b></span><span><i class="pw"></i>Warmer <b>${pct('warmer')}%</b></span></div></div>
+      <div class="legend"><span><i class="pc"></i>${tr('Cooler')} <b>${pct('cooler')}%</b></span><span><i class="pn"></i>${tr('No change')} <b>${pct('same')}%</b></span><span><i class="pw"></i>${tr('Warmer')} <b>${pct('warmer')}%</b></span></div></div>
   </div>`;
 }
 function historyList(list){
@@ -656,11 +659,11 @@ function historyList(list){
   shown.forEach(v => {
     const d = new Date(v.ts), t = dayTitle(d);
     if(t !== day){ day = t; html += `<li class="day">${t}</li>`; }
-    const heat = v.heat === 'on' ? 'heating on' : '';
-    const bits = [byId(TP,v.tp)?.n && 'prefer ' + byId(TP,v.tp).n.toLowerCase(), byId(ROOMS,v.room)?.n, typeof v.clo==='number' && v.clo.toFixed(2) + ' clo', heat].filter(Boolean).join(' &middot; ');
-    html += `<li><button class="item" data-act="show" data-id="${esc(v.id)}">${typeof v.tsv==='number' ? face(v.tsv) : '<span></span>'}<div><b>${typeof v.tsv==='number' ? tsvWord(v.tsv) + ' (' + signed(v.tsv) + ')' : 'Check-in'}</b><span>${bits}</span></div><time>${fmt(d)}</time>${ic('chev','go')}</button></li>`;
+    const heat = v.heat === 'on' ? tr('heating on') : '', tp = byId(TP,v.tp);
+    const bits = [tp && tr('prefer ' + I18N.en(tp, 'n').toLowerCase()), byId(ROOMS,v.room)?.n, typeof v.clo==='number' && v.clo.toFixed(2) + ' clo', heat].filter(Boolean).join(' &middot; ');
+    html += `<li><button class="item" data-act="show" data-id="${esc(v.id)}">${typeof v.tsv==='number' ? face(v.tsv) : '<span></span>'}<div><b>${typeof v.tsv==='number' ? tsvWord(v.tsv) + ' (' + signed(v.tsv) + ')' : tr('Check-in')}</b><span>${bits}</span></div><time>${fmt(d)}</time>${ic('chev','go')}</button></li>`;
   });
-  const more = list.length > shown.length ? `<button class="btn secondary" data-act="more">Show older check-ins</button>` : '';
+  const more = list.length > shown.length ? `<button class="btn secondary" data-act="more">${tr('Show older check-ins')}</button>` : '';
   return `<ul class="hist">${html}</ul>${more}`;
 }
 /* "Last 30 min: opened a window, turned the heating up": each name starts lower case */
@@ -673,26 +676,27 @@ function detailRows(l){
   const hf = heatForWord(l.heat_for);
   return [
     typeof l.tsv==='number' && li(`<span class="f">${face(l.tsv)}</span>`, `<b>${tsvWord(l.tsv)}</b> (${signed(l.tsv)})`),
-    tp && li(ic(tp.ic, tp.cls||''), tp.id==='same' ? 'Happy with the temperature' : `Would like to be <b>${tp.n.toLowerCase()}</b>`),
-    l.ta && li(ic(taOk?'up':'down', taOk?'good':'bad'), taWord(l.ta)),
-    (l.garments||[]).length ? li(ic('tshirt'), `${garmentNames(l.garments)} &middot; ${(l.clo||0).toFixed(2)} clo`) : '',
-    act && li(ic(act.ic), act.n), room && li(ic(room.ic), room.n),
-    air && li(ic(air.ic), air.k), sun && li(ic(sun.ic), sun.n),
-    heat && li(ic(heat.ic, heat.cls||''), heat.k + (l.heat === 'on' && (l.heat_src||[]).length ? ': ' + heatSrcWord(l.heat_src) : '') + (hf ? ` &middot; ${hf.toLowerCase()}` : '')),
-    typeof l.stat === 'number' && li(ic('stat'), `Thermostat showed ${statWord(l.stat)}`),
-    wall && li(ic(wall.ic, wall.cls||''), wall.id === 'no_reach' ? 'Could not reach an outside wall' : `Outside wall felt ${wall.n.toLowerCase()}`),
-    Array.isArray(l.actions) && li(ic(byId(ACTIONS, l.actions[0])?.ic || 'checkc'), l.actions.length ? 'Last 30 min: ' + lowerList(namesOf(ACTIONS, l.actions)) : 'Last 30 min: did none of these'),
-    Array.isArray(l.notes) && li(ic(byId(NOTES, l.notes[0])?.ic || 'info'), l.notes.length ? 'Last 30 min: ' + lowerList(namesOf(NOTES, l.notes)) : 'Last 30 min: nothing to note')
+    tp && li(pic(tp.ic, tp.cls||''), tp.id==='same' ? tr('Happy with the temperature') : tr(`Would like to be <b>${I18N.en(tp, 'n').toLowerCase()}</b>`)),
+    l.ta && li(pic(taOk?'up':'down', taOk?'good':'bad'), taWord(l.ta)),
+    (l.garments||[]).length ? li(pic('tshirt'), `${garmentNames(l.garments)} &middot; ${(l.clo||0).toFixed(2)} clo`) : '',
+    act && li(pic(act.ic), act.n), room && li(pic(room.ic), room.n),
+    air && li(pic(air.ic), air.k), sun && li(pic(sun.ic), sun.n),
+    heat && li(pic(heat.ic, heat.cls||''), heat.k + (l.heat === 'on' && (l.heat_src||[]).length ? ': ' + heatSrcWord(l.heat_src) : '') + (hf ? ` &middot; ${hf.toLowerCase()}` : '')),
+    typeof l.stat === 'number' && li(pic('stat'), tr('Thermostat showed {x}', { x: statWord(l.stat) })),
+    wall && li(pic(wall.ic, wall.cls||''), wall.id === 'no_reach' ? tr('Could not reach an outside wall') : tr('Outside wall felt ' + I18N.en(wall, 'n').toLowerCase())),
+    Array.isArray(l.actions) && li(pic(byId(ACTIONS, l.actions[0])?.ic || 'checkc'), l.actions.length ? tr('Last 30 min: {list}', { list: lowerList(namesOf(ACTIONS, l.actions)) }) : tr('Last 30 min: did none of these')),
+    Array.isArray(l.notes) && li(pic(byId(NOTES, l.notes[0])?.ic || 'info'), l.notes.length ? tr('Last 30 min: {list}', { list: lowerList(namesOf(NOTES, l.notes)) }) : tr('Last 30 min: nothing to note'))
   ].filter(Boolean).join('');
 }
 /* The answers of the check-in being made (S.a) as tiles, for the review: the feeling in its own colour, the
  * outfit on the figure, an icon for every other answer and a chip per thing done or felt. Only the steps
  * asked this time have a tile; each has an Edit button. */
 function answerTiles(a){
-  const asked = q => S.flow.includes(q), open = '<span class="open">Not answered yet</span>';
-  const tile = (q, art, k, v, cls) => `<li class="atile${cls ? ' ' + cls : ''}">${art}<span class="at-t"><span class="at-k">${k}</span><span class="at-v">${v}</span></span>${asked(q) ? `<button class="at-edit" data-act="edit" data-q="${q}" aria-label="Edit ${QNAME[q]}">${ic('edit')}</button>` : ''}</li>`;
-  const tic = (name, cls='') => `<span class="at-ic">${ic(name, cls)}</span>`;
-  const chips = (list, ids, none) => !Array.isArray(ids) ? open : !ids.length ? none : `<span class="achips">${ids.map(id => byId(list, id)).filter(Boolean).map(o => `<span class="achip">${ic(o.ic)}${o.n}</span>`).join('')}</span>`;
+  const asked = q => S.flow.includes(q), open = `<span class="open">${tr('Not answered yet')}</span>`;
+  /* k: the tile's English name (translated here) */
+  const tile = (q, art, k, v, cls) => `<li class="atile${cls ? ' ' + cls : ''}">${art}<span class="at-t"><span class="at-k">${tr(k)}</span><span class="at-v">${v}</span></span>${asked(q) ? `<button class="at-edit" data-act="edit" data-q="${q}" aria-label="${tr('Edit {x}', { x: QNAME[q] })}">${ic('edit')}</button>` : ''}</li>`;
+  const tic = (name, cls='') => `<span class="at-ic">${pic(name, cls)}</span>`;
+  const chips = (list, ids, none) => !Array.isArray(ids) ? open : !ids.length ? none : `<span class="achips">${ids.map(id => byId(list, id)).filter(Boolean).map(o => `<span class="achip">${pic(o.ic)}${o.n}</span>`).join('')}</span>`;
   const tp = byId(TP,a.tp), ta = byId(TA,a.ta), act = byId(ACTS,a.act), room = byId(ROOMS,a.room), air = byId(AIR,a.air), sun = byId(SUN,a.sun), heat = byId(HEAT,a.heat), wall = byId(WALL,a.wall), hf = byId(HEAT_FOR,a.heat_for);
   const feel = typeof a.tsv === 'number';
   let h = tile('tsv', feel ? `<span class="at-face">${face(a.tsv)}</span>` : tic('thermo'), 'Feeling', feel ? `${tsvWord(a.tsv)} <span class="num">${signed(a.tsv)}</span>` : open, 'wide feel' + (feel ? '" style="--sc:' + tsvColour(a.tsv) : ''));
@@ -704,11 +708,10 @@ function answerTiles(a){
   h += tile('air', tic(air ? air.ic : 'still'), 'Air', air ? air.k : open);
   h += tile('sun', tic(sun ? sun.ic : 'sun'), 'Sun', sun ? sun.n : open);
   h += tile('heat', tic(heat ? heat.ic : 'flame', heat && heat.cls || ''), 'Heating', heat ? heat.n : open, a.heat === 'on' ? '' : 'wide');
-  if(a.heat === 'on') h += tile('heat_for', tic('clock'), 'On for', a.heat_for ? heatForWord(a.heat_for) : open);
-  if(a.heat === 'on' && (asked('heat_src') || (a.heat_src||[]).length)) h += tile('heat_src', tic('radiator'), 'Which heating', (a.heat_src||[]).length ? heatSrcWord(a.heat_src) : open, 'wide');
+  if(a.heat === 'on') h += tile('heat_for', `<span class="at-ic">${a.heat_for ? artx('heat_for:' + a.heat_for, 'clock') : ic('clock')}</span>`, 'On for', a.heat_for ? heatForWord(a.heat_for) : open);
   h += tile('wall', tic(wall ? wall.ic : 'wall', wall && wall.cls || ''), 'Outside wall', wall ? wall.n : open, 'wide');
-  h += tile('actions', tic('refresh'), 'You did, last 30 minutes', chips(ACTIONS, a.actions, 'None of these'), 'wide');
-  h += tile('notes', tic('info'), 'You had or felt, last 30 minutes', chips(NOTES, a.notes, 'None of these'), 'wide');
+  h += tile('actions', tic('refresh'), 'You did, last 30 minutes', chips(ACTIONS, a.actions, tr('None of these')), 'wide');
+  h += tile('notes', tic('info'), 'You had or felt, last 30 minutes', chips(NOTES, a.notes, tr('None of these')), 'wide');
   return `<ul class="atiles">${h}</ul>`;
 }
 
@@ -724,8 +727,8 @@ function localRace(p){
   const goalDays = [...pts.goalDays].filter(k => (!per.from || k >= per.from) && (!per.to || k <= per.to)).length;
   const points = p === 'month' ? pts.month : p === 'last_week' ? (pts.last_week || 0) : pts.week, me = meProfile();
   return { period:p, from:per.from, to:per.to, target:per.target, total:1,
-    me:{ alias: me.alias || 'You', colour: me.alias_colour || 0, points, rank:1, hidden: !!me.race_hidden },
-    runners:[{ alias: me.alias || 'You', colour: me.alias_colour || 0, points, checkins: inP.length, goal_days: goalDays, rank:1, is_me:true }] };
+    me:{ alias: me.alias || tr('You'), colour: me.alias_colour || 0, points, rank:1, hidden:false },
+    runners:[{ alias: me.alias || tr('You'), colour: me.alias_colour || 0, points, checkins: inP.length, goal_days: goalDays, rank:1, is_me:true }] };
 }
 function racePayload(p){ return SWITCH.live ? raceCached(p) : localRace(p); }
 /* Fetches one period's race and keeps it; resolves to true when it changed. */
@@ -775,20 +778,20 @@ function netOk(kind){
 /* 'race' stands for any of its periods */
 const netBad = k => Object.keys(NET.n).some(x => NET.n[x] > 0 && (x === k || x.startsWith(k + ':')));
 function netNote(kinds){
-  const t = { pull:'Couldn&rsquo;t load your check-ins from your other devices.', race:'Couldn&rsquo;t load the Bay Race.' };
+  const t = { pull:tr('Couldn&rsquo;t load your check-ins from your other devices.'), race:tr('Couldn&rsquo;t load the Bay Race.') };
   const bad = kinds.filter(netBad);
   if(!bad.length) return '';
-  const off = navigator.onLine === false ? ' You seem to be offline.' : '';
-  return `<div class="msg net" role="status">${ic('refresh')}<div>${bad.map(k => t[k]).join(' ')}${off} Trying again&hellip;</div></div>`;
+  const off = navigator.onLine === false ? tr(' You seem to be offline.') : '';
+  return `<div class="msg net" role="status">${ic('refresh')}<div>${bad.map(k => t[k]).join(' ')}${off}${tr(' Trying again&hellip;')}</div></div>`;
 }
 /* the participant's place in the week's race if they had these points (the others as last fetched) */
 function rankWith(pay, pts){ if(!pay || !Array.isArray(pay.runners)) return 0; return 1 + pay.runners.filter(r => !r.is_me && r.points > pts).length; }
 function badgesSheet(opener){
-  openSheet(`<div class="sh-head"><div><div class="eyebrow">Just for you</div><b id="sheetTitle">My badges</b></div><button class="x" data-act="sheet-close" aria-label="Close">${ic('x')}</button></div>
+  openSheet(`<div class="sh-head"><div><div class="eyebrow">${tr('Just for you')}</div><b id="sheetTitle">${tr('My badges')}</b></div><button class="x" data-act="sheet-close" aria-label="${tr('Close')}">${ic('x')}</button></div>
     <div class="sh-body">${GAME.badgesHTML(GAME.badges(votes(), new Date()))}</div>`, null, opener);
 }
 function howSheet(opener){
-  openSheet(`<div class="sh-head"><div><div class="eyebrow">The Bay Race</div><b id="sheetTitle">How points work</b></div><button class="x" data-act="sheet-close" aria-label="Close">${ic('x')}</button></div>
+  openSheet(`<div class="sh-head"><div><div class="eyebrow">${tr('The Bay Race')}</div><b id="sheetTitle">${tr('How points work')}</b></div><button class="x" data-act="sheet-close" aria-label="${tr('Close')}">${ic('x')}</button></div>
     <div class="sh-body">${GAME.howSheetHTML()}</div>`, null, opener);
 }
 
@@ -796,8 +799,8 @@ function howSheet(opener){
 const label = (list, id) => (byId(list, id) || {}).n;
 const listWord = (opts, ids) => Array.isArray(ids) && ids.length ? ids.map(id => label(opts, id)).filter(Boolean).join(', ') : null;
 const countWord = (n, max) => typeof n === 'number' ? (max && n >= max ? max + '+' : String(n)) : null;
-const facingWord = (v, deg) => v === 'unsure' ? 'Not sure' : label(FACING, v) ? label(FACING, v) + (typeof deg === 'number' ? ` (${deg}°)` : '') : null;
-const notSure = v => v === null ? 'Not sure' : null;
+const facingWord = (v, deg) => v === 'unsure' ? tr('Not sure') : label(FACING, v) ? label(FACING, v) + (typeof deg === 'number' ? ` (${deg}°)` : '') : null;
+const notSure = v => v === null ? tr('Not sure') : null;
 /* Sections of "Your home": [title, wizard step id, items [art, key, value or null]] from the profile, in the
  * wizard's own fields (r: name, gender... as REG holds them; h: the home). */
 function homeSections(r, h, withEmail){
@@ -806,87 +809,96 @@ function homeSections(r, h, withEmail){
   const you = [[ic('user'), 'Name', f.name || null]].concat(withEmail ? [[ic('mail'), 'Email', f.email || null]] : [])
     .concat([[ic('users'), 'Gender', label(GENDERS, f.gender) || null], [ic('calendar'), 'Year of birth', f.birth_year ? String(f.birth_year) : null],
       [ic('ruler'), 'Height', f.height_cm ? Math.round(f.height_cm) + ' cm' : null], [ic('scale'), 'Weight', f.weight_kg ? f.weight_kg + ' kg' : null],
-      [ic('thermo'), 'Most like you', label(SENSITIVITY, f.sensitivity) || null]]);
+      [pic('thermo'), 'Most like you', label(SENSITIVITY, f.sensitivity) || null]]);
   return [
     ['About you', 'you', you],
     ['Your area and home', 'area', [[ic('pin'), 'Postcode area', h.postcode_area || null], [art(h.home_type ? 'home_type:' + h.home_type : 'home_type:detached'), 'Home', label(HOME_TYPES, h.home_type) || null]]
       .concat(h.home_type === 'flat' ? [[art(h.flat_position ? 'flat_position:' + h.flat_position : 'flat_position:middle'), 'Floor', label(FLAT_POS, h.flat_position) || null]] : [])
       .concat([[art(h.tenure ? 'tenure:' + h.tenure : 'tenure:own'), 'Tenure', label(TENURE, h.tenure) || null]])],
-    ['Age and size', 'size', [[h.year_built ? art('year_built:' + h.year_built) : ic('calendar'), 'Built', label(YEAR_BUILT, h.year_built) || null], [art('floors:' + (h.floors || 2)), 'Floors', h.floors ? (h.floors >= 4 ? '4 or more' : String(h.floors)) : null],
-      [ic('bed'), 'Bedrooms', countWord(h.bedrooms, 6)], [ic('ruler'), 'Floor area', typeof h.floor_area_m2 === 'number' ? h.floor_area_m2 + ' m²' : notSure(h.floor_area_m2)],
+    ['Age and size', 'size', [[h.year_built ? art('year_built:' + h.year_built) : ic('calendar'), 'Built', label(YEAR_BUILT, h.year_built) || null], [art('floors:' + (h.floors || 2)), 'Floors', h.floors ? (h.floors >= 4 ? tr('4 or more') : String(h.floors)) : null],
+      [pic('bed'), 'Bedrooms', countWord(h.bedrooms, 6)], [ic('ruler'), 'Floor area', typeof h.floor_area_m2 === 'number' ? h.floor_area_m2 + ' m²' : notSure(h.floor_area_m2)],
       [epcArt(h.epc), 'EPC rating', label(EPC, h.epc) || null]]],
-    ['Who lives here', 'people', [[ic('user'), 'Adults', countWord(h.adults)], [ic('child'), 'Children', countWord(h.children)], [ic('paw'), 'Pets', countWord(h.pets)], [ic('bed'), 'Bedroom', share]]],
+    ['Who lives here', 'people', [[pic('user'), 'Adults', countWord(h.adults)], [pic('child'), 'Children', countWord(h.children)], [pic('paw'), 'Pets', countWord(h.pets)], [typeof h.bedroom_share === 'number' ? art('share:' + h.bedroom_share) : pic('bed'), 'Bedroom', share]]],
     ['Heating', 'heat', [[art(h.main_heating ? 'heat:' + h.main_heating : 'heat:gas_combi'), 'Main heating', label(MAIN_HEATING, h.main_heating) || null],
-      [ic('flame'), 'Other heaters', listWord(OTHER_HEATERS, h.other_heaters)], [artx('pattern:' + h.heating_pattern, 'clock'), 'How it&rsquo;s used', label(HEAT_PATTERN, h.heating_pattern) || null]]],
-    ['Heating controls', 'controls', [[ic('sliders'), 'Controls', listWord(CONTROLS, h.controls)],
-      [ic('thermo'), 'Usual setting', typeof h.setpoint_c === 'number' ? h.setpoint_c.toFixed(1) + ' °C' : notSure(h.setpoint_c)]]],
+      [firstArt('other', h.other_heaters, pic('flame')), 'Other heaters', listWord(OTHER_HEATERS, h.other_heaters)], [artx('pattern:' + h.heating_pattern, 'clock'), 'How it&rsquo;s used', label(HEAT_PATTERN, h.heating_pattern) || null]]],
+    ['Heating controls', 'controls', [[firstArt('controls', h.controls, ic('sliders')), 'Controls', listWord(CONTROLS, h.controls)],
+      [pic('thermo'), 'Usual setting', typeof h.setpoint_c === 'number' ? h.setpoint_c.toFixed(1) + ' °C' : notSure(h.setpoint_c)]]],
     ['Walls, roof and windows', 'fabric', [[art(h.wall_insulation ? 'wall:' + h.wall_insulation : 'wall:none'), 'Walls', label(WALL_INS, h.wall_insulation) || null],
-      [art(h.loft ? 'loft:' + h.loft : 'loft:yes'), 'Loft insulation', label(LOFT, h.loft) || null], [ic('window'), 'Glazing', label(GLAZING, h.glazing) || null],
-      [ic('windowOpen'), 'Windows open', label(WINDOWS_OPEN, h.windows_open) || null], [ic('drop'), 'Damp or mould', listWord(DAMP, h.damp)]]],
-    ['Your bedroom', 'bedroom', [[ic('compass'), 'Window faces', facingWord(h.bedroom_facing, h.bedroom_facing_deg)],
-      [ic('compass'), 'Bedroom is on the', h.bedroom_side === 'unsure' ? 'Not sure' : facingWord(h.bedroom_side, h.bedroom_side_deg) && facingWord(h.bedroom_side, h.bedroom_side_deg).replace(/^([\w-]+)/, '$1 side')]]]
+      [art(h.loft ? 'loft:' + h.loft : 'loft:yes'), 'Loft insulation', label(LOFT, h.loft) || null], [h.glazing ? art('glazing:' + h.glazing) : pic('window'), 'Glazing', label(GLAZING, h.glazing) || null],
+      [h.windows_open ? art('windows_open:' + h.windows_open) : pic('windowOpen'), 'Windows open', label(WINDOWS_OPEN, h.windows_open) || null], [firstArt('damp', h.damp, ic('drop')), 'Damp or mould', listWord(DAMP, h.damp)]]],
+    ['Your bedroom', 'bedroom', [[art('compass'), 'Window faces', facingWord(h.bedroom_facing, h.bedroom_facing_deg)],
+      [art('compass'), 'Bedroom is on the', h.bedroom_side === 'unsure' ? tr('Not sure') : facingWord(h.bedroom_side, h.bedroom_side_deg) && (LANG === 'cy' ? facingWord(h.bedroom_side, h.bedroom_side_deg) : facingWord(h.bedroom_side, h.bedroom_side_deg).replace(/^([\w-]+)/, '$1 side'))]]]
   ];
 }
-/* typed values are escaped; the entities in option labels (&rsquo;) are kept */
-const glanceItem = (artHtml, k, v) => `<div class="gi${v==null?' empty':''}"><span class="gi-art">${artHtml}</span><span class="gi-t"><span class="gi-k">${k}</span><span class="gi-v">${v==null ? 'Not answered' : esc(v).replace(/&amp;(#?\w+);/g, '&$1;')}</span></span></div>`;
+/* the picture of the first answer of a multiple choice (the first heater, the first room with damp), else fb */
+const firstArt = (fam, ids, fb) => Array.isArray(ids) && ids.length && ART[fam + ':' + ids[0]] ? art(fam + ':' + ids[0]) : fb;
+/* typed values are escaped; the entities in option labels (&rsquo;) are kept; k and the section titles are English
+ * names from homeSections, translated here */
+const glanceItem = (artHtml, k, v) => `<div class="gi${v==null?' empty':''}"><span class="gi-art">${artHtml}</span><span class="gi-t"><span class="gi-k">${tr(k)}</span><span class="gi-v">${v==null ? tr('Not answered') : esc(v).replace(/&amp;(#?\w+);/g, '&$1;')}</span></span></div>`;
 function homeGlance(r, h, editAct, withEmail){
-  return homeSections(r, h, withEmail).map(([title, step, items]) => `<section class="glance"><div class="gl-head"><b>${title}</b>${editAct ? `<button class="btn-edit" data-act="${editAct}" data-step="${step}" aria-label="Edit ${title.toLowerCase()}">${ic('edit')}Edit</button>` : ''}</div>
+  return homeSections(r, h, withEmail).map(([title, step, items]) => `<section class="glance"><div class="gl-head"><b>${tr(title)}</b>${editAct ? `<button class="btn-edit" data-act="${editAct}" data-step="${step}" aria-label="${tr('Edit {x}', { x: tr(title).toLowerCase() })}">${ic('edit')}${tr('Edit')}</button>` : ''}</div>
     <div class="gl-items">${items.map(([a, k, v]) => glanceItem(a, k, v)).join('')}</div></section>`).join('');
 }
 /* iPhone or iPad, in Safari (or another app's browser) rather than the Home Screen app, nobody signed in, and
  * reminders possible there: the Home Screen app first, always (only it gets reminders, and it keeps its own
  * storage, so joining in Safari would mean signing in again later). */
 const installFirst = () => !PARTICIPANT && PUSH.status() === 'install';
-const brand = () => `<div class="brand"><span class="mark">${ic('brand')}</span><span><b>${APP}</b><small>${PROJECT}</small></span></div>`;
+const brand = () => `<div class="brand"><span class="mark">${ic('brand')}</span><span><b>${APP}</b><small>${tr(PROJECT)}</small></span></div>`;
+/* the language, the very first choice (welcome and install screens) and in Settings: big and clear, each in its own words */
+const langPick = cls => `<div class="lang-pick${cls ? ' ' + cls : ''}" role="group" aria-label="Language / Iaith"><span class="lp-lab" aria-hidden="true">Language &middot; Iaith</span><div class="lp-btns">${[['en','English'],['cy','Cymraeg']].map(([l, n]) =>
+  `<button class="lp-b${LANG === l ? ' on' : ''}" data-act="lang" data-v="${l}" aria-pressed="${LANG === l}" lang="${l === 'cy' ? 'cy' : 'en'}">${n}</button>`).join('')}</div></div>`;
+/* the study page, in the app's language */
+const studyHref = () => '../' + (LANG === 'cy' ? '?lang=cy' : '');
 
 /* ---------- screens ---------- */
 const SCREENS = {
   welcome: () => {
     const d = loadReg('join'), draft = d.step > 0 || d.name;
-    return `<div class="hero welcome">${brand()}
-        <h1 class="h1" tabindex="-1">How does your home feel?</h1>
-        <p class="sub">Short check-ins while you&rsquo;re at home teach the study what comfortable means for you. Joining takes about 5 minutes and happens once.</p></div>
-      ${welcomeNote ? `<div class="msg" role="status">${ic('info')}<div>${esc(welcomeNote)}</div></div>` : ''}
+    return `${langPick('lp-first')}<div class="hero welcome">${brand()}
+        <p class="tagline">${tr('Every home has a pulse: the warmth you feel inside it. <b>{app}</b> listens, one moment at a time, to help Swansea University shape comfortable, low-carbon homes across Wales.', { app: APP })}</p>
+        <h1 class="h1" tabindex="-1">${tr('How does your home feel?')}</h1>
+        <p class="sub">${tr('Short check-ins while you&rsquo;re at home teach the study what comfortable means for you. Joining takes about 5 minutes and happens once.')}</p></div>
+      ${welcomeNote ? `<div class="msg" role="status">${ic('info')}<div>${esc(tr(welcomeNote))}</div></div>` : ''}
       <div class="rows">
-        <button class="row" data-act="go" data-to="join">${ic('user')}<div><b>I&rsquo;m new here</b><span>${draft ? 'Carry on where you left off' : 'Join the study'}</span></div>${ic('chev','go')}</button>
-        <button class="row" data-act="go" data-to="signin">${ic('mail')}<div><b>I have registered before</b><span>Sign in with my email and PIN</span></div>${ic('chev','go')}</button>
+        <button class="row" data-act="go" data-to="join">${ic('user')}<div><b>${tr('I&rsquo;m new here')}</b><span>${draft ? tr('Carry on where you left off') : tr('Join the study')}</span></div>${ic('chev','go')}</button>
+        <button class="row" data-act="go" data-to="signin">${ic('mail')}<div><b>${tr('I have registered before')}</b><span>${tr('Sign in with my email and PIN')}</span></div>${ic('chev','go')}</button>
       </div>
-      ${SWITCH.live ? '' : `<div class="msg warn">${ic('alert')}<div><b>Local mode.</b> The study database is not connected, so everything stays in this browser.</div></div>`}
-      <div class="actions"><p class="note center"><b>${APP}</b> takes the pulse of how your home feels: a few taps while you are at home help Swansea University learn what comfort means in Welsh homes.</p><div class="foot">Questions about the study? Email ${TEAM} &middot; <a href="../">About the study</a></div></div>`;
+      ${SWITCH.live ? '' : `<div class="msg warn">${ic('alert')}<div>${tr('<b>Local mode.</b> The study database is not connected, so everything stays in this browser.')}</div></div>`}
+      <div class="actions"><div class="foot">${tr('Questions about the study? Email {team}', { team: TEAM })} &middot; <a href="${studyHref()}">${tr('About the study')}</a></div></div>`;
   },
   /* iPhone or iPad, outside the Home Screen app, before anyone joins or signs in (see installFirst): the Home
    * Screen app keeps its own storage, separate from Safari's, and only it can get reminders. No way round it. */
-  install: () => `<div class="hero">${brand()}<div class="eyebrow">Before you start</div><h1 class="h1" tabindex="-1">${PUSH.inApp ? `Open ${APP} in Safari` : `Add ${APP} to your Home Screen first`}</h1>
-      <p class="sub">On ${PUSH.device()}, reminders only work in the Home Screen app, and the study needs them. The app keeps its own copy of your answers, separate from Safari, so join or sign in there.</p></div>
-    <section class="card"><b class="card-t">${PUSH.inApp ? 'How to get there' : 'Three quick steps'}</b>${installSteps(false)}</section>
-    <div class="msg">${ic('info')}<div>Joined before? In the Home Screen app, choose <b>I have registered before</b> and sign in with your email and PIN. Forgot your PIN? Email ${TEAM}.</div></div>
-    <div class="actions"><div class="foot"><a href="../">About the study</a></div></div>`,
+  install: () => `${langPick('lp-first')}<div class="hero">${brand()}<div class="eyebrow">${tr('Before you start')}</div><h1 class="h1" tabindex="-1">${PUSH.inApp ? tr('Open {app} in Safari', { app: APP }) : tr('Add {app} to your Home Screen first', { app: APP })}</h1>
+      <p class="sub">${tr('On {dev}, reminders only work in the Home Screen app, and the study needs them. The app keeps its own copy of your answers, separate from Safari, so join or sign in there.', { dev: tr(PUSH.device()) })}</p></div>
+    <section class="card"><b class="card-t">${PUSH.inApp ? tr('How to get there') : tr('Three quick steps')}</b>${installSteps(false)}</section>
+    <div class="msg">${ic('info')}<div>${tr('Joined before? In the Home Screen app, choose <b>I have registered before</b> and sign in with your email and PIN. Forgot your PIN? Email {team}.', { team: TEAM })}</div></div>
+    <div class="actions"><div class="foot"><a href="${studyHref()}">${tr('About the study')}</a></div></div>`,
   signin: () => {
     const rekey = needsKey(), lost = LS.get(KEY_LOST_KEY) === '1', code = SIGNIN_CODE, choose = code || (rekey && !lost);
-    const t = rekey ? (lost ? ['Sign in again', 'Please sign in again', 'This phone was signed out. Your check-ins are safe: sign in with your email and your PIN.']
-      : ['One more step', 'Sign in with your email and a PIN', `${APP} now keeps your check-ins on every phone and tablet you use. Enter the email you registered with and your 4-digit PIN: the one you chose before, or a new one if you have not chosen one yet.`])
-      : ['Welcome back', 'Sign in', 'With the email you joined with and your 4-digit PIN. All your check-ins come with you.'];
+    const t = (rekey ? (lost ? ['Sign in again', 'Please sign in again', 'This phone was signed out. Your check-ins are safe: sign in with your email and your PIN.']
+      : ['One more step', 'Sign in with your email and a PIN', '{app} now keeps your check-ins on every phone and tablet you use. Enter the email you registered with and your 4-digit PIN: the one you chose before, or a new one if you have not chosen one yet.'])
+      : ['Welcome back', 'Sign in', 'With the email you joined with and your 4-digit PIN. All your check-ins come with you.']).map(x => tr(x, { app: APP }));
     return qhead(t[0], t[1], t[2]) +
       `<form class="form" id="signForm" novalidate>
-        <div class="field" id="f-s_email"><label for="s_email">Email</label><input class="in" id="s_email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" aria-describedby="err-s_email"><p class="err" id="err-s_email" hidden></p></div>
-        ${code ? `<div class="field" id="f-s_code"><label for="s_code">Your participant code</label><input class="in pcode" id="s_code" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="6" placeholder="e.g. P07" aria-describedby="hint-code err-s_code">
-          <p class="note" id="hint-code">You have not chosen a PIN yet (or the research team has reset it), so the study asks for your participant code once. It is at the bottom of the Today screen in the old app, or of any phone or tablet where you are signed in. Or ask the research team at ${TEAM}.</p><p class="err" id="err-s_code" hidden></p></div>` : ''}
-        <div class="field" id="f-s_pin"><label for="s_pin">${code ? 'Choose a 4-digit PIN' : rekey && !lost ? 'Your PIN, or choose one' : 'PIN'}</label><input class="in pin" id="s_pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="${code ? 'new-password' : 'current-password'}" aria-describedby="err-s_pin"><p class="err" id="err-s_pin" hidden></p>${choose ? '<p class="note">Four digits you will remember. Please don&rsquo;t use your bank card PIN.</p>' : ''}</div>
+        <div class="field" id="f-s_email"><label for="s_email">${tr('Email')}</label><input class="in" id="s_email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" aria-describedby="err-s_email"><p class="err" id="err-s_email" hidden></p></div>
+        ${code ? `<div class="field" id="f-s_code"><label for="s_code">${tr('Your participant code')}</label><input class="in pcode" id="s_code" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="6" placeholder="${tr('e.g. P07')}" aria-describedby="hint-code err-s_code">
+          <p class="note" id="hint-code">${tr('You have not chosen a PIN yet (or the research team has reset it), so the study asks for your participant code once. It is at the bottom of the Today screen in the old app, or of any phone or tablet where you are signed in. Or ask the research team at {team}.', { team: TEAM })}</p><p class="err" id="err-s_code" hidden></p></div>` : ''}
+        <div class="field" id="f-s_pin"><label for="s_pin">${tr(code ? 'Choose a 4-digit PIN' : rekey && !lost ? 'Your PIN, or choose one' : 'PIN')}</label><input class="in pin" id="s_pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="${code ? 'new-password' : 'current-password'}" aria-describedby="err-s_pin"><p class="err" id="err-s_pin" hidden></p>${choose ? `<p class="note">${tr('Four digits you will remember. Please don&rsquo;t use your bank card PIN.')}</p>` : ''}</div>
       </form>
-      <div class="actions"><button class="btn primary" type="button" data-act="signin">Continue ${ic('chev')}</button>
-        <p class="note center">Forgot your PIN? Email ${TEAM} and the research team will reset it.</p>
-        ${rekey ? `<button class="btn link" type="button" data-act="forget">Not you? Start again</button>` : `<button class="btn link" type="button" data-act="go" data-to="join">I haven&rsquo;t joined yet</button>`}</div>`;
+      <div class="actions"><button class="btn primary" type="button" data-act="signin">${tr('Continue')} ${ic('chev')}</button>
+        <p class="note center">${tr('Forgot your PIN? Email {team} and the research team will reset it.', { team: TEAM })}</p>
+        ${rekey ? `<button class="btn link" type="button" data-act="forget">${tr('Not you? Start again')}</button>` : `<button class="btn link" type="button" data-act="go" data-to="join">${tr('I haven&rsquo;t joined yet')}</button>`}</div>`;
   },
-  pending: () => `<div class="done"><div class="big">${ic('clock')}</div><h1 tabindex="-1">Thanks${firstName() ? ', ' + esc(firstName()) : ''}!</h1><p class="sub">The research team will confirm your place, usually within a day. You can check in as soon as that&rsquo;s done.</p><div class="msg" id="pendMsg" role="status" hidden></div>
-    <div class="actions"><button class="btn primary" data-act="recheck">${ic('refresh')} Check again</button><button class="btn link" data-act="forget">Not you? Start again</button><div class="foot">Your participant code is ${esc(PARTICIPANT)}</div></div></div>`,
+  pending: () => `<div class="done"><div class="big">${ic('clock')}</div><h1 tabindex="-1">${firstName() ? tr('Thanks, {name}!', { name: esc(firstName()) }) : tr('Thanks!')}</h1><p class="sub">${tr('The research team will confirm your place, usually within a day. You can check in as soon as that&rsquo;s done.')}</p><div class="msg" id="pendMsg" role="status" hidden></div>
+    <div class="actions"><button class="btn primary" data-act="recheck">${ic('refresh')} ${tr('Check again')}</button><button class="btn link" data-act="forget">${tr('Not you? Start again')}</button><div class="foot">${tr('Your participant code is {code}', { code: esc(PARTICIPANT) })}</div></div></div>`,
   today: () => {
     const list = votes(), l = list[0], pts = gamePoints(list), open = nextOpen();
     lockShown = !!open;
-    const last = l ? `Last one <span data-ago="${esc(l.ts)}">${agoWord(l.ts)}</span>${typeof l.tsv === 'number' ? ' &middot; ' + tsvWord(l.tsv).toLowerCase() : ''}` : 'Takes under a minute';
-    const cta = open ? `<button class="cta wait" data-act="start"><span class="cta-ic">${ic('clock')}</span><span class="cta-t"><b>Next check-in at ${fmt(open)}</b><span>They open ${GAP_MIN} minutes after the last one &middot; ${last}</span></span></button>`
-      : `<button class="cta" data-act="start"><span class="cta-ic">${ic('bell')}</span><span class="cta-t"><b>Check in now</b><span>${gateWord() || last}</span></span>${ic('chev','go')}</button>`;
+    const last = l ? tr('Last one {ago}', { ago: `<span data-ago="${esc(l.ts)}">${agoWord(l.ts)}</span>` }) + (typeof l.tsv === 'number' ? ' &middot; ' + tsvWord(l.tsv).toLowerCase() : '') : tr('Takes under a minute');
+    const cta = open ? `<button class="cta wait" data-act="start"><span class="cta-ic">${ic('clock')}</span><span class="cta-t"><b>${tr('Next check-in at {time}', { time: fmt(open) })}</b><span>${tr('They open {gap} minutes after the last one &middot; {last}', { gap: GAP_MIN, last })}</span></span></button>`
+      : `<button class="cta" data-act="start"><span class="cta-ic">${ic('bell')}</span><span class="cta-t"><b>${tr('Check in now')}</b><span>${gateWord() || last}</span></span>${ic('chev','go')}</button>`;
     const notif = !['on','unconfigured'].includes(PUSH.status()) && !studyOver();
-    return `<div class="hero today-hero"><div class="eyebrow">${PROJECT}</div><div class="hrow2"><h1 class="h1" tabindex="-1">${greeting()}</h1>${pts ? GAME.pointsChipHTML(pts, (racePayload('week') || {}).me) : ''}</div></div>
+    return `<div class="hero today-hero"><div class="eyebrow">${tr(PROJECT)}</div><div class="hrow2"><h1 class="h1" tabindex="-1">${greeting()}</h1>${pts ? GAME.pointsChipHTML(pts, (racePayload('week') || {}).me) : ''}</div></div>
       ${netNote(['pull','race'])}
       ${notif ? notifCard() : ''}
       ${cta}
@@ -895,74 +907,74 @@ const SCREENS = {
       ${gameToday(list, pts)}
       <div class="foot">${NAME ? esc(NAME) + ' &middot; ' : ''}${esc(PARTICIPANT)} &middot; <span data-sync>${syncLine()}</span></div>`;
   },
-  race: () => hasGame() ? `<div class="race-wrap">${netNote(['race'])}${GAME.raceHTML(racePayload(RACE_PERIOD), { period:RACE_PERIOD, lastWeek: racePayload('last_week'), loading: navigator.onLine !== false })}</div>` : head('The Bay Race', 'Marina to Mumbles', 'The race is not available right now.'),
+  race: () => hasGame() ? `<div class="race-wrap">${netNote(['race'])}${GAME.raceHTML(racePayload(RACE_PERIOD), { period:RACE_PERIOD, lastWeek: racePayload('last_week'), loading: navigator.onLine !== false })}</div>` : head(tr('The Bay Race'), tr('Marina to Mumbles'), tr('The race is not available right now.')),
   history: () => {
     const list = votes();
-    if(!list.length) return head('Your data', 'My check-ins') + netNote(['pull']) + `<div class="card empty">${ic('list')}<b>No check-ins yet</b><p class="sub">Your charts and history appear here after your first check-in.</p><button class="btn primary" data-act="start">Check in now ${ic('chev')}</button></div>`;
-    return head('Your data', 'My check-ins', `${list.length} check-in${list.length===1?'':'s'}, from all your devices. Tap one for the details.`) + netNote(['pull']) + charts(list) + historyList(list);
+    if(!list.length) return head(tr('Your data'), tr('My check-ins')) + netNote(['pull']) + `<div class="card empty">${ic('list')}<b>${tr('No check-ins yet')}</b><p class="sub">${tr('Your charts and history appear here after your first check-in.')}</p><button class="btn primary" data-act="start">${tr('Check in now')} ${ic('chev')}</button></div>`;
+    return head(tr('Your data'), tr('My check-ins'), trn(list.length, '{n} check-in, from all your devices. Tap one for the details.', '{n} check-ins, from all your devices. Tap one for the details.')) + netNote(['pull']) + charts(list) + historyList(list);
   },
   settings: () => {
-    const me = meProfile(), h = homeProfile(), shown = !me.race_hidden;
-    const homeLine = h && h.home_type ? [label(HOME_TYPES, h.home_type), esc(h.postcode_area), h.bedrooms != null ? countWord(h.bedrooms, 6) + ' bedroom' + (h.bedrooms === 1 ? '' : 's') : ''].filter(Boolean).join(' &middot; ') : 'Not filled in yet';
-    return head('Your app', 'Settings') +
-      `<section class="card" id="reminders" tabindex="-1" aria-labelledby="remH">${remindersSection()}</section>
-      <section class="card" aria-labelledby="raceH"><b class="card-t" id="raceH">The Bay Race</b>
-        <button class="toggle-row" role="switch" aria-checked="${shown}" data-act="race-hide">${ic(shown ? 'eye' : 'eyeOff')}<div><b>Show me in the Bay Race</b><span>${shown ? `Others see you as ${esc(me.alias || 'a Welsh wildlife name')}, never your name.` : 'Hidden from others. You still see the race and your own place.'}</span></div><span class="switch" aria-hidden="true"><i></i></span></button>
-        <div class="msg" id="raceMsg" role="status" hidden></div>
-        <div class="btn-row"><button class="btn secondary sm" data-act="race-how">${ic('info')} How points work</button><button class="btn secondary sm" data-act="badges">${ic('medal')} My badges</button></div></section>
-      <section class="card" aria-labelledby="homeH"><b class="card-t" id="homeH">My home</b>
-        <button class="row" data-act="go" data-to="myhome">${art(h && h.home_type ? 'home_type:' + h.home_type : 'home_type:detached', 'row-art')}<div><b>Your home profile</b><span>${homeLine}</span></div>${ic('chev','go')}</button></section>
-      <section class="card" aria-labelledby="acctH"><b class="card-t" id="acctH">Your account</b>
-        <ul class="kv"><li>${ic('user')}<span>Name</span><b>${esc(NAME) || '&mdash;'}</b></li><li>${ic('key')}<span>Participant code</span><b>${esc(PARTICIPANT)}</b></li>
-          ${me.alias ? `<li>${ic('flag')}<span>In the race</span><b>${esc(me.alias)}</b></li>` : ''}<li>${ic('refresh')}<span>Check-ins</span><b data-sync>${syncLine()}</b></li></ul>
-        ${SWITCH.live ? '' : `<div class="msg warn">${ic('alert')}<div><b>Local mode.</b> The study database is not connected: check-ins stay on this phone and nothing is sent.</div></div>`}
-        <button class="btn secondary" data-act="signout">${ic('signout')} Not you? Sign out</button></section>
-      <section class="card about"><b class="card-t">About</b>
-        <p class="note">${APP} &middot; ${esc(CFG.studyName || 'SWITCH home comfort study')} &middot; Swansea University &middot; version ${esc(CFG.appVersion || '')}</p>
-        <p class="note">Questions? Email ${TEAM}. <a href="../">About the study</a></p></section>`;
+    const me = meProfile(), h = homeProfile();
+    const homeLine = h && h.home_type ? [label(HOME_TYPES, h.home_type), esc(h.postcode_area), h.bedrooms != null ? (h.bedrooms >= 6 ? trn(6, '{n} bedroom', '{n} bedrooms', { n: countWord(h.bedrooms, 6) }) : trn(h.bedrooms, '{n} bedroom', '{n} bedrooms')) : ''].filter(Boolean).join(' &middot; ') : tr('Not filled in yet');
+    return head(tr('Your app'), tr('Settings')) +
+      `<section class="card" aria-labelledby="langH"><b class="card-t" id="langH">Language / Iaith</b>${langPick('in-card')}
+        <p class="note">${tr('The app speaks English and Welsh. Your choice is kept with your account, so your other phones and your reminders follow it.')}</p><div class="msg" id="langMsg" role="status" hidden></div></section>
+      <section class="card" id="reminders" tabindex="-1" aria-labelledby="remH">${remindersSection()}</section>
+      <section class="card" aria-labelledby="raceH"><b class="card-t" id="raceH">${tr('The Bay Race')}</b>
+        <div class="btn-row"><button class="btn secondary sm" data-act="race-how">${ic('info')} ${tr('How points work')}</button><button class="btn secondary sm" data-act="badges">${ic('medal')} ${tr('My badges')}</button></div></section>
+      <section class="card" aria-labelledby="homeH"><b class="card-t" id="homeH">${tr('My home')}</b>
+        <button class="row" data-act="go" data-to="myhome">${art(h && h.home_type ? 'home_type:' + h.home_type : 'home_type:detached', 'row-art')}<div><b>${tr('Your home profile')}</b><span>${homeLine}</span></div>${ic('chev','go')}</button></section>
+      <section class="card" aria-labelledby="acctH"><b class="card-t" id="acctH">${tr('Your account')}</b>
+        <ul class="kv"><li>${ic('user')}<span>${tr('Name')}</span><b>${esc(NAME) || '&mdash;'}</b></li><li>${ic('key')}<span>${tr('Participant code')}</span><b>${esc(PARTICIPANT)}</b></li>
+          ${me.alias ? `<li>${ic('flag')}<span>${tr('In the race')}</span><b>${esc(aliasName(me.alias))}</b></li>` : ''}<li>${ic('refresh')}<span>${tr('Check-ins')}</span><b data-sync>${syncLine()}</b></li></ul>
+        ${SWITCH.live ? '' : `<div class="msg warn">${ic('alert')}<div>${tr('<b>Local mode.</b> The study database is not connected: check-ins stay on this phone and nothing is sent.')}</div></div>`}
+        <button class="btn secondary" data-act="signout">${ic('signout')} ${tr('Not you? Sign out')}</button></section>
+      <section class="card about"><b class="card-t">${tr('About')}</b>
+        <p class="note">${tr('{app} &middot; {study} &middot; Swansea University &middot; version {v}', { app: APP, study: esc(tr(CFG.studyName || 'SWITCH home comfort study')), v: esc(CFG.appVersion || '') })}</p>
+        <p class="note">${tr('Questions? Email {team}.', { team: TEAM })} <a href="${studyHref()}">${tr('About the study')}</a></p></section>`;
   },
   myhome: () => {
     const h = homeProfile();
-    if(!h) return head('My home', 'Your home profile') + `<div class="card empty">${art('home_type:detached')}<b>Not filled in yet</b><p class="sub">It appears here once the study has it.</p></div>`;
-    return head('My home', 'Your home profile', 'As you described it. Tap Edit to change a section.') + homeGlance(regFromProfile(meProfile(), h), h, 'home-edit', false) +
-      `<div class="msg">${ic('info')}<div>Moved home? Please email ${TEAM} as well, so the research team knows.</div></div>`;
+    if(!h) return head(tr('My home'), tr('Your home profile')) + `<div class="card empty">${art('home_type:detached')}<b>${tr('Not filled in yet')}</b><p class="sub">${tr('It appears here once the study has it.')}</p></div>`;
+    return head(tr('My home'), tr('Your home profile'), tr('As you described it. Tap Edit to change a section.')) + homeGlance(regFromProfile(meProfile(), h), h, 'home-edit', false) +
+      `<div class="msg">${ic('info')}<div>${tr('Moved home? Please email {team} as well, so the research team knows.', { team: TEAM })}</div></div>`;
   },
   /* "Yes, for over an hour" and "Yes, I just got in" both lead to the check-in (at_home long or recent) */
-  athome: () => qhead('Before we start', 'Are you at home right now?', 'Then a few quick questions about how you feel.') +
+  athome: () => qhead(tr('Before we start'), tr('Are you at home right now?'), tr('Then a few quick questions about how you feel.')) +
     `<div class="rows fill">
-      <button class="row" data-act="home" data-v="long">${ic('home')}<div><b>Yes, for over an hour</b><span>Let&rsquo;s do the check-in</span></div>${ic('chev','go')}</button>
-      <button class="row" data-act="home" data-v="recent">${ic('clock')}<div><b>Yes, I just got in</b><span>Let&rsquo;s do the check-in</span></div>${ic('chev','go')}</button>
-      <button class="row" data-act="home" data-v="out">${ic('out')}<div><b>No, I&rsquo;m out</b><span>Pause reminders for a while</span></div>${ic('chev','go')}</button>
+      <button class="row" data-act="home" data-v="long">${ic('home')}<div><b>${tr('Yes, for over an hour')}</b><span>${tr('Let&rsquo;s do the check-in')}</span></div>${ic('chev','go')}</button>
+      <button class="row" data-act="home" data-v="recent">${ic('clock')}<div><b>${tr('Yes, I just got in')}</b><span>${tr('Let&rsquo;s do the check-in')}</span></div>${ic('chev','go')}</button>
+      <button class="row" data-act="home" data-v="out">${ic('out')}<div><b>${tr('No, I&rsquo;m out')}</b><span>${tr('Pause reminders for a while')}</span></div>${ic('chev','go')}</button>
     </div>`,
   /* each pause with the time it ends on the phone's clock */
   away: () => {
-    const opt = (v, icon, lab, sub) => `<button class="row" data-act="pause" data-v="${v}">${ic(icon)}<div><b>${lab}</b><span>${sub}</span></div>${ic('chev','go')}</button>`;
-    const until = min => 'Until ' + untilWord(new Date(Date.now() + min*60000));
-    return qhead('Out and about', 'When should we check again?', 'This phone stays quiet until then.') +
+    const opt = (v, icon, lab, sub) => `<button class="row" data-act="pause" data-v="${v}">${ic(icon)}<div><b>${tr(lab)}</b><span>${sub}</span></div>${ic('chev','go')}</button>`;
+    const until = min => tr('Until {until}', { until: untilWord(new Date(Date.now() + min*60000)) });
+    return qhead(tr('Out and about'), tr('When should we check again?'), tr('This phone stays quiet until then.')) +
       `<div class="rows fill">
         ${opt(60, 'clock', 'In an hour', until(60))}
         ${opt(180, 'clock', 'In three hours', until(180))}
         ${opt(300, 'clock', 'In five hours', until(300))}
-        ${new Date().getHours() < 19 ? opt('evening', 'moon', 'This evening', 'Until 19:00') : ''}
-        ${opt('manual', 'pin', 'I&rsquo;ll tell you when I&rsquo;m back', `Or in ${MANUAL_PAUSE_H} hours at the latest`)}
+        ${new Date().getHours() < 19 ? opt('evening', 'moon', 'This evening', tr('Until 19:00')) : ''}
+        ${opt('manual', 'pin', 'I&rsquo;ll tell you when I&rsquo;m back', tr('Or in {h} hours at the latest', { h: MANUAL_PAUSE_H }))}
       </div>`;
   },
   q: () => Q[S.flow[S.i]](),
-  review: () => qhead('Almost done', 'Here&rsquo;s what we&rsquo;ll save', `Tap ${ic('edit','inl')} to change an answer.`) +
+  review: () => qhead(tr('Almost done'), tr('Here&rsquo;s what we&rsquo;ll save'), tr('Tap {edit} to change an answer.', { edit: ic('edit','inl') })) +
     `<section class="review">${answerTiles(S.a)}</section>
-    <div class="actions"><button class="btn primary" data-act="submit">${ic('checkc')} Save check-in</button></div>`,
+    <div class="actions"><button class="btn primary" data-act="submit">${ic('checkc')} ${tr('Save check-in')}</button></div>`,
   /* celebrates showing up, never the answer */
   done: () => {
     const list = votes(), l = list[0], pts = gamePoints(list), g = goals(list, pts), t = g.t, open = nextOpen();
-    const title = t === GOAL ? 'That&rsquo;s today&rsquo;s goal!' : `Thank you${firstName() ? ', ' + esc(firstName()) : ''}!`;
-    const sub = t > GOAL ? 'Above and beyond today, thank you! Every extra check-in makes your comfort story clearer.'
-      : t === GOAL ? `${g.w} of ${WEEK_GOAL} goal days this week. More check-ins today are always welcome.`
-      : `${GOAL - t} more today reach${GOAL - t === 1 ? 'es' : ''} your daily goal.`;
+    const title = t === GOAL ? tr('That&rsquo;s today&rsquo;s goal!') : firstName() ? tr('Thank you, {name}!', { name: esc(firstName()) }) : tr('Thank you!');
+    const sub = t > GOAL ? tr('Above and beyond today, thank you! Every extra check-in makes your comfort story clearer.')
+      : t === GOAL ? tr('{w} of {wg} goal days this week. More check-ins today are always welcome.', { w: g.w, wg: WEEK_GOAL })
+      : trn(GOAL - t, '{n} more today reaches your daily goal.', '{n} more today reach your daily goal.');
     return `<div class="done"><div class="big">${ic('checkc')}</div><h1 tabindex="-1">${title}</h1><p class="sub">${sub}</p>
       ${hasGame() && DONE ? GAME.doneHTML(DONE) : ''}
-      ${l ? `<p class="note">Saved at ${fmt(new Date(l.ts))}${l.secs ? ` &middot; took ${secsWord(l.secs)}` : ''}</p>` : ''}
-      ${open ? `<p class="note next-open">${ic('clock','inl')} Your next check-in opens at <b>${fmt(open)}</b></p>` : ''}
-      <div class="actions"><button class="btn primary" data-act="tab" data-to="today">Done</button>${hasGame() ? `<button class="btn link" data-act="tab" data-to="race">See the Bay Race</button>` : `<button class="btn link" data-act="tab" data-to="history">See my check-ins</button>`}</div></div>`;
+      ${l ? `<p class="note">${tr('Saved at {time}', { time: fmt(new Date(l.ts)) })}${l.secs ? tr(' &middot; took {secs}', { secs: secsWord(l.secs) }) : ''}</p>` : ''}
+      ${open ? `<p class="note next-open">${ic('clock','inl')} ${tr('Your next check-in opens at <b>{time}</b>', { time: fmt(open) })}</p>` : ''}
+      <div class="actions"><button class="btn primary" data-act="tab" data-to="today">${tr('Done')}</button>${hasGame() ? `<button class="btn link" data-act="tab" data-to="race">${tr('See the Bay Race')}</button>` : `<button class="btn link" data-act="tab" data-to="history">${tr('See my check-ins')}</button>`}</div></div>`;
   },
   join: () => regScreen(),
   profile: () => regScreen(),
@@ -971,30 +983,30 @@ const SCREENS = {
 
 /* ---------- chrome: the top strip and the tab bar ---------- */
 const TAB_DEF = [['today','today','Today'],['race','flag','Race'],['history','list','My check-ins'],['settings','sliders','Settings']];
-const backPill = (hide) => hide ? '<span class="back-sp"></span>' : `<button class="back" id="back" data-act="back" aria-label="Back">${ic('back')}Back</button>`;
+const backPill = (hide) => hide ? '<span class="back-sp"></span>' : `<button class="back" id="back" data-act="back" aria-label="${tr('Back')}">${ic('back')}${tr('Back')}</button>`;
 function topbar(){
   const s = S.screen;
-  const bar = (label, pct) => `<div class="prog"><div class="count" aria-live="polite">${label}</div>${pct === null ? '' : `<div class="progress" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>`}</div>`;
+  const bar = (label, pct) => `<div class="prog"><div class="count" aria-live="polite">${label}</div>${pct === null ? '' : `<div class="progress" role="progressbar" aria-label="${tr('Progress')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>`}</div>`;
   if(FLOW_SCREENS.includes(s)){
     const n = S.flow.length || FLOW_ALL.length, step = s==='review' ? n + 1 : S.i + 1, prog = s==='q' || s==='review';
-    const label = s==='q' ? `Question ${step} of ${n}` : s==='review' ? 'Review' : 'Check-in &middot; ' + fmt(new Date());
-    return backPill() + bar(label, prog ? Math.round(step/(n+1)*100) : null) + `<button class="close" id="close" data-act="close" aria-label="Close the check-in">${ic('x')}</button>`;
+    const label = s==='q' ? tr('Question {s} of {n}', { s: step, n }) : s==='review' ? tr('Review') : tr('Check-in &middot; {time}', { time: fmt(new Date()) });
+    return backPill() + bar(label, prog ? Math.round(step/(n+1)*100) : null) + `<button class="close" id="close" data-act="close" aria-label="${tr('Close the check-in')}">${ic('x')}</button>`;
   }
   if(s==='join' || s==='profile'){
-    return backPill(s==='profile' && REG.step === 0 && !REG.edit) + bar(s==='join' ? 'Join the study' : 'Your profile', null) +
-      (s==='join' ? `<button class="later" id="later" data-act="reg-later">Later</button>` : '');
+    return backPill(s==='profile' && REG.step === 0 && !REG.edit) + bar(tr(s==='join' ? 'Join the study' : 'Your profile'), null) +
+      (s==='join' ? `<button class="later" id="later" data-act="reg-later">${tr('Later')}</button>` : '');
   }
-  if(s==='homeedit') return backPill() + bar('Edit your home', null);
-  if(s==='myhome') return backPill() + bar('Settings', null);
-  if(s==='signin') return needsKey() ? '' : backPill() + bar('Sign in', null);
+  if(s==='homeedit') return backPill() + bar(tr('Edit your home'), null);
+  if(s==='myhome') return backPill() + bar(tr('Settings'), null);
+  if(s==='signin') return needsKey() ? '' : backPill() + bar(tr('Sign in'), null);
   return '';
 }
 function updateChrome(){
   const s = S.screen, tabs = TABS.includes(s);
   $('.phone').classList.toggle('has-tabs', tabs);
   const nav = $('#tabbar');
-  nav.hidden = !tabs;
-  if(tabs) nav.innerHTML = TAB_DEF.map(([id, icon, lab]) => `<button class="tab" id="tab-${id}" data-act="tab" data-to="${id}"${id===s ? ' aria-current="page"' : ''}>${ic(icon)}<span>${lab}</span></button>`).join('');
+  nav.hidden = !tabs; nav.setAttribute('aria-label', tr('Main'));
+  if(tabs) nav.innerHTML = TAB_DEF.map(([id, icon, lab]) => `<button class="tab" id="tab-${id}" data-act="tab" data-to="${id}"${id===s ? ' aria-current="page"' : ''}>${ic(icon)}<span>${tr(lab)}</span></button>`).join('');
   const top = $('#top'), t = topbar();
   top.innerHTML = t; top.classList.toggle('empty', !t);
 }
@@ -1083,7 +1095,7 @@ function setPause(v){
   save();
   schedChange({ paused_until: store.paused });
   go('today');
-  showToast({ title:'Reminders paused', sub: store.pausedWhy==='manual' ? 'Tap Check in now when you&rsquo;re back' : 'Until ' + untilWord(new Date(store.paused)), kind:'info' });
+  showToast({ title:tr('Reminders paused'), sub: store.pausedWhy==='manual' ? tr('Tap Check in now when you&rsquo;re back') : tr('Until {until}', { until: untilWord(new Date(store.paused)) }), kind:'info' });
 }
 /* Saves the check-in on the phone at once and shows the done screen; it is sent after HOLD_MS (see hold), so
  * Undo can take it back everywhere. The row uses the answer keys switch-api.js toRecord reads. */
@@ -1092,7 +1104,7 @@ function submit(){
   const a = S.a, on = a.heat === 'on';
   const row = { id:'v'+Date.now()+Math.random().toString(36).slice(2,6), p:PARTICIPANT, ts:new Date().toISOString(), type:S.mode, home:a.home||'long',
     tsv:a.tsv, tp:a.tp, ta:a.ta, garments:a.clo||[], clo:cloOf(a.clo||[]), act:a.act, met:byId(ACTS,a.act)?.met, room:a.room,
-    air:a.air, sun:a.sun, heat:a.heat ?? null, heat_src: on ? (a.heat_src ?? null) : null, heat_for: on ? (a.heat_for ?? null) : null,
+    air:a.air, sun:a.sun, heat:a.heat ?? null, heat_src: null, heat_for: on ? (a.heat_for ?? null) : null,   // which heating is no longer asked
     stat: null, wall:a.wall ?? null,                                    // the thermostat reading is no longer asked
     actions:a.actions, notes:a.notes, same:false, secs:Math.max(1, Math.round((Date.now()-S.t0)/1000)) };
   const before = votes();
@@ -1101,7 +1113,8 @@ function submit(){
     const after = votes(), b = GAME.points(before, new Date()), af = GAME.points(after, new Date()), pay = racePayload('week');
     const rb = pay && pay.me ? +pay.me.rank || 0 : 0;
     DONE = { before:b, after:af, newBadges: GAME.newBadges(before, after, new Date()), rankBefore: rb,
-      rankAfter: pay && pay.me ? rankWith(pay, (+pay.me.points || 0) + Math.max(0, af.week - b.week)) : 0 };
+      rankAfter: pay && pay.me ? rankWith(pay, (+pay.me.points || 0) + Math.max(0, af.week - b.week)) : 0,
+      me: pay && pay.me ? { alias: pay.me.alias, colour: pay.me.colour } : null, next: GAME.nextBadge ? GAME.nextBadge(after, new Date()) : null };
   }
   S.undoTo = S.screen;
   hold(row);
@@ -1118,7 +1131,7 @@ function hold(row){
   // is closed still goes out the next time it opens.
   if(SWITCH.live){ const rec = SWITCH.toRecord(row, PARTICIPANT); rec.hold_until = Date.now() + HOLD_MS; SWITCH.queue(rec); }
   const on = PUSH.status()==='on', t = goals(votes(), gamePoints(votes())).t;
-  showToast({ title:'Check-in saved', sub: on ? 'Next reminder ' + whenWord(nextReminder()) : t > GOAL ? `${t} today` : `${t} of ${GOAL} today`, action:'Undo', onAction:() => undo(row.id), onClose:() => commit(row.id), ms:HOLD_MS, hold:true });
+  showToast({ title:tr('Check-in saved'), sub: on ? tr('Next reminder {when}', { when: whenWord(nextReminder()) }) : t > GOAL ? tr('{t} today', { t }) : tr('{t} of {g} today', { t, g: GOAL }), action:tr('Undo'), onAction:() => undo(row.id), onClose:() => commit(row.id), ms:HOLD_MS, hold:true });
 }
 /* The Undo time is over: send the check-in now. This also runs when the toast closes early (another message
  * replaced it, or the app went to the background), so the row's hold mark is removed here. A pause chosen after
@@ -1148,7 +1161,7 @@ function undo(id){
   if(S.screen === 'done'){ const to = S.undoTo || 'review'; if(S.hist[S.hist.length-1] === to) S.hist.pop(); S.screen = to; render(); }
   else if(TABS.includes(S.screen)) rerender();
   else if(FLOW_SCREENS.includes(S.screen)) go('today');
-  showToast({ title:'Check-in removed', sub:'Nothing was sent', kind:'info', ms:3500 });
+  showToast({ title:tr('Check-in removed'), sub:tr('Nothing was sent'), kind:'info', ms:3500 });
 }
 /* Sends the queued check-ins: on start, after a hold, when the phone comes back online and when the app comes
  * back to the screen. Rows still in their Undo time wait; rows of another participant (signed out on this
@@ -1196,7 +1209,7 @@ async function flushPending(){
 function flushLater(){ const q = SWITCH.pending(); const wait = q.map(r => r.hold_until || 0).filter(t => t > Date.now()); if(wait.length) setTimeout(() => quiet(flushPending()), Math.max(...wait) - Date.now() + 250); }
 
 /* ---------- identity, joining, approval ---------- */
-const friendly = (m, fallback) => /schema cache|could not find the function/i.test(m||'') ? 'Joining is not switched on yet. Please contact the research team.' : /registered/i.test(m||'') ? 'We could not find that email. Check the spelling, or join as new.' : /failed to fetch|network|load failed/i.test(m||'') ? 'Could not reach the study database. Check the connection and try again.' : (m || fallback);
+const friendly = (m, fallback) => /schema cache|could not find the function/i.test(m||'') ? tr('Joining is not switched on yet. Please contact the research team.') : /registered/i.test(m||'') ? tr('We could not find that email. Check the spelling, or join as new.') : /failed to fetch|network|load failed/i.test(m||'') ? tr('Could not reach the study database. Check the connection and try again.') : (m || tr(fallback));
 function setIdentity(code, name){
   PARTICIPANT = code; NAME = name || ''; welcomeNote = '';
   LS.set('switch_participant', code); LS.set('switch_name', NAME);
@@ -1210,7 +1223,8 @@ function forgetIdentity(note, device){
   if(code && SWITCH.live){ requeueUnsent(code); dropSynced(code); }          // local mode: nothing is anywhere else, so nothing leaves the phone
   if(device){ quiet(SWITCH.forgetDevice()); if(PUSH.status() === 'on') quiet(PUSH.disable()); }
   SWITCH.setKey(null);
-  ['switch_participant','switch_name',APPROVED_KEY,'switch_push','switch_push_lost','switch_sched',HOME_KEY,ME_KEY,KEY_LOST_KEY,POINTS_KEY,BACKFILL_KEY,RACE_KEY('week'),RACE_KEY('last_week'),RACE_KEY('month')].forEach(k => LS.del(k));
+  SS.del(LANG_TAP_KEY);
+  [LANG_SYNC_KEY,'switch_participant','switch_name',APPROVED_KEY,'switch_push','switch_push_lost','switch_sched',HOME_KEY,ME_KEY,KEY_LOST_KEY,POINTS_KEY,BACKFILL_KEY,RACE_KEY('week'),RACE_KEY('last_week'),RACE_KEY('month')].forEach(k => LS.del(k));
   PARTICIPANT = ''; NAME = ''; welcomeNote = note || ''; DONE = null;
   go('welcome');
 }
@@ -1240,7 +1254,8 @@ async function signedIn(r){
   if(!same && prev){
     if(PUSH.status() === 'on') await PUSH.disable();
     requeueUnsent(prev); dropSynced(prev);
-    ['switch_push','switch_push_lost','switch_sched',HOME_KEY,ME_KEY,POINTS_KEY,BACKFILL_KEY,RACE_KEY('week'),RACE_KEY('last_week'),RACE_KEY('month')].forEach(k => LS.del(k));
+    SS.del(LANG_TAP_KEY);
+    [LANG_SYNC_KEY,'switch_push','switch_push_lost','switch_sched',HOME_KEY,ME_KEY,POINTS_KEY,BACKFILL_KEY,RACE_KEY('week'),RACE_KEY('last_week'),RACE_KEY('month')].forEach(k => LS.del(k));
   }
   save();
   setIdentity(r.code, r.name);
@@ -1262,7 +1277,7 @@ function cacheProfile(prof){
   if(!prof || typeof prof !== 'object') return false;
   let changed = false;
   const me = { code:prof.code, name:prof.name, gender:prof.gender, birth_year:prof.birth_year, height_cm:prof.height_cm, weight_kg:prof.weight_kg,
-    sensitivity:prof.sensitivity, alias:prof.alias, alias_colour:prof.alias_colour, race_hidden:!!prof.race_hidden };
+    sensitivity:prof.sensitivity, alias:prof.alias, alias_colour:prof.alias_colour };
   if(LS.get(ME_KEY) !== JSON.stringify(me)){ LS.set(ME_KEY, JSON.stringify(me)); changed = true; }
   if(prof.home && typeof prof.home === 'object' && Object.keys(prof.home).length && LS.get(HOME_KEY) !== JSON.stringify(prof.home)){ LS.set(HOME_KEY, JSON.stringify(prof.home)); changed = true; }
   if(prof.name && prof.name !== NAME){ NAME = prof.name; LS.set('switch_name', NAME); changed = true; }
@@ -1284,6 +1299,7 @@ async function pullHistory(force){
   if(!SWITCH.live || !PARTICIPANT || !SWITCH.key()) return;
   if(!force && Date.now() - lastPull < 3*60000) return;
   lastPull = Date.now();
+  const langSeq0 = langSeq, langPend0 = LS.get(LANG_SYNC_KEY);   // a language chosen while this pull is out wins over what it brings back
   try{
     const got = await Promise.allSettled([SWITCH.myCheckins(), SWITCH.myProfile(), SWITCH.myPoints()]);
     const failed = got.filter(x => x.status === 'rejected').map(x => x.reason || {});
@@ -1292,6 +1308,9 @@ async function pullHistory(force){
     const val = i => got[i].status === 'fulfilled' ? got[i].value : null;
     const rows = val(0) || [], prof = val(1), pts = val(2);
     let changed = cacheProfile(prof);
+    const pendLang = LS.get(LANG_SYNC_KEY);
+    if(pendLang){ if(!langSaving) quiet(saveLanguage(pendLang)); }                // made offline: to the account first
+    else if(langSeq === langSeq0 && !langPend0 && prof && (prof.lang === 'en' || prof.lang === 'cy') && prof.lang !== LANG){ I18N.set(prof.lang); changed = true; }   // changed on another device
     if(pts){
       // the figures shown change only when they differ, or when the stored copy was not in use (older than the last
       // check-in here, or from another day: gamePoints falls back to its own count then)
@@ -1344,11 +1363,11 @@ function fieldError(id, msg){
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const weakPin = p => /^(\d)\1{3}$/.test(p) || ['1234','4321','0123','9876','1212','2580'].includes(p);
 /* "15 minutes", "1 hour", "24 hours": how long a lock lasts (15 min, then 1 h, then 24 h after repeated locks) */
-const waitWord = m => { m = Math.max(1, Math.ceil(Number(m) || 15)); if(m < 60) return `${m} minute${m===1?'':'s'}`; const h = Math.ceil(m / 60); return `${h} hour${h===1?'':'s'}`; };
-const pinOutcome = r => r.status === 'wrong' ? `That PIN isn&rsquo;t right. ${r.tries_left} ${r.tries_left === 1 ? 'try' : 'tries'} left before a pause.`
-  : r.status === 'locked' ? `Too many tries, so signing in is paused for ${waitWord(r.wait_min)}. Please try again after that, or ask the research team to reset your PIN.`
-  : r.status === 'not_found' ? 'We could not find that email. Check the spelling, or join as new.'
-  : r.status === 'weak_pin' ? 'That PIN is easy to guess. Please choose another 4 digits.' : 'Please enter your 4-digit PIN.';
+const waitWord = m => { m = Math.max(1, Math.ceil(Number(m) || 15)); if(m < 60) return trn(m, '{n} minute', '{n} minutes'); const h = Math.ceil(m / 60); return trn(h, '{n} hour', '{n} hours'); };
+const pinOutcome = r => r.status === 'wrong' ? trn(r.tries_left, 'That PIN isn&rsquo;t right. {n} try left before a pause.', 'That PIN isn&rsquo;t right. {n} tries left before a pause.')
+  : r.status === 'locked' ? tr('Too many tries, so signing in is paused for {wait}. Please try again after that, or ask the research team to reset your PIN.', { wait: waitWord(r.wait_min) })
+  : r.status === 'not_found' ? tr('We could not find that email. Check the spelling, or join as new.')
+  : r.status === 'weak_pin' ? tr('That PIN is easy to guess. Please choose another 4 digits.') : tr('Please enter your 4-digit PIN.');
 let SIGNIN_CODE = false;                                    // the sign-in screen asks for the participant code (the database answered code_needed)
 let SIGNIN_EMAIL = '';                                      // the email just signed in with (a join draft for it fills the profile)
 /* the sign-in screen again, now with the code field, keeping what was typed */
@@ -1365,31 +1384,33 @@ async function signin(){
   const email = $('#s_email').value.trim(), pin = ($('#s_pin').value || '').trim(), rekey = needsKey(), lost = LS.get(KEY_LOST_KEY) === '1';
   const asked = SIGNIN_CODE, typed = asked ? ($('#s_code').value || '').toUpperCase().replace(/\s+/g, '') : '';
   fieldError('s_email', ''); fieldError('s_pin', ''); if(asked) fieldError('s_code', '');
-  if(!EMAIL_RE.test(email)) return fieldError('s_email', 'Please enter the email you registered with, like name@example.com.');
-  if(asked && !/^P\d{2,}$/.test(typed)) return fieldError('s_code', 'Please enter your participant code: a P and its number, like P07.');
-  if(!/^\d{4}$/.test(pin)) return fieldError('s_pin', 'Please enter a 4-digit PIN.');
-  if(asked && weakPin(pin)) return fieldError('s_pin', 'That PIN is easy to guess. Please choose another 4 digits.');
+  if(!EMAIL_RE.test(email)) return fieldError('s_email', tr('Please enter the email you registered with, like name@example.com.'));
+  if(asked && !/^P\d{2,}$/.test(typed)) return fieldError('s_code', tr('Please enter your participant code: a P and its number, like P07.'));
+  if(!/^\d{4}$/.test(pin)) return fieldError('s_pin', tr('Please enter a 4-digit PIN.'));
+  if(asked && weakPin(pin)) return fieldError('s_pin', tr('That PIN is easy to guess. Please choose another 4 digits.'));
   const b = $('[data-act="signin"]'), idle = () => { b.disabled = false; b.classList.remove('busy'); };
   b.disabled = true; b.classList.add('busy');
   try{
-    if(!SWITCH.live) throw new Error('The study database is not connected yet, so signing in is not possible. Choose I&rsquo;m new here instead.');
+    if(!SWITCH.live) throw new Error(tr('The study database is not connected yet, so signing in is not possible. Choose I&rsquo;m new here instead.'));
     const sent = asked ? typed : (PARTICIPANT || null);
     const r = await SWITCH.signIn(email, pin, sent);
     if(r.status === 'code_needed'){
       idle();
       const wrong = !!sent && typeof r.tries_left === 'number';
       if(!asked) showCodeField();
-      if(wrong) return fieldError('s_code', `${asked ? 'That participant code doesn&rsquo;t match.' : 'The code on this phone doesn&rsquo;t match this email: please type yours.'} ${r.tries_left} ${r.tries_left === 1 ? 'try' : 'tries'} left before a pause.`);
-      return fieldError('s_code', 'This is the first time you sign in with a PIN. Please also enter your participant code, then choose your PIN.');
+      if(wrong) return fieldError('s_code', `${asked ? tr('That participant code doesn&rsquo;t match.') : tr('The code on this phone doesn&rsquo;t match this email: please type yours.')} ${trn(r.tries_left, '{n} try left before a pause.', '{n} tries left before a pause.')}`);
+      return fieldError('s_code', tr('This is the first time you sign in with a PIN. Please also enter your participant code, then choose your PIN.'));
     }
     if(r.status !== 'ok'){ idle(); return fieldError(r.status === 'not_found' ? 's_email' : 's_pin', pinOutcome(r)); }
     SIGNIN_CODE = false; SIGNIN_EMAIL = email.toLowerCase();
     await signedIn(r);
-    b.innerHTML = 'Loading your check-ins&hellip;';
+    languageAfterSignIn(r);
+    b.innerHTML = tr('Loading your check-ins&hellip;');
     await firstLoad();                                      // the profile decides what comes next; the history and the race fill Today
     afterIdentity(r.approved);
     quiet(flushPending());
-    showToast({ title:'Welcome' + (rekey && !lost ? '' : ' back') + (firstName() ? ', ' + esc(firstName()) : ''), sub: r.pin_set ? 'Your PIN is saved. Use it with your email on your other devices.' : netBad('pull') ? 'Your check-ins from your other devices are still on their way.' : 'Your check-ins from all your devices are here.', kind:'info', ms:6000 });
+    const hello = rekey && !lost ? 'Welcome' : 'Welcome back';
+    showToast({ title: firstName() ? tr(hello + ', {name}', { name: esc(firstName()) }) : tr(hello), sub: r.pin_set ? tr('Your PIN is saved. Use it with your email on your other devices.') : netBad('pull') ? tr('Your check-ins from your other devices are still on their way.') : tr('Your check-ins from all your devices are here.'), kind:'info', ms:6000 });
   }catch(e){ idle(); fieldError('s_email', friendly(e.message, 'Could not sign in. Check the connection and try again.')); }
 }
 function pendMsg(t){ const m = $('#pendMsg'); if(!m) return; m.hidden = false; m.innerHTML = ic('info') + '<div>' + t + '</div>'; }
@@ -1408,13 +1429,13 @@ let checking = false;
 async function recheck(silent){
   if(checking) return; checking = true;
   const b = $('[data-act="recheck"]'); if(b) b.disabled = true;
-  if(!silent) pendMsg('Checking&hellip;');
+  if(!silent) pendMsg(tr('Checking&hellip;'));
   try{
     const st = await approvalState();
-    if(st === 'yes'){ checking = false; await refreshProfile(); go('today'); showToast({ title:'You&rsquo;re in!', sub:'Welcome to the study' }); quiet(flushPending()); quiet(pullHistory(true)); refreshRace('week'); return; }
+    if(st === 'yes'){ checking = false; await refreshProfile(); go('today'); showToast({ title:tr('You&rsquo;re in!'), sub:tr('Welcome to the study') }); quiet(flushPending()); quiet(pullHistory(true)); refreshRace('week'); return; }
     if(st === 'gone'){ checking = false; forgetIdentity(NOT_FOUND_MSG); return; }
-    if(!silent) pendMsg('Not confirmed yet. Please try again a little later.');
-  }catch(e){ if(!silent) pendMsg('Could not reach the study database. Try again later.'); }
+    if(!silent) pendMsg(tr('Not confirmed yet. Please try again a little later.'));
+  }catch(e){ if(!silent) pendMsg(tr('Could not reach the study database. Try again later.')); }
   checking = false;
   const b2 = $('[data-act="recheck"]'); if(b2) b2.disabled = false;
 }
@@ -1461,8 +1482,12 @@ function startProfile(){
 /* ---------- reminders ---------- */
 const HOURS_KEY = 'switch_hours';
 /* Home hours: a weekday and a weekend window, plus an optional second window for each (null when unused).
- * The same eight fields go to push_subscriptions, where the sender reads them. Swansea's defaults. */
-const DEFAULT_HOURS = { weekday_start:'17:00', weekday_end:'22:30', weekend_start:'09:00', weekend_end:'22:30', weekday2_start:null, weekday2_end:null, weekend2_start:null, weekend2_end:null };
+ * The same eight fields go to push_subscriptions, where the sender reads them. The study's default: 07:00-22:00
+ * every day (the reminder service has the same). */
+const DEFAULT_HOURS = { weekday_start:'07:00', weekday_end:'22:00', weekend_start:'07:00', weekend_end:'22:00', weekday2_start:null, weekday2_end:null, weekend2_start:null, weekend2_end:null };
+/* the defaults of HomePulse 1.0 and 1.1 (see migrateHours) */
+const OLD_DEFAULT_HOURS = { weekday_start:'17:00', weekday_end:'22:30', weekend_start:'09:00', weekend_end:'22:30' };
+const HOURS_V2_KEY = 'switch_hours_v2';
 const hhmm = s => { const m = hm(s); return m ? pad(m[0])+':'+pad(m[1]) : null; };
 /* The saved hours, always usable: "HH:MM", a missing main bound takes the default, a main window that ends at
  * or before its start (an older version let people save "until 00:00") runs until 23:59, and a second window
@@ -1490,10 +1515,10 @@ function hoursWord(h, p){
 /* Why these hours cannot be saved, or '' when they can: every period has to end after it starts (a second
  * period ending at 00:00 means until midnight, as hours() reads it). */
 function hoursProblem(h){
-  for(const [p, name] of [['weekday','Weekdays'], ['weekend','Weekends']]){
-    if(!(h[p+'_start'] < h[p+'_end'])) return `${name}: the end time must be later than the start time. For &ldquo;until midnight&rdquo; choose 23:59.`;
+  for(const [p, name] of [['weekday', tr('Weekdays')], ['weekend', tr('Weekends')]]){
+    if(!(h[p+'_start'] < h[p+'_end'])) return tr('{name}: the end time must be later than the start time. For &ldquo;until midnight&rdquo; choose 23:59.', { name });
     const e2 = h[p+'2_end'] === '00:00' ? '23:59' : h[p+'2_end'];
-    if(h[p+'2_start'] && e2 && !(h[p+'2_start'] < e2)) return `${name}, second period: the end time must be later than the start time.`;
+    if(h[p+'2_start'] && e2 && !(h[p+'2_start'] < e2)) return tr('{name}, second period: the end time must be later than the start time.', { name });
   }
   return '';
 }
@@ -1562,19 +1587,19 @@ const PUSH = {
     const fail = (kind, msg) => Object.assign(new Error(msg), { kind });
     // Asked first, straight from the tap: iPhone only shows the question in direct response to one.
     let perm;
-    try{ perm = await Notification.requestPermission(); }catch(e){ throw fail('perm', 'This browser could not ask about notifications. Please try again.'); }
+    try{ perm = await Notification.requestPermission(); }catch(e){ throw fail('perm', tr('This browser could not ask about notifications. Please try again.')); }
     if(perm !== 'granted') return perm === 'denied' ? 'blocked' : 'dismissed';
     const reg = await swReady();
-    if(!reg) throw fail('sw', 'Reminders could not start on this phone. Close the app, open it again and try once more.');
+    if(!reg) throw fail('sw', tr('Reminders could not start on this phone. Close the app, open it again and try once more.'));
     let sub;
-    try{ sub = await this.subscribe(reg); }catch(e){ throw fail('subscribe', 'This phone&rsquo;s notification service did not answer. Please try again in a moment.'); }
+    try{ sub = await this.subscribe(reg); }catch(e){ throw fail('subscribe', tr('This phone&rsquo;s notification service did not answer. Please try again in a moment.')); }
     let saved;
     try{ saved = await SWITCH.saveSubscription(this.record(sub)); }catch(e){ saved = false; }
-    if(saved === 'not_signed_in'){ keyLost(); throw fail('signin', 'This phone needs to sign in again first.'); }
-    if(saved === 'refused'){ quiet(afterRefusal()); throw fail('refused', 'The study database did not accept this phone. Please contact the research team.'); }
-    if(saved === 'invalid') throw fail('invalid', 'Reminders don&rsquo;t work in this browser. On Android use Chrome; on iPhone use Safari and add the app to your Home Screen.');
-    if(saved === 'full') throw fail('full', 'Too many phones are registered for reminders under your code. Please contact the research team.');   // an older database only
-    if(saved !== true) throw fail('save', 'This phone could not be registered. Check the connection and try again.');
+    if(saved === 'not_signed_in'){ keyLost(); throw fail('signin', tr('This phone needs to sign in again first.')); }
+    if(saved === 'refused'){ quiet(afterRefusal()); throw fail('refused', tr('The study database did not accept this phone. Please contact the research team.')); }
+    if(saved === 'invalid') throw fail('invalid', tr('Reminders don&rsquo;t work in this browser. On Android use Chrome; on iPhone use Safari and add the app to your Home Screen.'));
+    if(saved === 'full') throw fail('full', tr('Too many phones are registered for reminders under your code. Please contact the research team.'));   // an older database only
+    if(saved !== true) throw fail('save', tr('This phone could not be registered. Check the connection and try again.'));
     LS.set('switch_push','on'); LS.del('switch_push_lost');
     quiet(this.sync(personState()));                        // no reminder during a pause or right after a check-in
     return 'on';
@@ -1631,28 +1656,41 @@ async function syncReminders(){
   }
   if(changed && (S.screen==='today' || S.screen==='settings')) rerender();
 }
+/* Once on each phone (switch_hours_v2): hours still exactly on the old defaults (weekdays 17:00-22:30, weekends
+ * 09:00-22:30, no second period), or none saved, become the study's 07:00-22:00 every day. With reminders on, the
+ * new hours go to the reminder service through the schedule queue (SCHED_KEY keeps them until the service has
+ * confirmed them, so an offline phone sends them later). Hours someone chose themselves stay as they are. */
+function migrateHours(){
+  if(LS.get(HOURS_V2_KEY)) return;
+  let h = null; try{ h = JSON.parse(LS.get(HOURS_KEY) || 'null'); }catch(e){}
+  const old = !h || typeof h !== 'object' || (Object.keys(OLD_DEFAULT_HOURS).every(k => hhmm(h[k]) === OLD_DEFAULT_HOURS[k])
+    && !h.weekday2_start && !h.weekday2_end && !h.weekend2_start && !h.weekend2_end);
+  if(old){ LS.set(HOURS_KEY, JSON.stringify(DEFAULT_HOURS)); if(PUSH.status() === 'on') schedChange(Object.assign({}, DEFAULT_HOURS)); }
+  LS.set(HOURS_V2_KEY, '1');
+}
 function b64ToBytes(s){ const p = '='.repeat((4 - s.length % 4) % 4); const b = atob((s + p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(b, c => c.charCodeAt(0)); }
 /* Settings, reminders: what this phone can do, the home hours and the buttons */
 function remindersSection(){
   const st = PUSH.status(), h = remDraft || hours();
   const tin = (id, v, lab) => `<input type="time" class="time-in" id="${id}" value="${esc(v||'')}" aria-label="${lab}">`;
   /* one day type: its from/until row, then either the optional second period (with a remove control) or the link that adds one */
-  const grp = (p, name, ids) => `<div class="hrow"><label class="hl" for="${ids[0]}">${name}</label>${tin(ids[0], h[p+'_start'], name+' from')}<span class="to">to</span>${tin(ids[1], h[p+'_end'], name+' until')}<span class="hx"></span></div>` +
+  const grp = (p, en, ids) => { const name = tr(en);
+    return `<div class="hrow"><label class="hl" for="${ids[0]}">${name}</label>${tin(ids[0], h[p+'_start'], tr('{name} from', { name }))}<span class="to">${tr('to')}</span>${tin(ids[1], h[p+'_end'], tr('{name} until', { name }))}<span class="hx"></span></div>` +
     (h[p+'2_start'] || h[p+'2_end']
-      ? `<div class="hrow"><label class="hl" for="${ids[2]}">and</label>${tin(ids[2], h[p+'2_start'], name+', second period, from')}<span class="to">to</span>${tin(ids[3], h[p+'2_end'], name+', second period, until')}<button class="hx" data-act="rm-win" data-w="${p}" aria-label="Remove the second ${name.toLowerCase()} period">${ic('x')}</button></div>`
-      : `<div class="hrow"><button class="addw" data-act="add-win" data-w="${p}">+ Add another period</button></div>`);
-  const form = `<div class="hours"><div class="lab">When are you usually at home?</div>${grp('weekday', 'Weekdays', ['h_ws','h_we','h_ws2','h_we2'])}${grp('weekend', 'Weekends', ['h_es','h_ee','h_es2','h_ee2'])}
-      <p class="note">Reminders only arrive inside these hours, never within ${GAP_MIN} minutes of a check-in, and not while you&rsquo;ve said you&rsquo;re out.</p></div>`;
+      ? `<div class="hrow"><label class="hl" for="${ids[2]}">${tr('and')}</label>${tin(ids[2], h[p+'2_start'], tr('{name}, second period, from', { name }))}<span class="to">${tr('to')}</span>${tin(ids[3], h[p+'2_end'], tr('{name}, second period, until', { name }))}<button class="hx" data-act="rm-win" data-w="${p}" aria-label="${tr('Remove the second ' + en.toLowerCase() + ' period')}">${ic('x')}</button></div>`
+      : `<div class="hrow"><button class="addw" data-act="add-win" data-w="${p}">${tr('+ Add another period')}</button></div>`); };
+  const form = `<div class="hours"><div class="lab">${tr('When are you usually at home?')}</div>${grp('weekday', 'Weekdays', ['h_ws','h_we','h_ws2','h_we2'])}${grp('weekend', 'Weekends', ['h_es','h_ee','h_es2','h_ee2'])}
+      <p class="note">${tr('Reminders only arrive inside these hours, never within {gap} minutes of a check-in, and not while you&rsquo;ve said you&rsquo;re out.', { gap: GAP_MIN })}</p></div>`;
   const msg = `<div class="msg" id="remMsg" role="status" hidden></div>`;
-  const title = `<div class="card-head"><b class="card-t" id="remH">Reminders</b>${st==='on' ? `<span class="pill on">${ic('check')}On</span>` : ''}</div>`;
-  if(studyOver()) return title + `<div class="msg">${ic('checkc')}<div>The study has ended, so reminders have stopped. Thank you for taking part.</div></div>`;
-  if(st === 'install') return title + installSteps(true) + `<p class="note">Then turn on notifications in the Home Screen app.</p>`;
+  const title = `<div class="card-head"><b class="card-t" id="remH">${tr('Reminders')}</b>${st==='on' ? `<span class="pill on">${ic('check')}${tr('On')}</span>` : ''}</div>`;
+  if(studyOver()) return title + `<div class="msg">${ic('checkc')}<div>${tr('The study has ended, so reminders have stopped. Thank you for taking part.')}</div></div>`;
+  if(st === 'install') return title + installSteps(true) + `<p class="note">${tr('Then turn on notifications in the Home Screen app.')}</p>`;
   if(st === 'unsupported' || st === 'blocked') return title + `<div class="msg${st === 'blocked' ? ' warn' : ''}">${ic('bellOff')}<div><b>${notifHelp(st).title}.</b></div></div><div class="nt-body">${notifHelp(st).html}</div>` + msg + (notifHelp(st).btn || '');
-  if(st === 'unconfigured') return title + `<div class="msg">${ic('info')}<div>Reminders start once the study database is connected. Your home hours are saved on this phone now.</div></div>` + form + msg + `<button class="btn primary" data-act="save-hours">Save hours</button>`;
+  if(st === 'unconfigured') return title + `<div class="msg">${ic('info')}<div>${tr('Reminders start once the study database is connected. Your home hours are saved on this phone now.')}</div></div>` + form + msg + `<button class="btn primary" data-act="save-hours">${tr('Save hours')}</button>`;
   // Off: notifications first, with one tap (the hours saved so far, or Swansea's defaults); the hours come once they are on.
-  if(st === 'off') return title + `<div class="msg ${PUSH.lost() || notifTrouble ? 'warn' : ''}">${ic(PUSH.lost() || notifTrouble ? 'alert' : 'info')}<div>${notifTrouble ? TROUBLE_TEXT : PUSH.lost() ? 'Notifications have stopped on this phone. Turn them on again.' : 'The study needs notifications: they remind you to check in. Turn them on, then choose your hours here.'}</div></div>` + msg + `<button class="btn primary" data-act="notif-on">${ic(notifTrouble ? 'refresh' : 'bell')} ${notifTrouble ? 'Try again' : 'Turn on notifications'}</button><p class="note center">${daysWord(hours())} to start with.</p>`;
-  return title + form + msg + `<button class="btn primary" data-act="save-hours">Save hours</button><button class="btn link" data-act="push-off">${ic('bellOff')} Turn off reminders</button>` +
-    (HANDHELD ? `<p class="note center">On a phone or tablet, check-ins need notifications: with them off, this device asks you to turn them on again before a check-in.</p>` : '');
+  if(st === 'off') return title + `<div class="msg ${PUSH.lost() || notifTrouble ? 'warn' : ''}">${ic(PUSH.lost() || notifTrouble ? 'alert' : 'info')}<div>${notifTrouble ? troubleText() : PUSH.lost() ? tr('Notifications have stopped on this phone. Turn them on again.') : tr('The study needs notifications: they remind you to check in. Turn them on, then choose your hours here.')}</div></div>` + msg + `<button class="btn primary" data-act="notif-on">${ic(notifTrouble ? 'refresh' : 'bell')} ${notifTrouble ? tr('Try again') : tr('Turn on notifications')}</button><p class="note center">${tr('{days} to start with.', { days: daysWord(hours()) })}</p>`;
+  return title + form + msg + `<button class="btn primary" data-act="save-hours">${tr('Save hours')}</button><button class="btn link" data-act="push-off">${ic('bellOff')} ${tr('Turn off reminders')}</button>` +
+    (HANDHELD ? `<p class="note center">${tr('On a phone or tablet, check-ins need notifications: with them off, this device asks you to turn them on again before a check-in.')}</p>` : '');
 }
 /* The eight hour fields as the form shows them: the main windows fall back to the defaults, a second window is
  * null unless its row is present and both ends are filled in. */
@@ -1739,77 +1777,77 @@ function regProblem(step, r){
   r = r || REG;
   const y = new Date().getFullYear(), id = REG_STEPS[step].id, H = r.home || {}, num = k => typeof H[k] === 'number', mode = r.mode;
   if(id === 'you'){
-    if((r.name || '').trim().length < 2) return ['r_name', 'Please enter your name.'];
-    if(mode === 'join' && !EMAIL_RE.test((r.email || '').trim())) return ['r_email', 'Please enter an email address, like name@example.com.'];
-    if(!r.gender) return ['r_gender', 'Please choose one. &ldquo;Prefer not to say&rdquo; is fine.'];
+    if((r.name || '').trim().length < 2) return ['r_name', tr('Please enter your name.')];
+    if(mode === 'join' && !EMAIL_RE.test((r.email || '').trim())) return ['r_email', tr('Please enter an email address, like name@example.com.')];
+    if(!r.gender) return ['r_gender', tr('Please choose one. &ldquo;Prefer not to say&rdquo; is fine.')];
     const by = numOf(r.birth_year);
-    if(blank(r.birth_year)) return ['r_year', 'Please enter the year you were born.'];
-    if(by === null || by % 1 || by < 1900 || by > y) return ['r_year', 'Please enter the year as four digits, like 1985.'];
-    if(by > y - 18) return ['r_year', 'You need to be 18 or over to take part.'];
+    if(blank(r.birth_year)) return ['r_year', tr('Please enter the year you were born.')];
+    if(by === null || by % 1 || by < 1900 || by > y) return ['r_year', tr('Please enter the year as four digits, like 1985.')];
+    if(by > y - 18) return ['r_year', tr('You need to be 18 or over to take part.')];
     if(r.hu === 'ftin'){
       const ft = numOf(r.ft), inch = numOf(r.inch);
-      if(blank(r.ft)) return ['r_ft', 'Please enter your height in feet and inches.'];
-      if(ft === null || ft < 3 || ft > 8 || (!blank(r.inch) && (inch === null || inch < 0 || inch >= 12))) return ['r_ft', 'Please check your height: feet from 3 to 8, inches from 0 to 11.'];
+      if(blank(r.ft)) return ['r_ft', tr('Please enter your height in feet and inches.')];
+      if(ft === null || ft < 3 || ft > 8 || (!blank(r.inch) && (inch === null || inch < 0 || inch >= 12))) return ['r_ft', tr('Please check your height: feet from 3 to 8, inches from 0 to 11.')];
     } else {
       const cm = numOf(r.cm);
-      if(blank(r.cm)) return ['r_cm', 'Please enter your height in centimetres.'];
-      if(cm === null || cm < 100 || cm > 250) return ['r_cm', 'Please check your height: between 100 and 250 cm.'];
+      if(blank(r.cm)) return ['r_cm', tr('Please enter your height in centimetres.')];
+      if(cm === null || cm < 100 || cm > 250) return ['r_cm', tr('Please check your height: between 100 and 250 cm.')];
     }
     if(r.wu === 'stlb'){
       const st = numOf(r.st), lb = numOf(r.lb);
-      if(blank(r.st)) return ['r_st', 'Please enter your weight in stone and pounds.'];
-      if(st === null || st < 4 || st > 47 || (!blank(r.lb) && (lb === null || lb < 0 || lb >= 14))) return ['r_st', 'Please check your weight: stone from 4 to 47, pounds from 0 to 13.'];
+      if(blank(r.st)) return ['r_st', tr('Please enter your weight in stone and pounds.')];
+      if(st === null || st < 4 || st > 47 || (!blank(r.lb) && (lb === null || lb < 0 || lb >= 14))) return ['r_st', tr('Please check your weight: stone from 4 to 47, pounds from 0 to 13.')];
     } else {
       const kg = numOf(r.kg);
-      if(blank(r.kg)) return ['r_kg', 'Please enter your weight in kilograms.'];
-      if(kg === null || kg < 30 || kg > 300) return ['r_kg', 'Please check your weight: between 30 and 300 kg.'];
+      if(blank(r.kg)) return ['r_kg', tr('Please enter your weight in kilograms.')];
+      if(kg === null || kg < 30 || kg > 300) return ['r_kg', tr('Please check your weight: between 30 and 300 kg.')];
     }
-    if(!r.sens) return ['sens', 'Please choose the one that sounds most like you.'];
+    if(!r.sens) return ['sens', tr('Please choose the one that sounds most like you.')];
   }
   if(id === 'area'){
     const pc = String(H.postcode_area || '').toUpperCase().replace(/\s+/g, '');
-    if(!pc) return ['r_pc', 'Please enter the first half of your postcode, like SA1.'];
-    if(!POSTCODE_AREA_RE.test(pc)) return ['r_pc', 'Please enter only the first half of your postcode: letters then numbers, like SA1 or CF10.'];
-    if(!HOME_TYPES.some(o => o.id === H.home_type)) return ['home_type', 'Please pick the closest match.'];
-    if(H.home_type === 'flat' && !FLAT_POS.some(o => o.id === H.flat_position)) return ['flat_position', 'Please choose which floor your flat is on.'];
-    if(!H.tenure) return ['tenure', 'Please choose one.'];
+    if(!pc) return ['r_pc', tr('Please enter the first half of your postcode, like SA1.')];
+    if(!POSTCODE_AREA_RE.test(pc)) return ['r_pc', tr('Please enter only the first half of your postcode: letters then numbers, like SA1 or CF10.')];
+    if(!HOME_TYPES.some(o => o.id === H.home_type)) return ['home_type', tr('Please pick the closest match.')];
+    if(H.home_type === 'flat' && !FLAT_POS.some(o => o.id === H.flat_position)) return ['flat_position', tr('Please choose which floor your flat is on.')];
+    if(!H.tenure) return ['tenure', tr('Please choose one.')];
   }
   if(id === 'size'){
-    if(!H.year_built) return ['year', 'Please choose when it was built, or &ldquo;Not sure&rdquo;.'];
-    if(!H.floors) return ['floors', 'Please choose how many floors.'];
-    if(!num('bedrooms')) return ['bedrooms', 'Please choose how many bedrooms.'];
-    if(H.floor_area_m2 === undefined) return ['area', blank(r.areaTxt) ? 'Please type the floor area in square metres, or tap &ldquo;Not sure&rdquo;.' : 'Please type the floor area as a number of square metres, like 85.'];
-    if(H.floor_area_m2 !== null && !(H.floor_area_m2 >= 20 && H.floor_area_m2 <= 300)) return ['area', 'Please check the floor area: between 20 and 300 m².'];
-    if(!H.epc) return ['epc', 'Please choose the rating, or &ldquo;I don&rsquo;t know&rdquo;.'];
+    if(!H.year_built) return ['year', tr('Please choose when it was built, or &ldquo;Not sure&rdquo;.')];
+    if(!H.floors) return ['floors', tr('Please choose how many floors.')];
+    if(!num('bedrooms')) return ['bedrooms', tr('Please choose how many bedrooms.')];
+    if(H.floor_area_m2 === undefined) return ['area', tr(blank(r.areaTxt) ? 'Please type the floor area in square metres, or tap &ldquo;Not sure&rdquo;.' : 'Please type the floor area as a number of square metres, like 85.')];
+    if(H.floor_area_m2 !== null && !(H.floor_area_m2 >= 20 && H.floor_area_m2 <= 300)) return ['area', tr('Please check the floor area: between 20 and 300 m².')];
+    if(!H.epc) return ['epc', tr('Please choose the rating, or &ldquo;I don&rsquo;t know&rdquo;.')];
   }
   if(id === 'people'){
-    if(!num('adults') || !num('children') || !num('pets')) return ['people', 'Please set adults, children and pets. Tap &minus; for none.'];
-    if(!num('bedroom_share')) return ['bedroom_share', 'Please choose one.'];
+    if(!num('adults') || !num('children') || !num('pets')) return ['people', tr('Please set adults, children and pets. Tap &minus; for none.')];
+    if(!num('bedroom_share')) return ['bedroom_share', tr('Please choose one.')];
   }
   if(id === 'heat'){
-    if(!H.main_heating) return ['main_heating', 'Please choose your main heating, or &ldquo;Not sure&rdquo;.'];
-    if(!(Array.isArray(H.other_heaters) && H.other_heaters.length)) return ['other_heaters', 'Please choose any you use, or &ldquo;None of these&rdquo;.'];
-    if(!H.heating_pattern) return ['heating_pattern', 'Please choose the one closest to how it&rsquo;s used.'];
+    if(!H.main_heating) return ['main_heating', tr('Please choose your main heating, or &ldquo;Not sure&rdquo;.')];
+    if(!(Array.isArray(H.other_heaters) && H.other_heaters.length)) return ['other_heaters', tr('Please choose any you use, or &ldquo;None of these&rdquo;.')];
+    if(!H.heating_pattern) return ['heating_pattern', tr('Please choose the one closest to how it&rsquo;s used.')];
   }
   if(id === 'controls'){
-    if(!(Array.isArray(H.controls) && H.controls.length)) return ['controls', 'Please choose any you have, or &ldquo;None of these&rdquo;.'];
-    if(H.setpoint_c === undefined) return ['setpoint', 'Please set the usual temperature, or tap &ldquo;Not sure&rdquo;.'];
+    if(!(Array.isArray(H.controls) && H.controls.length)) return ['controls', tr('Please choose any you have, or &ldquo;None of these&rdquo;.')];
+    if(H.setpoint_c === undefined) return ['setpoint', tr('Please set the usual temperature, or tap &ldquo;Not sure&rdquo;.')];
   }
   if(id === 'fabric'){
-    if(!H.wall_insulation) return ['wall_insulation', 'Please choose one, or &ldquo;Not sure&rdquo;.'];
-    if(!H.loft) return ['loft', 'Please choose one, or &ldquo;Not sure&rdquo;.'];
-    if(!H.glazing) return ['glazing', 'Please choose one, or &ldquo;Not sure&rdquo;.'];
-    if(!H.windows_open) return ['windows_open', 'Please choose one.'];
-    if(!(Array.isArray(H.damp) && H.damp.length)) return ['damp', 'Please choose where, or &ldquo;No&rdquo;.'];
+    if(!H.wall_insulation) return ['wall_insulation', tr('Please choose one, or &ldquo;Not sure&rdquo;.')];
+    if(!H.loft) return ['loft', tr('Please choose one, or &ldquo;Not sure&rdquo;.')];
+    if(!H.glazing) return ['glazing', tr('Please choose one, or &ldquo;Not sure&rdquo;.')];
+    if(!H.windows_open) return ['windows_open', tr('Please choose one.')];
+    if(!(Array.isArray(H.damp) && H.damp.length)) return ['damp', tr('Please choose where, or &ldquo;No&rdquo;.')];
   }
   if(id === 'bedroom'){
-    if(!H.bedroom_facing) return ['bedroom_facing', 'Please tap a direction, or &ldquo;Not sure&rdquo;.'];
-    if(!H.bedroom_side) return ['bedroom_side', 'Please tap a direction, or &ldquo;Not sure&rdquo;.'];
+    if(!H.bedroom_facing) return ['bedroom_facing', tr('Please tap a direction, or &ldquo;Not sure&rdquo;.')];
+    if(!H.bedroom_side) return ['bedroom_side', tr('Please tap a direction, or &ldquo;Not sure&rdquo;.')];
   }
   if(id === 'check' && mode === 'join'){
-    if(!/^\d{4}$/.test(r.pin || '')) return ['r_pin', 'Please choose a 4-digit PIN.'];
-    if(weakPin(r.pin)) return ['r_pin', 'That PIN is easy to guess. Please choose another.'];
-    if(r.pin2 !== r.pin) return ['r_pin2', 'The two PINs are not the same.'];
+    if(!/^\d{4}$/.test(r.pin || '')) return ['r_pin', tr('Please choose a 4-digit PIN.')];
+    if(weakPin(r.pin)) return ['r_pin', tr('That PIN is easy to guess. Please choose another.')];
+    if(r.pin2 !== r.pin) return ['r_pin2', tr('The two PINs are not the same.')];
   }
   return null;
 }
@@ -1841,27 +1879,28 @@ async function regJoin(){
   try{
     if(!SWITCH.live){
       setIdentity(LOCAL_CODE, f.name); finishJoin(f);
-      afterIdentity(true); showToast({ title:'Welcome to the study!', sub:'Local mode: everything stays on this phone' }); return;
+      afterIdentity(true); showToast({ title:tr('Welcome to the study!'), sub:tr('Local mode: everything stays on this phone') }); return;
     }
-    const r = await SWITCH.register(Object.assign({}, f, { pin: REG.pin }));
+    const r = await SWITCH.register(Object.assign({}, f, { pin: REG.pin, lang: LANG }));
     if(r.status !== 'ok'){ busy(b, false);
       if(r.status === 'weak_pin') return fieldError('r_pin', pinOutcome(r));
       if(r.status === 'code_needed'){                       // an account without a PIN (0.4.0): sign in with the code; this draft fills their profile afterwards
         saveReg(); S.hist = ['welcome']; go('signin'); SIGNIN_CODE = true; rerender();
         $('#s_email').value = f.email; $('#s_pin').value = REG.pin || '';
-        return fieldError('s_code', 'You already have an account. Please enter your participant code once, and your new PIN.');
+        return fieldError('s_code', tr('You already have an account. Please enter your participant code once, and your new PIN.'));
       }
-      return fieldError('join', r.status === 'locked' ? 'This email is already registered. ' + pinOutcome(r) : 'This email is already registered, with a different PIN. Use the PIN you chose before, or go back and sign in.'); }
+      return fieldError('join', r.status === 'locked' ? tr('This email is already registered. {why}', { why: pinOutcome(r) }) : tr('This email is already registered, with a different PIN. Use the PIN you chose before, or go back and sign in.')); }
     await signedIn(r);
+    languageAfterSignIn(r);
     if(r.is_new === false){
       // the email was registered already (a participant of 0.4.0, say): what was typed here completes their profile
       const hasHome = r.home && typeof r.home === 'object' && Object.keys(r.home).length;
       if(!hasHome){ try{ cacheProfile(await SWITCH.updateMyProfile(profileFieldsOf(f), f.home)); }catch(e){} }
-      if(b) b.innerHTML = 'Loading your check-ins&hellip;';
+      if(b) b.innerHTML = tr('Loading your check-ins&hellip;');
       await firstLoad();
       finishJoin(null);
       afterIdentity(r.approved);
-      showToast({ title:'Welcome back', sub:'That email was already registered, so we signed you in', kind:'info' });
+      showToast({ title:tr('Welcome back'), sub:tr('That email was already registered, so we signed you in'), kind:'info' });
       return;
     }
     finishJoin(f);
@@ -1890,7 +1929,7 @@ async function saveProfile(){
   try{
     await saveProfileRow();
     LS.del(REG_KEY); REG = regFresh('join');
-    go('today'); showToast({ title:'Thank you!', sub:'Your home profile is saved' });
+    go('today'); showToast({ title:tr('Thank you!'), sub:tr('Your home profile is saved') });
   }catch(e){ busy(b, false); if(e.notSignedIn) return keyLost(); fieldError('join', friendly(e.message, 'Could not save. Check the connection and try again.')); }
 }
 async function saveHome(){
@@ -1899,12 +1938,12 @@ async function saveHome(){
   try{
     await saveProfileRow();
     S.hist.pop(); S.screen = 'myhome'; render();
-    showToast({ title:'Saved', sub:'Your home profile is up to date' });
+    showToast({ title:tr('Saved'), sub:tr('Your home profile is up to date') });
   }catch(e){ busy(b, false); if(e.notSignedIn) return keyLost(); fieldError('join', friendly(e.message, 'Could not save. Check the connection and try again.')); }
 }
 function minutesLeft(){
   const m = REG_STEPS.slice(REG.step).reduce((s, x) => s + x.min, 0);
-  return REG.step === REG_STEPS.length - 1 ? 'Last step' : m < 1 ? 'Less than a minute left' : `About ${Math.round(m)} minute${Math.round(m)===1?'':'s'} left`;
+  return REG.step === REG_STEPS.length - 1 ? tr('Last step') : m < 1 ? tr('Less than a minute left') : trn(Math.round(m), 'About {n} minute left', 'About {n} minutes left');
 }
 /* ---- pieces of the wizard ---- */
 const regTile = (k, o, on, artHtml, cls='') => `<button class="ptile ${cls} ${on?'on':''}" type="button" role="radio" aria-checked="${on}" aria-label="${o.n.replace(/<[^>]+>/g,'')}${o.h ? ', ' + o.h : ''}" data-act="reg-pick" data-k="${k}" data-v="${o.id}">${artHtml ? `<span class="pt-art">${artHtml}</span>` : ''}<span class="pt-t"><b>${o.n}</b>${o.h?`<small>${o.h}</small>`:''}</span><span class="tick">${ic('check')}</span></button>`;
@@ -1914,8 +1953,9 @@ const groupErr = id => `<p class="err" id="err-${id}" hidden></p>`;
  * while answers are tapped: HOWTO_OPEN remembers it across redraws) */
 const HOWTO_OPEN = new Set();
 document.addEventListener('toggle', e => { const d = e.target; if(d && d.dataset && d.dataset.howto){ if(d.open) HOWTO_OPEN.add(d.dataset.howto); else HOWTO_OPEN.delete(d.dataset.howto); } }, true);
-const fieldBlock = (id, title, hint, body, howTo) => `<div class="field rq" id="f-${id}" role="group" aria-labelledby="lab-${id}"><div class="rq-head"><b id="lab-${id}">${title}</b>${hint ? `<p class="note">${hint}</p>` : ''}${howTo ? `<details class="howto" data-howto="${id}"${HOWTO_OPEN.has(id) ? ' open' : ''}><summary>${ic('help')}How to tell</summary><p>${howTo}</p></details>` : ''}</div>${body}${groupErr(id)}</div>`;
-const tiles = (cols, inner, label, multi) => `<div class="ptiles c${cols}" ${multi ? 'role="group"' : 'role="radiogroup"'} aria-label="${label}">${inner}</div>`;
+/* title, hint and howTo are the English texts (translated here) */
+const fieldBlock = (id, title, hint, body, howTo) => `<div class="field rq" id="f-${id}" role="group" aria-labelledby="lab-${id}"><div class="rq-head"><b id="lab-${id}">${tr(title)}</b>${hint ? `<p class="note">${tr(hint)}</p>` : ''}${howTo ? `<details class="howto" data-howto="${id}"${HOWTO_OPEN.has(id) ? ' open' : ''}><summary>${ic('help')}${tr('How to tell')}</summary><p>${tr(howTo)}</p></details>` : ''}</div>${body}${groupErr(id)}</div>`;
+const tiles = (cols, inner, label, multi) => `<div class="ptiles c${cols}" ${multi ? 'role="group"' : 'role="radiogroup"'} aria-label="${tr(label)}">${inner}</div>`;
 const pick1 = (k, list, artFn, cols, label, cls='') => { const v = k.startsWith('home.') ? REG.home[k.slice(5)] : REG[k]; return tiles(cols, list.map(o => regTile(k, o, v === o.id, artFn ? artFn(o) : '', cls)).join(''), label); };
 const pickN = (k, list, artFn, cols, label, cls='') => { const v = REG.home[k.slice(5)] || []; return tiles(cols, list.map(o => regMulti(k, o, v.includes(o.id), artFn ? artFn(o) : '', cls)).join(''), label, true); };
 /* A count of the home profile. Until it is tapped it shows "–" and stays out of the profile (not answered). A
@@ -1923,21 +1963,21 @@ const pickN = (k, list, artFn, cols, label, cls='') => { const v = REG.home[k.sl
 const STEP_LIMITS = { adults:[1,8], children:[0,8], pets:[0,8] };
 function stepper(k, val, min, max, aria){
   const set = typeof val === 'number', off = on => on ? 'aria-disabled="true"' : '';
-  const shown = set ? (val >= max ? max + '+' : val) : '<span class="unset" aria-hidden="true">&ndash;</span><span class="sr">Not answered</span>';
-  return `<div class="stepper" role="group" aria-label="${aria}"><button class="pm" data-act="reg-step" data-k="${k}" data-d="-1" aria-label="Fewer ${aria.toLowerCase()}" ${off(set && val <= min)}>${ic('minus')}</button><output aria-live="polite">${shown}</output><button class="pm" data-act="reg-step" data-k="${k}" data-d="1" aria-label="More ${aria.toLowerCase()}" ${off(set && val >= max)}>${ic('plus')}</button></div>`;
+  const shown = set ? (val >= max ? max + '+' : val) : `<span class="unset" aria-hidden="true">&ndash;</span><span class="sr">${tr('Not answered')}</span>`;
+  return `<div class="stepper" role="group" aria-label="${tr(aria)}"><button class="pm" data-act="reg-step" data-k="${k}" data-d="-1" aria-label="${tr('Fewer ' + aria.toLowerCase())}" ${off(set && val <= min)}>${ic('minus')}</button><output aria-live="polite">${shown}</output><button class="pm" data-act="reg-step" data-k="${k}" data-d="1" aria-label="${tr('More ' + aria.toLowerCase())}" ${off(set && val >= max)}>${ic('plus')}</button></div>`;
 }
 const firstStep = (key, d) => { const [mn] = STEP_LIMITS[key]; return d < 0 ? mn : Math.max(mn, 1); };
 /* the usual thermostat setting: a dial 10-28 °C in halves (the value is kept in °C), or "Not sure" */
 const DIAL = { min:10, max:28, step:0.5 }, DIAL_DEFAULT = 20;
-function dialHtml(k, title){
-  const v = REG.home[k], set = typeof v === 'number', unsure = v === null;
-  return `<div class="dial-card${set ? '' : ' unset'}"><div class="dial" id="dial-${k}" data-k="${k}" role="slider" tabindex="0" aria-label="${title}" aria-valuemin="${DIAL.min}" aria-valuemax="${DIAL.max}" ${set ? `aria-valuenow="${v}" aria-valuetext="${v} degrees Celsius"` : 'aria-valuetext="Not set"'}>
+function dialHtml(k, en){
+  const v = REG.home[k], set = typeof v === 'number', unsure = v === null, title = tr(en);
+  return `<div class="dial-card${set ? '' : ' unset'}"><div class="dial" id="dial-${k}" data-k="${k}" role="slider" tabindex="0" aria-label="${title}" aria-valuemin="${DIAL.min}" aria-valuemax="${DIAL.max}" ${set ? `aria-valuenow="${v}" aria-valuetext="${tr('{v} degrees Celsius', { v })}"` : `aria-valuetext="${tr('Not set')}"`}>
       <svg viewBox="0 0 150 140" aria-hidden="true" focusable="false"><path class="dial-track" d=""/><path class="dial-fill" d=""/><circle class="dial-knob" r="11"/>
         <text class="dial-num" x="75" y="78" text-anchor="middle"></text><text class="dial-unit" x="75" y="98" text-anchor="middle"></text>
         <text class="dial-end" x="34" y="136" text-anchor="middle">${DIAL.min}</text><text class="dial-end" x="116" y="136" text-anchor="middle">${DIAL.max}</text></svg></div>
-    <div class="dial-side"><b>${title}</b><span class="note dial-hint">${set ? 'Drag the dial or use &minus; and +' : unsure ? 'Marked as not sure' : 'Tap &minus; or + to set it'}</span>
-      <span class="dial-pm"><button class="pm" data-act="reg-dial" data-k="${k}" data-d="-1" aria-label="Lower">${ic('minus')}</button><button class="pm" data-act="reg-dial" data-k="${k}" data-d="1" aria-label="Higher">${ic('plus')}</button></span>
-      <button class="chip ${unsure ? 'on' : ''}" aria-pressed="${unsure}" data-act="reg-unsure" data-k="${k}">${ic('check')}Not sure / no thermostat</button></div></div>`;
+    <div class="dial-side"><b>${title}</b><span class="note dial-hint">${tr(set ? 'Drag the dial or use &minus; and +' : unsure ? 'Marked as not sure' : 'Tap &minus; or + to set it')}</span>
+      <span class="dial-pm"><button class="pm" data-act="reg-dial" data-k="${k}" data-d="-1" aria-label="${tr('Lower')}">${ic('minus')}</button><button class="pm" data-act="reg-dial" data-k="${k}" data-d="1" aria-label="${tr('Higher')}">${ic('plus')}</button></span>
+      <button class="chip ${unsure ? 'on' : ''}" aria-pressed="${unsure}" data-act="reg-unsure" data-k="${k}">${ic('check')}${tr('Not sure / no thermostat')}</button></div></div>`;
 }
 const DIAL_A0 = 135, DIAL_SWEEP = 270, DIAL_R = 54, DCX = 75, DCY = 72;
 const dialPt = a => [DCX + DIAL_R * Math.cos(a * Math.PI / 180), DCY + DIAL_R * Math.sin(a * Math.PI / 180)];
@@ -1950,9 +1990,9 @@ function paintDial(el){
   el.querySelector('.dial-fill').setAttribute('d', set && t > 0.001 ? arc(DIAL_A0, a) : '');
   const [kx, ky] = dialPt(a), knob = el.querySelector('.dial-knob'); knob.setAttribute('cx', kx.toFixed(2)); knob.setAttribute('cy', ky.toFixed(2));
   el.querySelector('.dial-num').textContent = set ? shown.toFixed(1) + '°' : '–';
-  el.querySelector('.dial-unit').textContent = set ? 'SET TO' : (v === null ? 'NOT SURE' : 'NOT SET');
-  if(set){ el.setAttribute('aria-valuenow', String(shown)); el.setAttribute('aria-valuetext', `${shown} degrees Celsius`); }
-  else { el.removeAttribute('aria-valuenow'); el.setAttribute('aria-valuetext', v === null ? 'Not sure' : 'Not set'); }
+  el.querySelector('.dial-unit').textContent = tr(set ? 'SET TO' : (v === null ? 'NOT SURE' : 'NOT SET'));
+  if(set){ el.setAttribute('aria-valuenow', String(shown)); el.setAttribute('aria-valuetext', tr('{v} degrees Celsius', { v: shown })); }
+  else { el.removeAttribute('aria-valuenow'); el.setAttribute('aria-valuetext', tr(v === null ? 'Not sure' : 'Not set')); }
   el.closest('.dial-card').classList.toggle('unset', !set);
 }
 function setDial(k, shown){
@@ -1960,7 +2000,7 @@ function setDial(k, shown){
   REG.home[k] = shown; saveReg();
   const el = $('#dial-' + k); if(el) paintDial(el);
   const chip = $(`[data-act="reg-unsure"][data-k="${k}"]`); if(chip){ chip.setAttribute('aria-pressed', 'false'); chip.classList.remove('on'); }
-  const hint = el && el.closest('.dial-card').querySelector('.dial-hint'); if(hint) hint.textContent = 'Drag the dial or use − and +';
+  const hint = el && el.closest('.dial-card').querySelector('.dial-hint'); if(hint) hint.textContent = tr('Drag the dial or use − and +');
   const f = $('#f-setpoint'); if(f && f.classList.contains('bad')) fieldError('setpoint', '');
 }
 function stepDial(k, d){ const v = REG.home[k]; if(typeof v !== 'number') return setDial(k, DIAL_DEFAULT); setDial(k, v + d * DIAL.step); }
@@ -1976,13 +2016,13 @@ function dialFromPointer(el, e, start){
 /* A compass of eight directions for one direction question (k: bedroom_facing or bedroom_side), the optional
  * degrees read from the phone's own compass app (which also picks the direction) and "Not sure". No sensor. */
 const dir8 = h => FACING[Math.round((((h % 360) + 360) % 360) / 45) % 8];
-function compass(k, title){
-  const v = REG.home[k], deg = REG.home[k + '_deg'];
+function compass(k, en){
+  const v = REG.home[k], deg = REG.home[k + '_deg'], title = tr(en);
   const ringHtml = `<div class="compass" role="radiogroup" aria-label="${title}">${art('compass', 'cmp-art')}` +
     FACING.map((f, i) => { const a = (i * 45 - 90) * Math.PI / 180, x = 50 + 39 * Math.cos(a), y = 50 + 39 * Math.sin(a);
       return `<button class="cmp-pt ${v===f.id?'on':''}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%" role="radio" aria-checked="${v===f.id}" aria-label="${f.n}" data-act="reg-pick" data-k="home.${k}" data-v="${f.id}">${f.id}</button>`; }).join('') + `</div>`;
-  const degIn = `<div class="deg-row"><label for="deg-${k}">The number on the compass <span class="opt">(optional)</span></label><span class="deg-in"><input class="in" id="deg-${k}" data-deg="${k}" inputmode="numeric" maxlength="3" placeholder="e.g. 225" value="${typeof deg === 'number' ? deg : ''}" aria-describedby="degw-${k}"><span aria-hidden="true">°</span></span><span class="deg-word" id="degw-${k}" aria-live="polite">${typeof deg === 'number' ? '= ' + dir8(deg).n : ''}</span></div>`;
-  return ringHtml + degIn + `<div class="cmp-actions"><button class="chip ${v==='unsure'?'on':''}" aria-pressed="${v==='unsure'}" data-act="reg-pick" data-k="home.${k}" data-v="unsure">${ic('help')}Not sure</button></div>`;
+  const degIn = `<div class="deg-row"><label for="deg-${k}">${tr('The number on the compass <span class="opt">(optional)</span>')}</label><span class="deg-in"><input class="in" id="deg-${k}" data-deg="${k}" inputmode="numeric" maxlength="3" placeholder="${tr('e.g. 225')}" value="${typeof deg === 'number' ? deg : ''}" aria-describedby="degw-${k}"><span aria-hidden="true">°</span></span><span class="deg-word" id="degw-${k}" aria-live="polite">${typeof deg === 'number' ? '= ' + dir8(deg).n : ''}</span></div>`;
+  return ringHtml + degIn + `<div class="cmp-actions"><button class="chip ${v==='unsure'?'on':''}" aria-pressed="${v==='unsure'}" data-act="reg-pick" data-k="home.${k}" data-v="unsure">${ic('help')}${tr('Not sure')}</button></div>`;
 }
 /* A picture of a phone's compass app, read the way participants should read theirs: the top of the phone points
  * south-west, so the big reading at the bottom says 225° SW. Drawn, not a screenshot. */
@@ -1997,47 +2037,47 @@ function compassPic(){
     <text x="60" y="117" text-anchor="middle" class="cpic-read">225° SW</text></svg>`;
 }
 const directionHelp = () => `<section class="dir-help" aria-labelledby="dirH">
-  <b class="dir-h" id="dirH">${ic('compass')}Use your phone&rsquo;s compass</b>
-  <div class="dir-os"><div><span class="dh">iPhone</span><p>Swipe down on the Home Screen, type <b>Compass</b> and open the app.</p></div>
-    <div><span class="dh">Android</span><p>Open the <b>Google</b> app and search <b>compass</b>: a live compass shows at the top. Some phones also have a <b>Compass</b> app.</p></div></div>
-  <div class="dir-read">${compassPic()}<div><span class="dh">How to read it</span><ol class="steps"><li><div>Hold the phone flat, screen up, with its top edge pointing the way the question asks.</div></li><li><div>Read the big number and letters at the bottom. In this picture, <b>225° SW</b> means the phone points <b>south-west</b>.</div></li><li><div>Tap the same letters on the circle below, or type the number.</div></li></ol></div></div>
-  <p class="note">N = north, E = east, S = south, W = west; NE, SE, SW and NW are in between.</p></section>`;
+  <b class="dir-h" id="dirH">${ic('compass')}${tr('Use your phone&rsquo;s compass')}</b>
+  <div class="dir-os"><div><span class="dh">iPhone</span><p>${tr('Swipe down on the Home Screen, type <b>Compass</b> and open the app.')}</p></div>
+    <div><span class="dh">Android</span><p>${tr('Open the <b>Google</b> app and search <b>compass</b>: a live compass shows at the top. Some phones also have a <b>Compass</b> app.')}</p></div></div>
+  <div class="dir-read">${compassPic()}<div><span class="dh">${tr('How to read it')}</span><ol class="steps"><li><div>${tr('Hold the phone flat, screen up, with its top edge pointing the way the question asks.')}</div></li><li><div>${tr('Read the big number and letters at the bottom. In this picture, <b>225° SW</b> means the phone points <b>south-west</b>.')}</div></li><li><div>${tr('Tap the same letters on the circle below, or type the number.')}</div></li></ol></div></div>
+  <p class="note">${tr('N = north, E = east, S = south, W = west; NE, SE, SW and NW are in between.')}</p></section>`;
 function people(){
-  const h = REG.home, fig = (icon, n, cls) => Array.from({length: Math.min(n, 6)}, () => `<span class="pfig ${cls}">${ic(icon)}</span>`).join('') + (n > 6 ? `<span class="pfig-more">+${n-6}</span>` : '');
+  const h = REG.home, fig = (icon, n, cls) => Array.from({length: Math.min(n, 6)}, () => `<span class="pfig ${cls}">${pic(icon)}</span>`).join('') + (n > 6 ? `<span class="pfig-more">+${n-6}</span>` : '');
   return `<div class="household" aria-hidden="true">${fig('user', h.adults||0, 'adult')}${fig('child', h.children||0, 'child')}${fig('paw', h.pets||0, 'pet')}</div>`;
 }
 /* the height and weight inputs, each with its units switch */
 function unitSwitch(kind, cur, a, b){
   const btn = (v, t) => `<button type="button" class="${cur===v?'on':''}" aria-pressed="${cur===v}" data-act="reg-unit" data-k="${kind}" data-v="${v}">${t}</button>`;
-  return `<span class="seg-sm" role="group" aria-label="Units">${btn(a[0], a[1])}${btn(b[0], b[1])}</span>`;
+  return `<span class="seg-sm" role="group" aria-label="${tr('Units')}">${btn(a[0], a[1])}${btn(b[0], b[1])}</span>`;
 }
 const REGS = {
   you: () => {
     const r = REG, join = r.mode === 'join' && S.screen !== 'homeedit';
-    const inp = (id, key, lab, attrs) => `<div class="field" id="f-${id}"><label for="${id}">${lab}</label><input class="in" id="${id}" data-reg="${key}" value="${esc(r[key])}" ${attrs} aria-describedby="err-${id}"><p class="err" id="err-${id}" hidden></p></div>`;
-    const sfx = (id, key, lab, s, attrs) => `<span class="in-sfx"><input class="in" id="${id}" data-reg="${key}" value="${esc(r[key])}" ${attrs} aria-label="${lab}"><span aria-hidden="true">${s}</span></span>`;
+    const inp = (id, key, lab, attrs) => `<div class="field" id="f-${id}"><label for="${id}">${tr(lab)}</label><input class="in" id="${id}" data-reg="${key}" value="${esc(r[key])}" ${attrs} aria-describedby="err-${id}"><p class="err" id="err-${id}" hidden></p></div>`;
+    const sfx = (id, key, lab, s, attrs) => `<span class="in-sfx"><input class="in" id="${id}" data-reg="${key}" value="${esc(r[key])}" ${attrs} aria-label="${tr(lab)}"><span aria-hidden="true">${s}</span></span>`;
     const height = r.hu === 'ftin'
-      ? `<div class="field" id="f-r_ft"><span class="lab-row"><label for="r_ft">Height</label>${unitSwitch('h', r.hu, ['cm','cm'], ['ftin','ft, in'])}</span><span class="pair">${sfx('r_ft','ft','Height, feet','ft','inputmode="numeric" maxlength="1" placeholder="5"')}${sfx('r_in','inch','Height, inches','in','inputmode="numeric" maxlength="2" placeholder="8"')}</span><p class="err" id="err-r_ft" hidden></p></div>`
-      : `<div class="field" id="f-r_cm"><span class="lab-row"><label for="r_cm">Height</label>${unitSwitch('h', r.hu, ['cm','cm'], ['ftin','ft, in'])}</span>${sfx('r_cm','cm','Height in centimetres','cm','inputmode="decimal" maxlength="5" placeholder="172"')}<p class="err" id="err-r_cm" hidden></p></div>`;
+      ? `<div class="field" id="f-r_ft"><span class="lab-row"><label for="r_ft">${tr('Height')}</label>${unitSwitch('h', r.hu, ['cm','cm'], ['ftin','ft, in'])}</span><span class="pair">${sfx('r_ft','ft','Height, feet','ft','inputmode="numeric" maxlength="1" placeholder="5"')}${sfx('r_in','inch','Height, inches','in','inputmode="numeric" maxlength="2" placeholder="8"')}</span><p class="err" id="err-r_ft" hidden></p></div>`
+      : `<div class="field" id="f-r_cm"><span class="lab-row"><label for="r_cm">${tr('Height')}</label>${unitSwitch('h', r.hu, ['cm','cm'], ['ftin','ft, in'])}</span>${sfx('r_cm','cm','Height in centimetres','cm','inputmode="decimal" maxlength="5" placeholder="172"')}<p class="err" id="err-r_cm" hidden></p></div>`;
     const weight = r.wu === 'stlb'
-      ? `<div class="field" id="f-r_st"><span class="lab-row"><label for="r_st">Weight</label>${unitSwitch('w', r.wu, ['kg','kg'], ['stlb','st, lb'])}</span><span class="pair">${sfx('r_st','st','Weight, stone','st','inputmode="numeric" maxlength="2" placeholder="11"')}${sfx('r_lb','lb','Weight, pounds','lb','inputmode="numeric" maxlength="2" placeholder="6"')}</span><p class="err" id="err-r_st" hidden></p></div>`
-      : `<div class="field" id="f-r_kg"><span class="lab-row"><label for="r_kg">Weight</label>${unitSwitch('w', r.wu, ['kg','kg'], ['stlb','st, lb'])}</span>${sfx('r_kg','kg','Weight in kilograms','kg','inputmode="decimal" maxlength="5" placeholder="70"')}<p class="err" id="err-r_kg" hidden></p></div>`;
+      ? `<div class="field" id="f-r_st"><span class="lab-row"><label for="r_st">${tr('Weight')}</label>${unitSwitch('w', r.wu, ['kg','kg'], ['stlb','st, lb'])}</span><span class="pair">${sfx('r_st','st','Weight, stone','st','inputmode="numeric" maxlength="2" placeholder="11"')}${sfx('r_lb','lb','Weight, pounds','lb','inputmode="numeric" maxlength="2" placeholder="6"')}</span><p class="err" id="err-r_st" hidden></p></div>`
+      : `<div class="field" id="f-r_kg"><span class="lab-row"><label for="r_kg">${tr('Weight')}</label>${unitSwitch('w', r.wu, ['kg','kg'], ['stlb','st, lb'])}</span>${sfx('r_kg','kg','Weight in kilograms','kg','inputmode="decimal" maxlength="5" placeholder="70"')}<p class="err" id="err-r_kg" hidden></p></div>`;
     return `<div class="form" id="regForm">
       ${inp('r_name', 'name', 'Full name', 'autocomplete="name" autocapitalize="words"')}
       ${join ? inp('r_email', 'email', 'Email', 'type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false"') : ''}
       <div class="row2">
-        <div class="field" id="f-r_gender"><label for="r_gender">Gender</label><select class="in" id="r_gender" data-reg="gender" aria-describedby="err-r_gender"><option value="">Choose</option>${GENDERS.map(g => `<option value="${g.id}"${r.gender===g.id?' selected':''}>${g.n}</option>`).join('')}</select><p class="err" id="err-r_gender" hidden></p></div>
-        ${inp('r_year', 'birth_year', 'Year of birth', 'inputmode="numeric" maxlength="4" placeholder="e.g. 1985" autocomplete="bday-year"')}
+        <div class="field" id="f-r_gender"><label for="r_gender">${tr('Gender')}</label><select class="in" id="r_gender" data-reg="gender" aria-describedby="err-r_gender"><option value="">${tr('Choose')}</option>${GENDERS.map(g => `<option value="${g.id}"${r.gender===g.id?' selected':''}>${g.n}</option>`).join('')}</select><p class="err" id="err-r_gender" hidden></p></div>
+        ${inp('r_year', 'birth_year', 'Year of birth', `inputmode="numeric" maxlength="4" placeholder="${tr('e.g. 1985')}" autocomplete="bday-year"`)}
       </div>
       <div class="row2">${height}${weight}</div>
-      ${fieldBlock('sens', 'Which sounds most like you?', '', pick1('sens', SENSITIVITY, o => ic(o.ic, o.cls||''), 3, 'Which sounds most like you', 'sm'))}
-      <p class="note">Used only to understand comfort differences between people. Your check-ins are stored under a participant code, not your name. The research team sees your name and email next to that code, to run the study and contact you.</p>
+      ${fieldBlock('sens', 'Which sounds most like you?', '', pick1('sens', SENSITIVITY, o => pic(o.ic, o.cls||''), 3, 'Which sounds most like you', 'sm'))}
+      <p class="note">${tr('Used only to understand comfort differences between people. Your check-ins are stored under a participant code, not your name. The research team sees your name and email next to that code, to run the study and contact you.')}</p>
     </div>`;
   },
   area: () => {
     const h = REG.home;
     return `<div class="form">
-      <div class="field" id="f-r_pc"><label for="r_pc">The first half of your postcode</label><input class="in pcode" id="r_pc" data-reg="home.postcode_area" value="${esc(h.postcode_area||'')}" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="5" placeholder="e.g. SA1" aria-describedby="hint-pc err-r_pc"><p class="note" id="hint-pc">${ic('cloud','inl')} Only the first half (like SA2 or CF10), never the full postcode: it matches your check-ins to the local weather.</p><p class="err" id="err-r_pc" hidden></p></div>
+      <div class="field" id="f-r_pc"><label for="r_pc">${tr('The first half of your postcode')}</label><input class="in pcode" id="r_pc" data-reg="home.postcode_area" value="${esc(h.postcode_area||'')}" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="5" placeholder="${tr('e.g. SA1')}" aria-describedby="hint-pc err-r_pc"><p class="note" id="hint-pc">${ic('cloud','inl')} ${tr('Only the first half (like SA2 or CF10), never the full postcode: it matches your check-ins to the local weather.')}</p><p class="err" id="err-r_pc" hidden></p></div>
       ${fieldBlock('home_type', 'What type of home do you live in?', 'Pick the closest match.', pick1('home.home_type', HOME_TYPES, o => art('home_type:' + o.id), 3, 'Home type'))}
       ${h.home_type === 'flat' ? fieldBlock('flat_position', 'Which floor is your flat on?', 'The floor you live on. A maisonette: its lowest floor.', pick1('home.flat_position', FLAT_POS, o => art('flat_position:' + o.id), 4, 'Which floor', 'sm')) : ''}
       ${fieldBlock('tenure', 'Do you own or rent your home?', '', pick1('home.tenure', TENURE, o => art('tenure:' + o.id), 2, 'Tenure', 'line'))}
@@ -2048,14 +2088,14 @@ const REGS = {
     return `<div class="form">
       ${fieldBlock('year', 'When was it built?', 'A good guess is fine.', pick1('home.year_built', YEAR_BUILT, o => art('year_built:' + o.id), 3, 'Year built'))}
       ${fieldBlock('floors', 'How many floors does your home have?', h.home_type === 'flat' ? 'Inside your flat, not the whole building.' : 'Count a loft or cellar only if it is lived in.', pick1('home.floors', FLOORS, o => art('floors:' + o.id), 4, 'Floors', 'sm'))}
-      ${fieldBlock('bedrooms', 'How many bedrooms?', '', `<div class="numrow" role="radiogroup" aria-label="Bedrooms">${BEDROOMS.map(o => `<button class="num-b ${h.bedrooms===o.id?'on':''}" role="radio" aria-checked="${h.bedrooms===o.id}" data-act="reg-pick" data-k="home.bedrooms" data-v="${o.id}">${o.n}</button>`).join('')}</div>`)}
-      ${fieldBlock('area', 'What is the floor area?', 'In square metres. Your Energy Performance Certificate (EPC) shows it as &ldquo;Total floor area&rdquo;.', `<div class="area-row"><span class="in-sfx"><input class="in" id="r_area" data-area="1" inputmode="decimal" maxlength="5" placeholder="e.g. 85" value="${typeof v === 'number' ? v : esc(REG.areaTxt || '')}" aria-label="Floor area in square metres"><span aria-hidden="true">m²</span></span><button class="chip ${v === null ? 'on' : ''}" aria-pressed="${v === null}" data-act="reg-unsure" data-k="floor_area_m2">${ic('check')}Not sure</button></div>`)}
-      ${fieldBlock('epc', 'What is its energy rating (EPC)?', 'The letter on the Energy Performance Certificate, from A (best) to G. You can look it up on GOV.UK: &ldquo;Find an energy certificate&rdquo;.', `<div class="ptiles c4" role="radiogroup" aria-label="EPC rating">${EPC.map(o => regTile('home.epc', o, h.epc === o.id, o.id === 'unsure' ? '' : epcArt(o.id), o.id === 'unsure' ? 'sm txt span2' : 'sm epc')).join('')}</div>`)}
+      ${fieldBlock('bedrooms', 'How many bedrooms?', '', `<div class="numrow" role="radiogroup" aria-label="${tr('Bedrooms')}">${BEDROOMS.map(o => `<button class="num-b ${h.bedrooms===o.id?'on':''}" role="radio" aria-checked="${h.bedrooms===o.id}" data-act="reg-pick" data-k="home.bedrooms" data-v="${o.id}">${o.n}</button>`).join('')}</div>`)}
+      ${fieldBlock('area', 'What is the floor area?', 'In square metres. Your Energy Performance Certificate (EPC) shows it as &ldquo;Total floor area&rdquo;.', `<div class="area-row"><span class="in-sfx"><input class="in" id="r_area" data-area="1" inputmode="decimal" maxlength="5" placeholder="${tr('e.g. 85')}" value="${typeof v === 'number' ? v : esc(REG.areaTxt || '')}" aria-label="${tr('Floor area in square metres')}"><span aria-hidden="true">m²</span></span><button class="chip ${v === null ? 'on' : ''}" aria-pressed="${v === null}" data-act="reg-unsure" data-k="floor_area_m2">${ic('check')}${tr('Not sure')}</button></div>`)}
+      ${fieldBlock('epc', 'What is its energy rating (EPC)?', 'The letter on the Energy Performance Certificate, from A (best) to G. You can look it up on GOV.UK: &ldquo;Find an energy certificate&rdquo;.', `<div class="ptiles c4" role="radiogroup" aria-label="${tr('EPC rating')}">${EPC.map(o => regTile('home.epc', o, h.epc === o.id, o.id === 'unsure' ? '' : epcArt(o.id), o.id === 'unsure' ? 'sm txt span2' : 'sm epc')).join('')}</div>`)}
     </div>`;
   },
   people: () => {
     const h = REG.home;
-    const row = (k, icon, lab, hint) => `<div class="stepper-row"><span class="sr-ic">${ic(icon)}</span><span class="sr-t"><b>${lab}</b>${hint ? `<span class="note">${hint}</span>` : ''}</span>${stepper('home.'+k, h[k], STEP_LIMITS[k][0], STEP_LIMITS[k][1], lab)}</div>`;
+    const row = (k, icon, lab, hint) => `<div class="stepper-row"><span class="sr-ic">${ic(icon)}</span><span class="sr-t"><b>${tr(lab)}</b>${hint ? `<span class="note">${tr(hint)}</span>` : ''}</span>${stepper('home.'+k, h[k], STEP_LIMITS[k][0], STEP_LIMITS[k][1], lab)}</div>`;
     return `<div class="form">
       ${fieldBlock('people', 'Who lives here?', 'Including you.', `<div class="rows-card">${people()}${row('adults', 'user', 'Adults', '')}${row('children', 'child', 'Children', 'Under 18. Tap &minus; for none')}${row('pets', 'paw', 'Pets', 'Tap &minus; for none')}</div>`)}
       ${fieldBlock('bedroom_share', 'Do you share your bedroom with anyone?', 'Count everyone else who sleeps in the same room.', pick1('home.bedroom_share', BED_SHARE, o => art('share:' + o.id), 4, 'Bedroom shared with', 'sm'))}
@@ -2090,12 +2130,12 @@ const REGS = {
   check: () => {
     const join = REG.mode === 'join';
     return `<div class="form">${homeGlance(REG, REG.home, 'reg-edit', join)}
-      ${join ? `<section class="pin-card" aria-labelledby="pinH"><div class="pin-top">${ic('key')}<div><b id="pinH">Choose a 4-digit PIN</b><p class="note">With your email, it lets you sign in on another phone or tablet and see all your check-ins there. Please don&rsquo;t use your bank card PIN.</p></div></div>
+      ${join ? `<section class="pin-card" aria-labelledby="pinH"><div class="pin-top">${ic('key')}<div><b id="pinH">${tr('Choose a 4-digit PIN')}</b><p class="note">${tr('With your email, it lets you sign in on another phone or tablet and see all your check-ins there. Please don&rsquo;t use your bank card PIN.')}</p></div></div>
         <div class="row2">
-          <div class="field" id="f-r_pin"><label for="r_pin">PIN</label><input class="in pin" id="r_pin" data-reg="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" value="${esc(REG.pin || '')}" aria-describedby="err-r_pin"><p class="err" id="err-r_pin" hidden></p></div>
-          <div class="field" id="f-r_pin2"><label for="r_pin2">Type it again</label><input class="in pin" id="r_pin2" data-reg="pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" value="${esc(REG.pin2 || '')}" aria-describedby="err-r_pin2"><p class="err" id="err-r_pin2" hidden></p></div>
+          <div class="field" id="f-r_pin"><label for="r_pin">${tr('PIN')}</label><input class="in pin" id="r_pin" data-reg="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" value="${esc(REG.pin || '')}" aria-describedby="err-r_pin"><p class="err" id="err-r_pin" hidden></p></div>
+          <div class="field" id="f-r_pin2"><label for="r_pin2">${tr('Type it again')}</label><input class="in pin" id="r_pin2" data-reg="pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" value="${esc(REG.pin2 || '')}" aria-describedby="err-r_pin2"><p class="err" id="err-r_pin2" hidden></p></div>
         </div></section>
-      <div class="msg">${ic('shield')}<div>Joining means you agree to take part as described on the <a href="../">study page</a>.</div></div>` : ''}</div>`;
+      <div class="msg">${ic('shield')}<div>${tr('Joining means you agree to take part as described on the <a href="../">study page</a>.')}</div></div>` : ''}</div>`;
   }
 };
 const REG_TITLES = {
@@ -2113,11 +2153,12 @@ function regScreen(){
   const st = REG_STEPS[REG.step], last = REG.step === REG_STEPS.length - 1, s = S.screen;
   let [title, sub] = REG_TITLES[st.id];
   if(st.id === 'check' && REG.mode !== 'join') sub = 'Check everything, then save. Tap Edit to change a section.';
-  if(s === 'profile' && REG.step === 0) [title, sub] = ['Tell us about your home', `${APP} 1.0 asks a few questions about you and your home, once. Some answers are filled in from before: check them, and answer the rest.`];
-  const track = s === 'homeedit' ? '' : `<ol class="reg-track" aria-label="Progress">` + REG_STEPS.map((x, i) =>
-    `<li class="${i < REG.step ? 'ok' : ''}${i === REG.step ? ' cur' : ''}"${i === REG.step ? ' aria-current="step"' : ''}>${ic(i < REG.step ? 'check' : x.ic)}<span class="sr">${x.t}${i < REG.step ? ', done' : i === REG.step ? ', current step' : ''}</span></li>`).join('') + `</ol>`;
-  const btn = s === 'homeedit' ? `Save ${ic('check')}` : last ? (REG.mode === 'join' ? `Join the study ${ic('check')}` : `Save my profile ${ic('check')}`) : REG.edit ? `Save and go back ${ic('chev')}` : `Continue ${ic('chev')}`;
-  return track + qhead(s === 'homeedit' ? 'Edit &middot; ' + st.t : `Step ${REG.step+1} of ${REG_STEPS.length} &middot; ${st.t}`, title, sub) +
+  if(s === 'profile' && REG.step === 0) [title, sub] = ['Tell us about your home', '{app} 1.0 asks a few questions about you and your home, once. Some answers are filled in from before: check them, and answer the rest.'];
+  title = tr(title); sub = sub ? tr(sub, { app: APP }) : '';
+  const track = s === 'homeedit' ? '' : `<ol class="reg-track" aria-label="${tr('Progress')}">` + REG_STEPS.map((x, i) =>
+    `<li class="${i < REG.step ? 'ok' : ''}${i === REG.step ? ' cur' : ''}"${i === REG.step ? ' aria-current="step"' : ''}>${ic(i < REG.step ? 'check' : x.ic)}<span class="sr">${i < REG.step ? tr('{t}, done', { t: x.t }) : i === REG.step ? tr('{t}, current step', { t: x.t }) : x.t}</span></li>`).join('') + `</ol>`;
+  const btn = s === 'homeedit' ? `${tr('Save')} ${ic('check')}` : last ? (REG.mode === 'join' ? `${tr('Join the study')} ${ic('check')}` : `${tr('Save my profile')} ${ic('check')}`) : REG.edit ? `${tr('Save and go back')} ${ic('chev')}` : `${tr('Continue')} ${ic('chev')}`;
+  return track + qhead(s === 'homeedit' ? tr('Edit &middot; {t}', { t: st.t }) : tr('Step {n} of {m} &middot; {t}', { n: REG.step+1, m: REG_STEPS.length, t: st.t }), title, sub) +
     `<div class="reg-body">${REGS[st.id]()}</div>` +
     `<div class="actions reg-foot"><div class="field" id="f-join"><p class="err" id="err-join" role="alert" hidden></p></div><button class="btn primary" data-act="reg-next">${btn}</button>${s === 'homeedit' ? '' : `<p class="note center">${minutesLeft()}</p>`}</div>`;
 }
@@ -2149,19 +2190,19 @@ function showDetail(id, opener){
   const v = store.votes.find(x => x.id === id); if(!v) return;
   const d = new Date(v.ts);
   const meta = [
-    `<span>${ic(v.type==='scheduled' ? 'bell' : 'user')}${v.type==='scheduled' ? 'From a reminder' : 'You started it'}</span>`,
-    `<span>${ic(v.home==='recent' ? 'clock' : 'home')}${v.home==='recent' ? 'Just got in' : 'Home over an hour'}</span>`,
-    v.secs ? `<span>${ic('clock')}Took ${secsWord(v.secs)}</span>` : '',
-    v.same ? `<span>${ic('refresh')}Same as the time before</span>` : '',
-    v.example ? `<span>${ic('info')}Example data</span>` : ''
+    `<span>${ic(v.type==='scheduled' ? 'bell' : 'user')}${tr(v.type==='scheduled' ? 'From a reminder' : 'You started it')}</span>`,
+    `<span>${ic(v.home==='recent' ? 'clock' : 'home')}${tr(v.home==='recent' ? 'Just got in' : 'Home over an hour')}</span>`,
+    v.secs ? `<span>${ic('clock')}${tr('Took {secs}', { secs: secsWord(v.secs) })}</span>` : '',
+    v.same ? `<span>${ic('refresh')}${tr('Same as the time before')}</span>` : '',
+    v.example ? `<span>${ic('info')}${tr('Example data')}</span>` : ''
   ].filter(Boolean).join('');
-  openSheet(`<div class="sh-head"><div><div class="eyebrow">Check-in</div><b id="sheetTitle">${dateWord(d)}</b></div><button class="x" data-act="sheet-close" aria-label="Close">${ic('x')}</button></div>
-    <div class="sh-body"><div class="last"><div class="when">What you logged</div><div class="fig">${avatar(v.garments||[])}</div><ul>${detailRows(v)}</ul></div><div class="sh-meta">${meta}</div></div>`, null, opener);
+  openSheet(`<div class="sh-head"><div><div class="eyebrow">${tr('Check-in')}</div><b id="sheetTitle">${dateWord(d)}</b></div><button class="x" data-act="sheet-close" aria-label="${tr('Close')}">${ic('x')}</button></div>
+    <div class="sh-body"><div class="last"><div class="when">${tr('What you logged')}</div><div class="fig">${avatar(v.garments||[])}</div><ul>${detailRows(v)}</ul></div><div class="sh-meta">${meta}</div></div>`, null, opener);
 }
 function confirmSignOut(opener){
-  openSheet(`<div class="sh-head"><div><div class="eyebrow">Your account</div><b id="sheetTitle">Sign out on this phone?</b></div><button class="x" data-act="sheet-close" aria-label="Close">${ic('x')}</button></div>
-    <div class="sh-body"><p class="sub">Reminders stop on this phone. Your check-ins so far stay saved, and any not sent yet go out when you sign in here again. To come back, choose &ldquo;I have registered before&rdquo; and enter your email and PIN.</p>
-    <div class="actions"><button class="btn danger" data-act="signout-yes">${ic('signout')} Sign out</button><button class="btn link" data-act="sheet-close">Cancel</button></div></div>`, '.sh-body [data-act="sheet-close"]', opener);
+  openSheet(`<div class="sh-head"><div><div class="eyebrow">${tr('Your account')}</div><b id="sheetTitle">${tr('Sign out on this phone?')}</b></div><button class="x" data-act="sheet-close" aria-label="${tr('Close')}">${ic('x')}</button></div>
+    <div class="sh-body"><p class="sub">${tr('Reminders stop on this phone. Your check-ins so far stay saved, and any not sent yet go out when you sign in here again. To come back, choose &ldquo;I have registered before&rdquo; and enter your email and PIN.')}</p>
+    <div class="actions"><button class="btn danger" data-act="signout-yes">${ic('signout')} ${tr('Sign out')}</button><button class="btn link" data-act="sheet-close">${tr('Cancel')}</button></div></div>`, '.sh-body [data-act="sheet-close"]', opener);
 }
 
 /* ---------- toast (with Undo) ---------- */
@@ -2204,7 +2245,7 @@ document.addEventListener('click', async e => {
      * only ever asked from this tap, so it can never be asked in a loop. */
     case 'notif-recheck':
       // "I've turned them on": still blocked in the phone's settings -> say so, nothing is asked
-      if(!('Notification' in window) || Notification.permission === 'denied'){ notifMsg(`Notifications are still blocked for ${APP}. Follow the steps above, then tap the button again.`); break; }
+      if(!('Notification' in window) || Notification.permission === 'denied'){ notifMsg(tr('Notifications are still blocked for {app}. Follow the steps above, then tap the button again.', { app: APP })); break; }
       // falls through: allowed now (or not decided), so turn them on
     case 'notif-on': await turnOnNotifs(b, d.then === 'start', d.mode); break;
     case 'home': onHome(d.v); break;
@@ -2225,7 +2266,7 @@ document.addEventListener('click', async e => {
       // never a row with a gap: an asked step without an answer is asked first (as an Edit, so it returns here)
       refreshFlow();
       const gap = S.flow.findIndex(q => !answered(S.a, q));
-      if(gap >= 0){ S.editPrev = { q:S.flow[gap], v:undefined, also:null }; S.i = gap; S.edit = true; S.editFrom = 'review'; S.hist.push('review'); S.screen = 'q'; render(); showToast({ title:'One answer is missing', sub:'Answer it, then save', kind:'info', ms:3500 }); break; }
+      if(gap >= 0){ S.editPrev = { q:S.flow[gap], v:undefined, also:null }; S.i = gap; S.edit = true; S.editFrom = 'review'; S.hist.push('review'); S.screen = 'q'; render(); showToast({ title:tr('One answer is missing'), sub:tr('Answer it, then save'), kind:'info', ms:3500 }); break; }
       submit(); break; }
     case 'show': showDetail(d.id, b); break;
     case 'more': S.histN += 40; rerender(); break;
@@ -2236,8 +2277,8 @@ document.addEventListener('click', async e => {
     case 'rm-win': { remDraft = readHours(); remDraft[d.w+'2_start'] = null; remDraft[d.w+'2_end'] = null; rerender(); $(`[data-act="add-win"][data-w="${d.w}"]`)?.focus({ preventScroll:true }); break; }
     case 'copy-link': {                                     // the app's link, to paste into Safari
       const inp = b.parentNode && b.parentNode.querySelector('input'), was = b.innerHTML;
-      try{ await navigator.clipboard.writeText(APP_URL); b.innerHTML = ic('check') + ' Copied'; }
-      catch(e){ if(inp){ inp.focus(); inp.select(); } b.innerHTML = 'Now copy it'; }
+      try{ await navigator.clipboard.writeText(APP_URL); b.innerHTML = ic('check') + ' ' + tr('Copied'); }
+      catch(e){ if(inp){ inp.focus(); inp.select(); } b.innerHTML = tr('Now copy it'); }
       setTimeout(() => { if(document.contains(b)) b.innerHTML = was; }, 2000);
       break; }
     case 'signin': signin(); break;
@@ -2249,15 +2290,17 @@ document.addEventListener('click', async e => {
       const h = readHours(), why = hoursProblem(h);
       if(why){ remMsg(why, 'warn'); break; }
       LS.set(HOURS_KEY, JSON.stringify(h)); remDraft = null;
-      if(PUSH.status() === 'unconfigured'){ remMsg('Saved on this phone.', 'ok'); break; }
+      if(PUSH.status() === 'unconfigured'){ remMsg(tr('Saved on this phone.'), 'ok'); break; }
       busy(b, true);
       const st = await PUSH.sync(h).catch(() => null);
       busy(b, false);
-      if(PUSH.status() !== 'on'){ rerender(); remMsg('Saved on this phone, but reminders have stopped here. Turn them on again below.', 'warn'); break; }
-      remMsg(st && st.found ? 'Saved.' : 'Saved on this phone. The reminder service could not be reached right now; it gets the new hours next time you open the app.', st && st.found ? 'ok' : 'warn');
+      if(PUSH.status() !== 'on'){ rerender(); remMsg(tr('Saved on this phone, but reminders have stopped here. Turn them on again below.'), 'warn'); break; }
+      remMsg(st && st.found ? tr('Saved.') : tr('Saved on this phone. The reminder service could not be reached right now; it gets the new hours next time you open the app.'), st && st.found ? 'ok' : 'warn');
       break; }
-    case 'push-off': busy(b, true); await PUSH.disable(); rerender(); remMsg('Reminders are off on this phone.', 'ok'); break;
-    /* the game: race period, how points work, badges, hiding from the race */
+    case 'push-off': busy(b, true); await PUSH.disable(); rerender(); remMsg(tr('Reminders are off on this phone.'), 'ok'); break;
+    /* the language: the welcome and install screens, and Settings */
+    case 'lang': setLanguage(d.v, !PARTICIPANT); break;    // a choice before signing in also decides the account's language (languageAfterSignIn)
+    /* the game: race period, how points work, badges (everyone is in the race: there is no hiding) */
     case 'race-period': {                                    // this week, last week (final standings), this month; from Today it opens the Race tab
       const v = ['week','last_week','month'].includes(d.v) ? d.v : 'week';
       if(S.screen !== 'race'){ RACE_PERIOD = v; go('race'); break; }
@@ -2265,14 +2308,6 @@ document.addEventListener('click', async e => {
       break; }
     case 'race-how': if(hasGame()) howSheet(b); break;
     case 'badges': if(hasGame()) badgesSheet(b); break;
-    case 'race-hide': {
-      const me = meProfile(), hide = !me.race_hidden;
-      const apply = v => { me.race_hidden = v; LS.set(ME_KEY, JSON.stringify(me)); rerender(); };
-      apply(hide);
-      if(!SWITCH.live) break;
-      try{ const v = await SWITCH.setRaceHidden(hide); apply(!!v); refreshRace('week', true); refreshRace('month', true); }
-      catch(err){ apply(!hide); if(err.notSignedIn) keyLost(); else { const m = $('#raceMsg'); if(m){ m.hidden = false; m.className = 'msg warn'; m.innerHTML = ic('alert') + '<div>Could not change it right now. Check the connection and try again.</div>'; } } }
-      break; }
     /* the join wizard, the profile, My home */
     case 'home-edit': REG = Object.assign(regFromProfile(meProfile(), homeProfile() || {}), { mode:'edit', step: stepOf(d.step) }); go('homeedit'); break;
     case 'reg-next': regNext(); break;
@@ -2312,7 +2347,7 @@ document.addEventListener('input', e => {
   if(t.dataset && t.dataset.deg){
     const k = t.dataset.deg, raw = t.value.trim(), n = /^\d{1,3}$/.test(raw) ? Number(raw) : null, w = $('#degw-' + k);
     if(n !== null && n <= 360){ REG.home[k + '_deg'] = n % 360; REG.home[k] = dir8(n).id; if(w) w.textContent = '= ' + dir8(n).n; }
-    else { delete REG.home[k + '_deg']; if(w) w.textContent = raw ? 'Type a number from 0 to 359' : ''; }
+    else { delete REG.home[k + '_deg']; if(w) w.textContent = raw ? tr('Type a number from 0 to 359') : ''; }
     saveReg();
     $$(`.cmp-pt[data-k="home.${k}"]`).forEach(p => { const on = p.dataset.v === REG.home[k]; p.setAttribute('aria-checked', String(on)); p.classList.toggle('on', on); });
     const un = $(`[data-act="reg-pick"][data-k="home.${k}"][data-v="unsure"]`); if(un){ un.setAttribute('aria-pressed', String(REG.home[k] === 'unsure')); un.classList.toggle('on', REG.home[k] === 'unsure'); }
@@ -2391,6 +2426,51 @@ document.addEventListener('visibilitychange', () => {
   $$('[data-ago]').forEach(el => { el.textContent = agoWord(el.dataset.ago); });
 });
 
+/* ---------- the language (i18n.js) ----------
+ * The choice is kept on this device (switch_lang) and with the account (participants.lang: register, my_profile,
+ * update_my_profile, the sign-in row), so the participant's other devices and their reminders follow it. A change
+ * made offline waits in LANG_SYNC_KEY and goes with the next pull. Only a tap on English / Cymraeg in the app before
+ * signing in (LANG_TAP_KEY, this tab only) wins over the account's language at sign-in, and is then saved to the
+ * account; ?lang= from the study page only sets what a newcomer sees (and so a new account's language). Both keys
+ * are cleared once used, on sign-out and when another person signs in on this phone.
+ * langSeq counts the language changes made here, so a pull that was already out cannot undo one (pullHistory). */
+const LANG_SYNC_KEY = 'switch_lang_sync', LANG_TAP_KEY = 'switch_lang_tap';
+let langSeq = 0, langSaving = null;
+function setLanguage(l, tapped){
+  if(l !== 'en' && l !== 'cy') return;
+  if(tapped){ SS.set(LANG_TAP_KEY, l); langSeq++; }
+  if(l === LANG) return;
+  langSeq++;
+  I18N.set(l);
+  if(S.screen === 'q' || S.screen === 'review') refreshFlow();
+  rerender();
+  const f = $('[data-act="lang"][aria-pressed="true"]'); if(f) f.focus({ preventScroll:true });
+  if(PARTICIPANT && SWITCH.live) quiet(saveLanguage(l));
+}
+/* the account's copy (update_my_profile); kept for the next pull when it cannot be reached */
+async function saveLanguage(l){
+  LS.set(LANG_SYNC_KEY, l);
+  if(!SWITCH.key()) return;
+  const p = (async () => {
+    try{ const row = await SWITCH.updateMyProfile({ lang: l }, null); if(LS.get(LANG_SYNC_KEY) === l) LS.del(LANG_SYNC_KEY); cacheProfile(row); }
+    catch(e){ if(e.notSignedIn) keyLost(); else if(S.screen === 'settings'){ const m = $('#langMsg'); if(m){ m.hidden = false; m.className = 'msg'; m.innerHTML = ic('info') + '<div>' + tr('Saved on this phone. It reaches your account next time you are online.') + '</div>'; } } }
+  })();
+  langSaving = p;
+  try{ await p; } finally { if(langSaving === p) langSaving = null; }
+}
+/* After signing in: the account's language, unless this person chose one here first (a tap before signing in, or a
+ * change of theirs still waiting to reach the account): then that one, saved to the account. The tap is used once. */
+function languageAfterSignIn(r){
+  const tapped = SS.get(LANG_TAP_KEY), waiting = LS.get(LANG_SYNC_KEY), mine = tapped === 'en' || tapped === 'cy' ? tapped : waiting === 'en' || waiting === 'cy' ? waiting : null;
+  SS.del(LANG_TAP_KEY);
+  langSeq++;
+  if(mine){ if(mine !== LANG) I18N.set(mine); if(r.lang !== mine) quiet(saveLanguage(mine)); else LS.del(LANG_SYNC_KEY); return; }
+  LS.del(LANG_SYNC_KEY);
+  if((r.lang === 'en' || r.lang === 'cy') && r.lang !== LANG) I18N.set(r.lang);
+}
+/* the runner names: the database's English alias, shown in the app's language */
+const aliasName = a => I18N.alias(a);
+
 /* ---------- celebration ---------- */
 function confetti(){
   if(reduceMotion()) return;
@@ -2435,7 +2515,12 @@ if(DEBUG){
 }
 
 /* ---------- start ---------- */
+I18N.register({ ACTS, ROOMS, TP, TA, AIR, SUN, HEAT, HEAT_FOR, WALL, ACTIONS, ACTION_BOXES, NOTES, NOTE_BOXES, HEAT_OTHER,
+  GENDERS, SENSITIVITY, HOME_TYPES, FLAT_POS, TENURE, YEAR_BUILT, FLOORS, EPC, BED_SHARE, MAIN_HEATING, OTHER_HEATERS, HEAT_PATTERN,
+  CONTROLS, WALL_INS, LOFT, GLAZING, WINDOWS_OPEN, DAMP, FACING, TSV, GARMENTS, GARMENT_GROUPS, REG_STEPS, TA_OLD, HEAT_FOR_OLD, QNAME });
+I18N.set(I18N.initial(!!PARTICIPANT));                     // ?lang= (the study page) only for someone not signed in, and only for what they see
 load();
+migrateHours();
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 window.addEventListener('online', () => quiet(flushPending()));
 window.addEventListener('pagehide', endHolds);              // closed or navigated away during the Undo time

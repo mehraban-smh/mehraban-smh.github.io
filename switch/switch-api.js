@@ -46,9 +46,11 @@
  * ---- participant side (publishable key; "key" = this device's key from joining or signing in) ----
  *   key(), setKey(k)                  this device's key in localStorage switch_key (setKey(null) removes it)
  *   register(fields)                  register_participant. fields: email, pin, name, gender, birth_year,
- *                                     height_cm, weight_kg, sensitivity, home (object). -> outcome row
+ *                                     height_cm, weight_kg, sensitivity, home (object), lang ('en' | 'cy';
+ *                                     'en' when left out). -> outcome row
  *                                     { status, tries_left, wait_min, code, name, is_new, approved, home,
- *                                     device_key, pin_set, alias }; an email already registered is a sign-in.
+ *                                     device_key, pin_set, alias, lang }; an email already registered is a
+ *                                     sign-in (lang then is the stored one, not the one sent).
  *                                     Rejects with the database's message (err.code '22023') for values it refuses.
  *   signIn(email, pin, code?)         participant_sign_in -> the same row. status:
  *                                       ok          signed in (pin_set true: this PIN has just become theirs)
@@ -65,9 +67,11 @@
  *                                     register() can answer weak_pin too (and code_needed for an email that is
  *                                     registered but has no PIN).
  *   myProfile()                       my_profile -> { code, name, approved, gender, birth_year, height_cm,
- *                                     weight_kg, sensitivity, home, alias, alias_colour, race_hidden } or null
+ *                                     weight_kg, sensitivity, home, alias, alias_colour, race_hidden (always
+ *                                     false now), lang ('en' | 'cy') } or null
  *   updateMyProfile(fields, home)     update_my_profile; fields: any of name, gender, birth_year, height_cm,
- *                                     weight_kg, sensitivity (only keys given change); home: the whole profile
+ *                                     weight_kg, sensitivity, lang ('en' | 'cy') (only keys given change);
+ *                                     home: the whole profile
  *                                     object, or null to leave it. -> the my_profile row. 22023 with a message
  *   myCheckins()                      my_checkins -> every check-in of this participant from all devices,
  *                                     newest first, database row shape (all toRecord fields but participant,
@@ -76,10 +80,11 @@
  *   myPoints()                        my_points -> { all_time, week, last_week, month, checkins_counted, goal_days,
  *                                     streak }
  *   race(period)                      race('week' | 'last_week' | 'month') -> { period, from, to, target, total,
- *                                     me: { alias, colour, points, rank, hidden },
+ *                                     me: { alias, colour, points, rank, hidden (always false) },
  *                                     runners: [{ alias, colour, points, checkins, goal_days, rank, is_me }] }
  *                                     (not approved yet: runners [], total 0, me.rank null)
- *   setRaceHidden(hidden)             set_race_hidden -> the stored value (boolean)
+ *   setRaceHidden(hidden)             set_race_hidden: kept for older apps; the Bay Race is compulsory now, so it
+ *                                     changes nothing and resolves to false
  *     All keyed calls above reject with err.notSignedIn = true when there is no key, the key no longer
  *     works (the database answers code 28000: signed out elsewhere, removed), or the app is in local mode.
  *     Any other refusal (a 401 from the gateway for a bad publishable key, a missing grant 42501, a 5xx)
@@ -344,7 +349,7 @@
       if (!live) return null;
       const body = { p_email: fields.email, p_name: fields.name || null, p_gender: fields.gender || null, p_birth_year: fields.birth_year ?? null,
         p_height_cm: fields.height_cm ?? null, p_weight_kg: fields.weight_kg ?? null, p_sensitivity: fields.sensitivity || null,
-        p_home: fields.home || null, p_pin: fields.pin || null };
+        p_home: fields.home || null, p_pin: fields.pin || null, p_lang: fields.lang === 'cy' ? 'cy' : 'en' };
       return S.rpcRow('register_participant', body, 'Registration failed');
     },
     // code: the participant code (P07), needed only when the answer was code_needed

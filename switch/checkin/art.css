@@ -1,106 +1,10 @@
-/* HomePulse art: the colours and line weights of the pictures drawn in icons.js. Loaded after app.css.
- * The pictures name materials, not colours (a-br brick, a-in insulation, a-gl glass, a-m mould ...), and this
- * file gives each material a light and a dark colour. Lines are teal (currentColor) unless a class says
- * otherwise. Every line keeps its width on screen whatever the picture's size (non-scaling stroke), so a
- * 38 px tile and an 88 px tile have the same 2 px outlines, 1.4 px details and 1 px textures. */
-:root{
-  --art-warm:#E07B24; --art-warm-soft:#FDE3C4; --art-flame:#F2A93B;
-  --art-brick:#B4563A; --art-brick-soft:#F0C9B8; --art-mortar:#FFF6F1;
-  --art-block:#7F8C99; --art-block-soft:#E1E6EB;
-  --art-ins:#C9900F; --art-ins-soft:#FBE7A1;
-  --art-glass:#3F8FCF; --art-glass-soft:#DCEFFB;
-  --art-cold:#2F7FDA; --art-cold-soft:#DCEBFB;
-  --art-mould:#27321F; --art-mould-soft:#B8C7A0;
-  --art-plaster:#F4F1EA; --art-render:#E6DCC4; --art-render-line:#A8946A;
-  --art-wood:#9A6A3E; --art-wood-soft:#EBD5BA;
-  --art-metal:#6E7C8A; --art-metal-soft:#E4E9EE;
-  --art-dim:#9AA6B2; --art-ink:#33404D; --art-paper:var(--card);
-  --art-wall:#F3F5F8; --art-floor:#E6EAEF; --art-sky:#E4F1FB; --art-earth:#D9C7AE;
-  --art-roof:#C9D1DA; --art-leaf:#4E9A5B; --art-leaf-soft:#CFE8CF; --art-tank:#5E8A4E; --art-tank-soft:#D7E8CB;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --art-warm:#F29A4A; --art-warm-soft:#4A321E; --art-flame:#F5B451;
-    --art-brick:#E2896A; --art-brick-soft:#4C2D24; --art-mortar:#2A1E1A;
-    --art-block:#9AA7B5; --art-block-soft:#2D3641;
-    --art-ins:#E9BD47; --art-ins-soft:#4B3E17;
-    --art-glass:#72B5EA; --art-glass-soft:#1B3447;
-    --art-cold:#6AA9F2; --art-cold-soft:#1C3048;
-    --art-mould:#B9C9A4; --art-mould-soft:#3B4631;
-    --art-plaster:#2C3440; --art-render:#4A4435; --art-render-line:#B7A57E;
-    --art-wood:#CFA275; --art-wood-soft:#45362A;
-    --art-metal:#A3B0BE; --art-metal-soft:#2C3642;
-    --art-dim:#6C7986; --art-ink:#DCE3EA;
-    --art-wall:#222A34; --art-floor:#1B222B; --art-sky:#172A3A; --art-earth:#3E3427;
-    --art-roof:#3A4552; --art-leaf:#7CC487; --art-leaf-soft:#22392A; --art-tank:#8DBB7B; --art-tank-soft:#263A24;
-  }
-}
-:root[data-theme="dark"]{
-  --art-warm:#F29A4A; --art-warm-soft:#4A321E; --art-flame:#F5B451;
-  --art-brick:#E2896A; --art-brick-soft:#4C2D24; --art-mortar:#2A1E1A;
-  --art-block:#9AA7B5; --art-block-soft:#2D3641;
-  --art-ins:#E9BD47; --art-ins-soft:#4B3E17;
-  --art-glass:#72B5EA; --art-glass-soft:#1B3447;
-  --art-cold:#6AA9F2; --art-cold-soft:#1C3048;
-  --art-mould:#B9C9A4; --art-mould-soft:#3B4631;
-  --art-plaster:#2C3440; --art-render:#4A4435; --art-render-line:#B7A57E;
-  --art-wood:#CFA275; --art-wood-soft:#45362A;
-  --art-metal:#A3B0BE; --art-metal-soft:#2C3642;
-  --art-dim:#6C7986; --art-ink:#DCE3EA;
-  --art-wall:#222A34; --art-floor:#1B222B; --art-sky:#172A3A; --art-earth:#3E3427;
-  --art-roof:#3A4552; --art-leaf:#7CC487; --art-leaf-soft:#22392A; --art-tank:#8DBB7B; --art-tank-soft:#263A24;
-}
+/* HomePulse pictures: sizes only. Loaded after app.css.
+ * The pictures themselves (icons.js: art() for the join wizard, pic() for the check-in's answers, the clothes and
+ * the household) carry their own natural colours and thin dark contours, the same on the light and the dark theme,
+ * so this file only decides how big they are where they appear. Interface icons (ic) keep app.css's teal lines. */
+.art *,.pic *{vector-effect:non-scaling-stroke}
 
-/* line weights: the same on screen at every size */
-.art{stroke-width:2}
-.art *{vector-effect:non-scaling-stroke}
-.art .a-t1{stroke-width:1.4}
-.art .a-t0{stroke-width:1}
-.art .a-t3{stroke-width:2.6}
-
-/* materials and accents (fill, line) */
-.art .a-f{fill:var(--art-fill)}
-.art .a-p{fill:var(--art-paper)}
-.art .a-w{stroke:var(--art-warm)}
-.art .a-wf{fill:var(--art-warm-soft);stroke:var(--art-warm)}
-.art .a-fl{fill:var(--art-flame);stroke:var(--art-warm)}
-.art .a-br{fill:var(--art-brick-soft);stroke:var(--art-brick)}
-.art .a-brl{stroke:var(--art-brick)}
-.art .a-mo{stroke:var(--art-mortar)}
-.art .a-bk{fill:var(--art-block-soft);stroke:var(--art-block)}
-.art .a-bkl{stroke:var(--art-block)}
-.art .a-in{fill:var(--art-ins-soft);stroke:var(--art-ins)}
-.art .a-inl{stroke:var(--art-ins)}
-.art .a-gl{fill:var(--art-glass-soft);stroke:var(--art-glass)}
-.art .a-gll{stroke:var(--art-glass)}
-.art .a-c{stroke:var(--art-cold)}
-.art .a-cf{fill:var(--art-cold-soft);stroke:var(--art-cold)}
-.art .a-m{fill:var(--art-mould);stroke:none}
-.art .a-mh{fill:var(--art-mould-soft);stroke:none}
-.art .a-pl{fill:var(--art-plaster)}
-.art .a-rd{fill:var(--art-render);stroke:var(--art-render-line)}
-.art .a-wd{fill:var(--art-wood-soft);stroke:var(--art-wood)}
-.art .a-wdl{stroke:var(--art-wood)}
-.art .a-mt{fill:var(--art-metal-soft);stroke:var(--art-metal)}
-.art .a-mtl{stroke:var(--art-metal)}
-.art .a-d{stroke:var(--art-dim)}
-.art .a-df{fill:var(--art-wall);stroke:var(--art-dim)}
-.art .a-k{fill:var(--art-ink);stroke:none}
-.art .a-kl{stroke:var(--art-ink)}
-.art .a-wl{fill:var(--art-wall)}
-.art .a-fo{fill:var(--art-floor)}
-.art .a-sk{fill:var(--art-sky);stroke:none}
-.art .a-ea{fill:var(--art-earth);stroke:none}
-.art .a-rf{fill:var(--art-roof)}
-.art .a-lf{fill:var(--art-leaf-soft);stroke:var(--art-leaf)}
-.art .a-tk{fill:var(--art-tank-soft);stroke:var(--art-tank)}
-.art .a-ns{stroke:none}
-.art .a-tf{fill:currentColor;stroke:none}
-
-/* a picture on a selected tile: its own soft teal gives way to the card so it still stands out */
-.ptile.on .art .a-wl{fill:var(--card)}
-
-/* picture sizes per family, in the tiles that show them (Step 7's large tiles are sized in app.css) */
+/* join wizard: each family sized to its tiles (Step 7's large tiles are sized in app.css, .ptile.lg) */
 .ptile .art-home_type{width:64px;height:64px}
 .ptile.sm .art-flat_position,.ptile.sm .art-floors,.ptile.sm .art-share{width:54px;height:54px}
 .ptile.line .art-tenure{width:46px;height:46px}
@@ -108,38 +12,26 @@
 .ptile .art-controls{width:58px;height:58px}
 .ptile.line .art-pattern{width:44px;height:44px}
 .ptile .art-year_built{width:60px;height:60px}
+.ptile .pt-art .pic{width:44px;height:44px}
 
-/* two-tone icons: in the check-in's picture tiles, rows and answer boxes the parts of an icon take colours
- * (a soft teal body, warm flames and steam, cold air and water, glass, brick, the garments in the avatar's
- * colours). Everywhere else (buttons, the tab bar, chips) the same icons stay plain teal lines. */
-:is(.tile,.orb,.aopt,.gt,.mrow,.ptile,.at-ic,.abox legend,.pfig) .ic .i-f{fill:var(--art-fill)}
-:is(.tile,.orb,.aopt,.gt,.mrow,.ptile,.at-ic,.abox legend,.pfig) .ic .i-p{fill:var(--card)}
-:is(.tile,.orb,.aopt,.gt,.mrow,.ptile,.at-ic,.abox legend,.pfig) .ic .i-sk{fill:var(--art-sky)}
-:is(.tile,.orb,.aopt,.gt,.mrow,.ptile,.at-ic,.abox legend,.pfig) .ic .i-g{fill:var(--art-glass-soft)}
-:is(.tile,.orb,.aopt,.gt,.mrow,.ptile,.at-ic,.abox legend,.pfig) .ic .i-w{stroke:var(--art-warm)}
-:is(.tile,.orb,.aopt,.gt,.mrow,.ptile,.at-ic,.abox legend,.pfig) .ic .i-wf{fill:var(--art-warm-soft);stroke:var(--art-warm)}
-:is(.tile,.orb,.aopt,.gt,.mrow,.ptile,.at-ic,.abox legend,.pfig) .ic .i-fl{fill:var(--art-flame);stroke:var(--art-warm)}
-:is(.tile,.orb,.aopt,.gt,.mrow,.ptile,.at-ic,.abox legend,.pfig) .ic .i-c{stroke:var(--art-cold)}
-:is(.tile,.orb,.aopt,.gt,.mrow,.ptile,.at-ic,.abox legend,.pfig) .ic .i-cf{fill:var(--art-cold-soft);stroke:var(--art-cold)}
-:is(.tile,.orb,.aopt,.gt,.mrow,.ptile,.at-ic,.abox legend,.pfig) .ic .i-br{fill:var(--art-brick-soft)}
-:is(.tile,.orb,.aopt,.gt,.mrow,.ptile,.at-ic,.abox legend,.pfig) .ic .i-brl{stroke:var(--art-brick)}
-:is(.tile,.orb,.aopt,.gt,.mrow,.ptile,.at-ic,.abox legend,.pfig) .ic .i-hd{fill:var(--skin)}
-:is(.tile,.orb,.aopt,.gt,.mrow,.ptile,.at-ic,.abox legend,.pfig) .ic .i-lf{fill:var(--art-leaf-soft);stroke:var(--art-leaf)}
-:is(.tile,.orb,.aopt,.gt,.mrow,.ptile,.at-ic,.abox legend,.pfig) .ic .i-d{stroke:var(--art-dim)}
-:is(.tile,.orb,.aopt,.gt,.mrow,.ptile,.at-ic,.abox legend,.pfig) .ic .i-gm{fill:var(--gc);fill-opacity:.6}
-/* on a selected tile the soft teal would vanish into the tile's own teal: the body turns card-coloured */
-:is(.tile,.aopt,.gt,.ptile).on .ic .i-f{fill:var(--card)}
-/* a tinted tile or row (cold, warm) tints the body in its own colour */
-.tint .ic .i-f{fill:currentColor;fill-opacity:.14}
-
-/* the check-in's pictures, larger where the tiles and rows have the room */
+/* the check-in's answer pictures, larger where the tiles and rows have the room */
 .tile .ic{width:44px;height:44px}
 .tile.big .ic{width:64px;height:64px}
-.tile.wide .ic,.tile.txt .ic{width:32px;height:32px}
-.row.tall .orb{width:64px;height:64px}
-.row.tall .orb .ic{width:44px;height:44px}
-.aopt .ic{width:32px;height:32px}
-.gt .ic{width:32px;height:32px}
-.row.mrow .ic{width:30px;height:30px}
+.tile.wide .ic,.tile.txt .ic{width:34px;height:34px}
+.tiles.fill>.tile:not(.txt):not(.wide) .ic{width:56px;height:56px}
 .tile.txt .art-heat_for{width:46px;height:46px}
-.tiles.fill>.tile:not(.txt):not(.wide) .ic{width:52px;height:52px}
+.row.tall .orb{width:64px;height:64px}
+.row.tall .orb .ic{width:46px;height:46px}
+.aopt .ic{width:34px;height:34px}
+.gt .ic{width:34px;height:34px}
+.row.mrow .pic{width:32px;height:32px}
+
+/* answers read back: the review tiles, the check-in's detail sheet, My home, the household strip */
+.at-ic .pic{width:30px;height:30px}
+.at-ic .art{width:30px;height:30px}
+.achip .pic{width:20px;height:20px}
+.last li .pic{width:26px;height:26px}
+.gi-art .pic{width:32px;height:32px}
+.pfig .pic{width:34px;height:34px}
+.pfig.child .pic{width:28px;height:28px}
+.pfig.pet .pic{width:24px;height:24px}
