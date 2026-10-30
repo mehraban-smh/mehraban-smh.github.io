@@ -15,3 +15,4 @@ exclude:
   - switch/supabase-setup.sql
   - switch/supabase-reminder-clock.sql
   - switch/push
+  - mouldcast/README.md

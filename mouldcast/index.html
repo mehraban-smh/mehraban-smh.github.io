@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="MouldCast: a week's warning of mould on the walls of a home, from its sensors and digital twin. First draft of the PhD application, with demo data.">
+<title>MouldCast · damp and mould forecast</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="app/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Inter:wght@400;500;600&display=swap">
+<!-- The project page: what MouldCast is, the two demo pages, how it works. The look of HomePulse's study page
+     (switch/index.html): Source Serif 4 prose, Inter for labels and buttons, navy accent with teal buttons. -->
+<style>
+  :root{
+    --paper:#FFFFFF; --panel:#F5F7F9; --ink:#1C2A35; --ink-soft:#5A6B77; --line:#E5EAEE;
+    --accent:#1F4E79; --accent-dark:#163A5B; --accent-soft:#EDF2F7; --teal:#0E7B72; --teal-dark:#0A5F58; --teal-soft:#E3F2F0;
+    --c0:#5CB68B; --c1:#F2BB52; --c2:#EE8A3E; --c3:#D64530;
+    --serif:"Source Serif 4",Georgia,"Times New Roman",serif; --sans:"Inter",-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+    --measure:40rem;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#10161C; --panel:#162029; --ink:#E4EAF0; --ink-soft:#A2AFBB; --line:#26323D;
+      --accent:#8DB8E4; --accent-dark:#B4D1EF; --accent-soft:#17283A; --teal:#2E9C91; --teal-dark:#3CC6B5; --teal-soft:#15312E;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#10161C; --panel:#162029; --ink:#E4EAF0; --ink-soft:#A2AFBB; --line:#26323D;
+    --accent:#8DB8E4; --accent-dark:#B4D1EF; --accent-soft:#17283A; --teal:#2E9C91; --teal-dark:#3CC6B5; --teal-soft:#15312E;
+  }
+  *{box-sizing:border-box}
+  html{background:var(--paper)}
+  body{margin:0;font-family:var(--serif);background:var(--paper);color:var(--ink);line-height:1.65;font-size:17px;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{color:var(--accent-dark);text-decoration:underline;text-underline-offset:3px}
+  a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+  .wrap{max-width:60rem;margin:0 auto;padding:0 24px}
+  .site{font-family:var(--sans);font-size:.85rem;border-bottom:1px solid var(--line)}
+  .site .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;padding-bottom:14px}
+  .brand{display:flex;align-items:center;gap:10px;color:var(--ink);min-width:0;flex:1 1 auto}
+  .brand>span{min-width:0}
+  .brand:hover{text-decoration:none;color:var(--ink)}
+  .brand img{width:38px;height:38px;border-radius:11px;flex:none}
+  .brand b{display:block;font-family:var(--serif);font-size:1.2rem;font-weight:700;line-height:1.05}
+  .brand small{display:block;font-size:.72rem;font-weight:500;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .home{color:var(--ink-soft);font-weight:500;white-space:nowrap;flex:none}
+  .draft{display:inline-block;font-family:var(--sans);font-size:.74rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);background:var(--teal-soft);padding:4px 10px;border-radius:999px;margin-bottom:14px}
+  header.hero{padding:48px 0 36px}
+  h1{font-weight:700;font-size:clamp(2rem,6vw,3rem);line-height:1.1;letter-spacing:-.015em;margin:0 0 12px}
+  .tagline{font-style:italic;font-size:clamp(1.12rem,3.6vw,1.35rem);line-height:1.5;color:var(--ink);margin:0 0 22px;max-width:var(--measure)}
+  .lede{max-width:var(--measure);margin:0 0 26px;color:var(--ink-soft)}
+  .btns{display:flex;flex-wrap:wrap;gap:12px}
+  .btn{font-family:var(--sans);display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:12px 20px;border-radius:10px;background:var(--teal);color:#fff;font-weight:600;font-size:.98rem;border:1.5px solid transparent}
+  .btn:hover{background:var(--teal-dark);color:#fff;text-decoration:none}
+  .btn.ghost{background:transparent;color:var(--accent);border-color:var(--line)}
+  .btn.ghost:hover{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent)}
+  .btn svg{width:20px;height:20px;flex:none}
+  section{padding:30px 0;border-top:1px solid var(--line)}
+  .label{display:block;font-family:var(--sans);font-size:.74rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--teal);margin-bottom:6px}
+  h2{font-size:1.55rem;line-height:1.2;margin:0 0 14px;font-weight:600}
+  p{margin:0 0 14px;max-width:var(--measure)}
+  ol.steps{list-style:none;margin:0;padding:0;counter-reset:s;display:grid;gap:14px;max-width:var(--measure)}
+  ol.steps li{counter-increment:s;display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;align-items:start}
+  ol.steps li::before{content:counter(s);font-family:var(--sans);font-weight:600;font-size:.95rem;width:44px;height:44px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+  ol.steps b{display:block;font-family:var(--sans);font-size:.98rem;font-weight:600;margin-top:2px}
+  ol.steps span{color:var(--ink-soft);font-size:.98rem}
+  .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(16rem,1fr));gap:16px}
+  .panel{background:var(--panel);border-radius:14px;padding:18px 20px}
+  .panel h3{font-family:var(--sans);font-size:1rem;font-weight:600;margin:0 0 8px}
+  .panel ul{margin:0;padding-left:1.1em;color:var(--ink-soft);font-size:.98rem}
+  .panel li{margin:4px 0}
+  .panel a.go{display:inline-block;margin-top:10px;font-family:var(--sans);font-weight:600;font-size:.92rem}
+  ul.scale{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-width:var(--measure)}
+  ul.scale li{display:flex;align-items:center;gap:12px;font-size:.98rem}
+  ul.scale b{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none;font-family:var(--sans);font-weight:600;color:#14202B}
+  .s0{background:var(--c0)} .s1{background:var(--c1)} .s2{background:var(--c2)} .s3{background:var(--c3);color:#fff!important}
+  .note{font-family:var(--sans);font-size:.86rem;color:var(--ink-soft);line-height:1.55}
+  footer{border-top:1px solid var(--line);padding:24px 0 40px;font-family:var(--sans);font-size:.85rem;color:var(--ink-soft)}
+  footer p{max-width:none;margin:0 0 6px}
+  @media (max-width:640px){
+    body{font-size:16px}
+    header.hero{padding:32px 0 26px}
+    .btn{width:100%}
+    .home span{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="site"><div class="wrap">
+  <a class="brand" href="./"><img src="app/icon-192.png" alt="" width="38" height="38"><span><b>MouldCast</b><small>Damp and mould digital twin · London South Bank University</small></span></a>
+  <a class="home" href="https://mehraban.uk/">mehraban.uk<span> ↗</span></a>
+</div></div>
+
+<main>
+<header class="hero"><div class="wrap">
+  <span class="draft">First draft · demo data</span>
+  <h1>See mould coming before it shows</h1>
+  <p class="tagline">MouldCast tells residents and their landlord, a week ahead, where mould could grow on the walls of a home, why, and what may help.</p>
+  <p class="lede">It is the application layer of a PhD on AI-integrated digital twins for the early detection of damp and mould in UK social housing. Sensors in the home feed a digital twin, the VTT mould model turns each surface&rsquo;s conditions into a mould index, and a forecast gives time to act before mould can be seen. This draft runs on a simulated flat, entirely in your browser.</p>
+  <div class="btns">
+    <a class="btn" href="app/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.2"/><path d="M10.4 5.2h3.2"/></svg>Open the resident app</a>
+    <a class="btn ghost" href="staff/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3M7 13l3-3 3 2 4-4"/></svg>Housing team view</a>
+  </div>
+</div></header>
+
+<section><div class="wrap">
+  <span class="label">How it works</span>
+  <h2>From sensors to a week&rsquo;s warning</h2>
+  <ol class="steps">
+    <li><div><b>Sensors measure</b><span>Temperature and humidity in every room and on the coldest walls, found by a thermal imaging survey, with the weather outside. No cameras, no microphones.</span></div></li>
+    <li><div><b>The twin fills the gaps</b><span>A building information model gives each wall its construction and material. The twin links every reading to a surface and estimates the surfaces that carry no sensor.</span></div></li>
+    <li><div><b>A mould index for every surface</b><span>The VTT mould model turns how warm and damp a surface has been, and for how long, into an index from 0 to 6.</span></div></li>
+    <li><div><b>A forecast, and why</b><span>A physics-informed model forecasts each index a week ahead, and explains which conditions drive it.</span></div></li>
+    <li><div><b>Photos check it</b><span>Residents photograph every monitored surface each week. Where the forecast and the photo disagree, the model is recalibrated.</span></div></li>
+  </ol>
+</div></section>
+
+<section><div class="wrap">
+  <span class="label">Two views of the same twin</span>
+  <h2>For residents and for housing teams</h2>
+  <div class="two">
+    <div class="panel"><h3>The resident app</h3><ul>
+      <li>Each room&rsquo;s risk, and an early warning when a surface could show mould within the week</li>
+      <li>What is driving it, with tips for the home and repairs for the landlord kept apart</li>
+      <li>Questions answered in plain language, only from the home&rsquo;s own data</li>
+      <li>The weekly photo check, and reports with Awaab&rsquo;s Law deadlines</li></ul>
+      <a class="go" href="app/">Open the resident app →</a></div>
+    <div class="panel"><h3>The housing team view</h3><ul>
+      <li>Homes ranked by their worst forecast, and when mould could become visible</li>
+      <li>Every monitored surface, its forecast and its drivers, for targeted inspections</li>
+      <li>The Awaab&rsquo;s Law queue: reports, deadlines and what is overdue</li>
+      <li>The model check: forecasts against residents&rsquo; photos</li></ul>
+      <a class="go" href="staff/">Open the housing team view →</a></div>
+  </div>
+  <p class="note" style="margin-top:16px">A photo or report made in the resident app appears in the housing team view when both are opened in the same browser.</p>
+</div></section>
+
+<section><div class="wrap">
+  <span class="label">The mould index</span>
+  <h2>Acting while mould is still invisible</h2>
+  <p>Mould grows in stages. Visual inspections and complaints only see it from stage 3, by which time a household may have lived with it for weeks. A forecast of the index finds the surfaces heading there first.</p>
+  <ul class="scale">
+    <li><b class="s0">0</b>No growth</li>
+    <li><b class="s1">1</b>Small amounts of mould, seen only under a microscope</li>
+    <li><b class="s2">2</b>Several small colonies, seen only under a microscope</li>
+    <li><b class="s3">3</b>Visible mould, less than 10% of the surface</li>
+    <li><b class="s3">4</b>Visible mould, 10 to 50% of the surface</li>
+    <li><b class="s3">5</b>Visible mould, more than 50% of the surface</li>
+  </ul>
+  <p class="note" style="margin-top:12px">VTT mould index (Hukka and Viitanen, 1999; Ojanen et al., 2011).</p>
+</div></section>
+
+<section><div class="wrap">
+  <span class="label">About this draft</span>
+  <h2>What is real and what is simulated</h2>
+  <p>The VTT model, its material classes and the Awaab&rsquo;s Law deadlines are real. The flat, its sensors and its weather are simulated, the forecast is the VTT model run on the expected conditions, and &ldquo;what&rsquo;s driving it&rdquo; comes from re-running the twin without each factor. In the study, a physics-informed model trained on monitored homes replaces both, with SHAP explanations, and a large language model answers residents&rsquo; questions from the twin&rsquo;s data.</p>
+  <p>The proof of concept is published in <a href="https://doi.org/10.1016/j.buildenv.2026.115221" target="_blank" rel="noopener">Building and Environment</a>, with a <a href="../mould-digital-twin/">video summary</a>.</p>
+</div></section>
+</main>
+
+<footer><div class="wrap">
+  <p>MouldCast <span id="ver"></span> · first draft · Seyed Mohammad Hosein Mehraban, School of Construction, Property and Surveying, London South Bank University</p>
+  <p>Questions and feedback: <a href="mailto:info@mehraban.uk">info@mehraban.uk</a></p>
+</div></footer>
+<script src="config.js"></script>
+<script>document.getElementById('ver').textContent = (self.MC_CONFIG && self.MC_CONFIG.appVersion) || '';</script>
+</body>
+</html>
