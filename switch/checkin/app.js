@@ -710,8 +710,9 @@ function answerTiles(a){
   h += tile('room_time', tic('clock'), 'In this room', a.room_time ? label(ROOM_TIME, a.room_time) : open);
   h += tile('air', tic(air ? air.ic : 'still'), 'Air', air ? air.k : open);
   h += tile('sun', tic(sun ? sun.ic : 'sun'), 'Sun', sun ? sun.k || sun.n : open);
-  h += tile('heat', tic(heat ? heat.ic : 'flame', heat && heat.cls || ''), 'Heating', heat ? heat.n : open, a.heat === 'on' ? '' : 'wide');
-  if(a.heat === 'on') h += tile('heat_for', `<span class="at-ic">${a.heat_for ? artx('heat_for:' + a.heat_for, 'clock') : ic('clock')}</span>`, 'On for', a.heat_for ? heatForWord(a.heat_for) : open);
+  h += tile('heat', tic(heat ? heat.ic : 'flame', heat && heat.cls || ''), 'Heating', heat ? heat.n : open, a.heat === 'on' && asked('heat_for') ? '' : 'wide');
+  /* how long the heating has been on: no longer asked from 1.4, so no tile */
+  if(a.heat === 'on' && asked('heat_for')) h += tile('heat_for', `<span class="at-ic">${a.heat_for ? artx('heat_for:' + a.heat_for, 'clock') : ic('clock')}</span>`, 'On for', a.heat_for ? heatForWord(a.heat_for) : open);
   h += tile('wall', tic(wall ? wall.ic : 'wall', wall && wall.cls || ''), 'Outside wall', wall ? wall.n : open, 'wide');
   h += tile('actions', tic('refresh'), 'You did, last 30 minutes', chips(ACTIONS, a.actions, tr('None of these')), 'wide');
   h += tile('notes', tic('info'), 'You had or felt, last 30 minutes', chips(NOTES, a.notes, tr('None of these')), 'wide');
