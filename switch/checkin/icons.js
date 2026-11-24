@@ -856,6 +856,9 @@ A['cool:room'] = SH(22, 43.6, 21) + R(22, 4, 22, 39.4, M.white, .6) + R(24.4, 6.
   T('M30.4 24.8c-1.2 0-1.2 1-2.4 1M36.4 28.4c-1.2 0-1.2 1-2.4 1', M.cold, 1.2) + R(24.4, 6.4, 17.2, 37, 'none', 0) + Pp('M41.6 6.4l-4.4 2.2v30.6l4.4 4.2z', M.oak) + Cc(38.4, 25, .6, '#F2C230', '') +
   G('translate(-4.6 12.2) scale(.7)', Q.walk) + Pp('M4 9.6h17V6.8l5.4 4.4-5.4 4.4v-2.8H4z', M.cold);
 A['cool:other'] = A['other:other']; A['cool:none'] = noneArt;
+/* 1.4.1: "I'm not at home": the front door shut behind them, walking away down the path with a bag */
+A['away:out'] = SH(24, 43.6, 22) + smallHouse(1.5, 13, 21, M.navy) + R(20, 41.4, 27, 1.6, M.stoneD, .8) +
+  G('translate(20.6 11.4) scale(.64)', Q.walk) + Pp('M27.4 6.4h11.2V3.6l5 4.2-5 4.2V9.2H27.4z', M.teal);
 
 return { ART: A, PIC: Q, M, INK };
 })();

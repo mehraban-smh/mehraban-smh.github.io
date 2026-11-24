@@ -111,6 +111,15 @@ a{color:var(--accent);font-weight:700}
 .room .tiles.big{flex:1.5;min-height:0;grid-auto-rows:minmax(110px,1fr)}
 .room .tiles.small{flex:1;min-height:0;grid-auto-rows:minmax(56px,1fr)}
 .tiles.c3{grid-template-columns:repeat(3,minmax(0,1fr))}   /* 1.4: three smaller rooms */
+/* 1.4.1: the first screen: the two main rooms a little larger than the other three, then "I'm not at home" as a large row */
+.where{display:flex;flex-direction:column;gap:8px}
+.where > .room.fill{flex:2.6}
+.where .room .tiles.big{flex:1.2;grid-auto-rows:minmax(84px,1fr)}
+.where .room .tiles.small{flex:1}
+.where > .away-row{flex:1;min-height:96px;gap:14px;padding:10px 16px}
+.where .away-row .aw-art{flex:none;display:grid;place-items:center}
+.where .away-row .aw-art .art{width:min(104px,24vw);height:min(104px,24vw);display:block}
+.where .away-row b{font-size:1.1rem}
 .room .tiles.c3 .tile.wide{flex-direction:column;justify-content:center;text-align:center;gap:6px;padding:8px 6px}
 /* rows */
 .rows{display:flex;flex-direction:column;gap:8px}
