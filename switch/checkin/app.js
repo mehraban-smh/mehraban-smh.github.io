@@ -957,8 +957,8 @@ const SCREENS = {
   },
   /* 1.4: "Where are you right now?": a room starts the check-in (at room_time); "I'm not at home" asks when to remind them.
    * Until 1.3 this screen asked "Are you at home right now?" (at_home long, recent or out). */
-  athome: () => qhead(tr('Before we start'), tr('Where are you right now?'), tr('Then a few quick questions about how you feel.')) + roomTiles('where') +
-    `<div class="rows"><button class="row" data-act="where" data-v="out">${ic('out')}<div><b>${tr('I&rsquo;m not at home')}</b><span>${tr('Pause reminders for a while')}</span></div>${ic('chev','go')}</button></div>`,
+  athome: () => qhead(tr('Before we start'), tr('Where are you right now?'), tr('Then a few quick questions about how you feel.')) +
+    `<div class="where fill">${roomTiles('where')}<button class="row away-row" data-act="where" data-v="out"><span class="aw-art">${art('away:out')}</span><div><b>${tr('I&rsquo;m not at home')}</b><span>${tr('Pause reminders for a while')}</span></div>${ic('chev','go')}</button></div>`,
   /* each pause with the time it ends on the phone's clock */
   away: () => {
     const opt = (v, icon, lab, sub) => `<button class="row" data-act="pause" data-v="${v}">${ic(icon)}<div><b>${tr(lab)}</b><span>${sub}</span></div>${ic('chev','go')}</button>`;
