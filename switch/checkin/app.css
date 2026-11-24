@@ -110,6 +110,8 @@ a{color:var(--accent);font-weight:700}
 .room{display:flex;flex-direction:column;gap:8px}
 .room .tiles.big{flex:1.5;min-height:0;grid-auto-rows:minmax(110px,1fr)}
 .room .tiles.small{flex:1;min-height:0;grid-auto-rows:minmax(56px,1fr)}
+.tiles.c3{grid-template-columns:repeat(3,minmax(0,1fr))}   /* 1.4: three smaller rooms */
+.room .tiles.c3 .tile.wide{flex-direction:column;justify-content:center;text-align:center;gap:6px;padding:8px 6px}
 /* rows */
 .rows{display:flex;flex-direction:column;gap:8px}
 .rows.fill{display:grid;grid-auto-rows:minmax(0,1fr)}

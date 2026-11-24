@@ -36,12 +36,12 @@
   /* Every stored check-in column, in download order. The 0.4 columns keep their old order (scripts that read
    * the old files by position still work), the 1.0 columns follow, then the legacy columns no version since 0.4
    * writes; any column the database adds later is appended automatically. */
-  const COLS = ['participant', 'local_time', 'ts', 'prompt', 'at_home', 'tsv', 'preference', 'clo', 'garments', 'met', 'activity', 'room', 'acceptability', 'air', 'sun', 'actions', 'notes', 'same_as_last', 'seconds', 'app_version', 'client_id',
+  const COLS = ['participant', 'local_time', 'ts', 'prompt', 'at_home', 'room_time', 'tsv', 'preference', 'clo', 'garments', 'met', 'activity', 'room', 'acceptability', 'air', 'sun', 'actions', 'notes', 'same_as_last', 'seconds', 'app_version', 'client_id',
     'tz_offset_min', 'heating_on', 'heating_src', 'heating_for', 'stat_temp_c', 'wall', 'id', 'created_at'];
   const LEGACY_COLS = ['comfort', 'comfort_score', 'humidity', 'air_pref'];
   const NUM_COLS = new Set(['tsv', 'clo', 'met', 'seconds', 'tz_offset_min', 'stat_temp_c', 'comfort_score']);
   // the on-screen table: question order, legacy columns left out
-  const TABLE_COLS = ['participant', 'local_time', 'prompt', 'at_home', 'tsv', 'preference', 'acceptability', 'clo', 'garments', 'met', 'activity', 'room', 'air', 'sun', 'heating_on', 'heating_src', 'heating_for', 'stat_temp_c', 'wall', 'actions', 'notes', 'same_as_last', 'seconds', 'app_version', 'ts', 'tz_offset_min', 'created_at', 'client_id', 'id'];
+  const TABLE_COLS = ['participant', 'local_time', 'prompt', 'at_home', 'room_time', 'tsv', 'preference', 'acceptability', 'clo', 'garments', 'met', 'activity', 'room', 'air', 'sun', 'heating_on', 'heating_src', 'heating_for', 'stat_temp_c', 'wall', 'actions', 'notes', 'same_as_last', 'seconds', 'app_version', 'ts', 'tz_offset_min', 'created_at', 'client_id', 'id'];
   const PCOLS = ['code', 'name', 'email', 'alias', 'alias_colour', 'lang', 'approved', 'gender', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity', 'created_at', 'updated_at', 'notified_at'];
   const PNUM = new Set(['birth_year', 'height_cm', 'weight_kg', 'alias_colour']);
   const HOME_KEYS = ['postcode_area', 'home_type', 'flat_position', 'tenure', 'year_built', 'floors', 'bedrooms', 'floor_area_m2', 'epc', 'adults', 'children', 'pets', 'bedroom_share',
@@ -60,15 +60,16 @@
   const L = {
     tsv: { '-3': 'Cold', '-2': 'Cool', '-1': 'Slightly cool', 0: 'Neutral', 1: 'Slightly warm', 2: 'Warm', 3: 'Hot' },
     prompt: { scheduled: 'From a reminder', self: 'Self-started' },
-    at_home: { long: 'Home for over an hour', recent: 'Just got in', out: 'Out' },
+    at_home: { long: 'Home for over an hour', recent: 'Just got in', out: 'Out' },   // until 1.3
+    room_time: { lt15: 'In the room less than 15 minutes', '15_60': 'In the room 15 minutes to an hour', gt60: 'In the room more than an hour' },   // 1.4
     preference: { much_cooler: 'Much cooler', cooler: 'Cooler', same: 'No change', warmer: 'Warmer', much_warmer: 'Much warmer' },   // much_*: from 1.3 (cooler / warmer read "a bit" there)
     acceptability: { acceptable: 'Acceptable', unacceptable: 'Not acceptable', clearly_acc: 'Clearly acceptable (older scale)', just_acc: 'Just acceptable (older scale)', just_unacc: 'Just unacceptable (older scale)', clearly_unacc: 'Clearly unacceptable (older scale)' },
     garments: { tshirt: 'T-shirt', long: 'Long sleeves', jumper: 'Thick jumper', hoodie: 'Hoodie or fleece', shorts: 'Shorts', trousers: 'Jeans or trousers', joggers: 'Joggers', skirt: 'Skirt or dress', pyjamas: 'Pyjamas', coat_light: 'Light jacket or summer coat', coat_winter: 'Winter coat', socks: 'Socks', slippers: 'Slippers', blanket: 'Blanket', duvet: 'Duvet',
       outfit_vlight: 'Very light outfit (0.35 clo)', outfit_light: 'Light outfit (0.55 clo)', outfit_medium: 'Medium outfit (0.75 clo)', outfit_warm: 'Warm outfit (1.00 clo)' },
     activity: { sleep: 'Sleeping', lying: 'Lying down', sit: 'Sitting relaxed', desk: 'Desk work', stand: 'Standing', house: 'Cooking or housework', walk: 'Walking about', exercise: 'Exercising' },
-    room: { living: 'Living room', bedroom: 'Bedroom', kitchen: 'Kitchen', office: 'Home office', bathroom: 'Bathroom', other: 'Elsewhere' },
+    room: { living: 'Living room', bedroom: 'Bedroom', kitchen: 'Kitchen', office: 'Home office (until 1.3)', bathroom: 'Bathroom', other: 'Somewhere else at home' },
     air: { still: 'Still', slight: 'A little air movement', draughty: 'Clearly draughty', drafty: 'Clearly draughty' },
-    sun: { yes: 'Sun on me', no: 'No direct sun', dark: 'It’s dark' },
+    sun: { yes: 'Sun on me', no: 'No direct sun', dark: 'It’s dark (until 1.3)' },
     heating_on: { on: 'On', off: 'Off', unsure: 'Not sure' },
     heating_for: { lt30: 'Less than 30 minutes (no longer offered)', '30_60': '30 minutes to an hour', '1_2h': '1 to 2 hours', '2_4h': '2 to 4 hours', gt4h: 'More than 4 hours', always: 'Always on (the thermostat switches it on and off)', unsure: 'Not sure' },
     wall: { cold: 'Cold', cool: 'Cool', neutral: 'Neither cold nor warm', warm: 'Warm', hot: 'Hot', no_reach: 'Can’t reach one' },

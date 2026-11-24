@@ -411,6 +411,10 @@ A['heat_for:1_2h'] = clockFace([[0, 2]]);
 A['heat_for:2_4h'] = clockFace([[0, 4]]);
 A['heat_for:gt4h'] = clockFace([[0, 7]]) + T('M6.4 32.4A19 19 0 0 1 24 5', M.flameD, 1.6, .9);
 A['heat_for:unsure'] = `<g opacity=".45">${clockFace([])}</g>` + qBadge(24, 24);
+/* how long in this room (1.4): the minutes of the hour shaded on the dial */
+A['room_time:lt15'] = clockFace([[0, 2.5]]);
+A['room_time:15_60'] = clockFace([[0, 8]]);
+A['room_time:gt60'] = clockFace([[0, 11.98]]) + T('M6.4 32.4A19 19 0 0 1 24 5', M.flameD, 1.6, .9);
 
 /* ---- walls, roof and windows ---- */
 /* A wall block cut open: the outside face in perspective on the left, the layers cut through at the front.
