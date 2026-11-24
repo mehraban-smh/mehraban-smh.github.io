@@ -643,7 +643,7 @@ create table if not exists public.comfort_votes (
   heating_src    text[],                        -- which heating is on (ids from the home profile, or other); null unless on
   heating_for    text,                          -- 30_60 | 1_2h | 2_4h | gt4h | always | unsure (lt30 in older rows); null unless on
   stat_temp_c    numeric(3,1),                  -- what the thermostat's screen showed (room temperature); asked by 1.0 only, null since
-  wall           text,                          -- the nearest outside wall to the touch: cold | cool | neutral | warm | no_reach
+  wall           text,                          -- the nearest outside wall to the touch: cold | cool | neutral | warm | hot (1.3) | no_reach
   actions        text[],                        -- what they did in the last 30 minutes
   notes          text[],                        -- what they had or felt in the last 30 minutes
   same_as_last   boolean not null default false,  -- "still the same" quick check (0.4.0 only; always false from 1.0)
@@ -779,11 +779,12 @@ begin
     public.sw_pick(j, 'prompt', array['self', 'scheduled']),
     public.sw_pick(j, 'at_home', array['long', 'recent']),
     v_tsv::smallint,
-    public.sw_pick(j, 'preference', array['cooler', 'same', 'warmer']),
+    public.sw_pick(j, 'preference', array['much_cooler', 'cooler', 'same', 'warmer', 'much_warmer']),   -- much_*: 1.3
     public.sw_pick(j, 'acceptability', array['acceptable', 'unacceptable', 'clearly_acc', 'just_acc', 'just_unacc', 'clearly_unacc']),
     public.sw_num(j, 'clo', 0, 8, 2),
     public.sw_picks(j, 'garments', array['tshirt', 'long', 'jumper', 'hoodie', 'shorts', 'trousers', 'joggers', 'skirt', 'pyjamas',
-                                         'coat_light', 'coat_winter', 'socks', 'slippers', 'blanket', 'duvet']),
+                                         'coat_light', 'coat_winter', 'socks', 'slippers', 'blanket', 'duvet',
+                                         'outfit_vlight', 'outfit_light', 'outfit_medium', 'outfit_warm']),   -- outfits: 1.3
     public.sw_num(j, 'met', 0.5, 5, 1),
     public.sw_pick(j, 'activity', array['sleep', 'lying', 'sit', 'desk', 'stand', 'house', 'walk', 'exercise']),
     public.sw_pick(j, 'room', array['living', 'bedroom', 'kitchen', 'office', 'bathroom', 'other']),
@@ -794,7 +795,7 @@ begin
                                             'plugin', 'gas_fire', 'electric_fire', 'stove', 'open_fire', 'electric_blanket', 'main', 'other', 'unsure']),
     public.sw_pick(j, 'heating_for', array['lt30', '30_60', '1_2h', '2_4h', 'gt4h', 'always', 'unsure']),   -- lt30: older app versions
     public.sw_num(j, 'stat_temp_c', 5, 35, 1),
-    public.sw_pick(j, 'wall', array['cold', 'cool', 'neutral', 'warm', 'no_reach']),
+    public.sw_pick(j, 'wall', array['cold', 'cool', 'neutral', 'warm', 'hot', 'no_reach']),   -- hot: 1.3
     public.sw_picks(j, 'actions', array['win_open', 'win_close', 'door_open', 'door_close', 'heat_up', 'heat_down', 'layer_on', 'layer_off',
                                         'blanket', 'fan', 'curtains', 'moved', 'none']),
     public.sw_picks(j, 'notes', array['hot_drink', 'cold_drink', 'ate', 'hungry', 'tired', 'unwell', 'none']),

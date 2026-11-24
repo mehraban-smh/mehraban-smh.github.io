@@ -13,6 +13,9 @@
 .ptile.line .art-pattern{width:44px;height:44px}
 .ptile .art-year_built{width:60px;height:60px}
 .ptile .pt-art .pic{width:44px;height:44px}
+/* 1.3: the pictures of the Home Visit Questionnaire's new questions */
+.ptile.sm .art-feel_cold,.ptile.sm .art-feel_warm,.ptile.sm .art-overheat{width:54px;height:54px}
+.ptile .art-road,.ptile .art-changes,.ptile .art-pet_door,.ptile .art-drying,.ptile .art-tariff,.ptile .art-putoff,.ptile .art-cool{width:60px;height:60px}
 
 /* the check-in's answer pictures, larger where the tiles and rows have the room */
 .tile .ic{width:44px;height:44px}

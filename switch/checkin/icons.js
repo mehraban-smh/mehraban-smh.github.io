@@ -118,6 +118,7 @@ const P = {
   wallCool:'<rect class="i-cf" x="2.5" y="3" width="19" height="18" rx="1"/><path class="i-brl" d="M2.5 9h19M2.5 15h19M8 3v6M16 3v6M12 9v6M5 15v6M19 15v6" stroke-width="1"/><path class="i-hd" d="M9.2 21.5v-8a1.3 1.3 0 0 1 2.6 0V9.8a1.3 1.3 0 0 1 2.6 0v.6a1.3 1.3 0 0 1 2.6 0v1a1.3 1.3 0 0 1 2.6 0v5.2c0 2.7-2 4.9-4.8 4.9zM9.2 17.2l-1.8-2a1.25 1.25 0 0 0-1.9 1.6l3.7 4.7"/><path class="i-c" d="M3.4 5h4.4M3.4 8h3" stroke-width="1.6"/>',
   wallNeutral:'<rect class="i-br" x="2.5" y="3" width="19" height="18" rx="1"/><path class="i-brl" d="M2.5 9h19M2.5 15h19M8 3v6M16 3v6M12 9v6M5 15v6M19 15v6" stroke-width="1"/><path class="i-hd" d="M9.2 21.5v-8a1.3 1.3 0 0 1 2.6 0V9.8a1.3 1.3 0 0 1 2.6 0v.6a1.3 1.3 0 0 1 2.6 0v1a1.3 1.3 0 0 1 2.6 0v5.2c0 2.7-2 4.9-4.8 4.9zM9.2 17.2l-1.8-2a1.25 1.25 0 0 0-1.9 1.6l3.7 4.7"/>',
   wallWarm:'<rect class="i-wf" x="2.5" y="3" width="19" height="18" rx="1"/><path class="i-brl" d="M2.5 9h19M2.5 15h19M8 3v6M16 3v6M12 9v6M5 15v6M19 15v6" stroke-width="1"/><path class="i-hd" d="M9.2 21.5v-8a1.3 1.3 0 0 1 2.6 0V9.8a1.3 1.3 0 0 1 2.6 0v.6a1.3 1.3 0 0 1 2.6 0v1a1.3 1.3 0 0 1 2.6 0v5.2c0 2.7-2 4.9-4.8 4.9zM9.2 17.2l-1.8-2a1.25 1.25 0 0 0-1.9 1.6l3.7 4.7"/><path class="i-w" d="M4.4 9.4c-1.2-1.4 1.2-2.1 0-3.6M7.4 9.4c-1.2-1.4 1.2-2.1 0-3.6" stroke-width="1.6"/>',
+  wallHot:'<rect class="i-wf" x="2.5" y="3" width="19" height="18" rx="1"/><path class="i-brl" d="M2.5 9h19M2.5 15h19M8 3v6M16 3v6M12 9v6M5 15v6M19 15v6" stroke-width="1"/><path class="i-hd" d="M9.2 21.5v-8a1.3 1.3 0 0 1 2.6 0V9.8a1.3 1.3 0 0 1 2.6 0v.6a1.3 1.3 0 0 1 2.6 0v1a1.3 1.3 0 0 1 2.6 0v5.2c0 2.7-2 4.9-4.8 4.9zM9.2 17.2l-1.8-2a1.25 1.25 0 0 0-1.9 1.6l3.7 4.7"/><path class="i-w" d="M4.4 9.4c-1.2-1.4 1.2-2.1 0-3.6M7.4 9.4c-1.2-1.4 1.2-2.1 0-3.6M10.4 7.6c-1.2-1.4 1.2-2.1 0-3.6" stroke-width="1.9"/>',
   wallFar:'<rect class="i-br" x="15" y="3" width="6.5" height="18" rx="1"/><path class="i-brl" d="M15 7.5h6.5M15 12h6.5M15 16.5h6.5M18 3v4.5M18 12v4.5" stroke-width="1"/><path class="i-hd" d="M2.5 21v-8.4a1.2 1.2 0 0 1 2.4 0V9.4a1.2 1.2 0 0 1 2.4 0v1.6a1.2 1.2 0 0 1 2.4 0v5.4c0 2.6-1.8 4.6-4.4 4.6z"/><path class="i-d" d="M10.5 12.5h3.5" stroke-dasharray="1.2 1.6"/><path d="M11 4l3 3M14 4l-3 3" stroke-width="1.5"/>',
   undo:'<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
   wifi:'<path d="M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0"/><path d="M12 19.5h.01"/>',
@@ -589,6 +590,7 @@ Q.wallCold = brickPanel + Pp('M3 22C7 21 8 15 12 16S18 10 22 9 30 6 34 3H8A5 5 0
 Q.wallCool = brickPanel + Pp('M3 14C6 13 8 10 11 10.6S16 7 18 3H8A5 5 0 0 0 3 8z', M.frost, '') + T('M6 7.4h6.4M6 11h3.6', M.cold, 1.8) + T('M36 40h6.4M38.6 36.4h3.6', M.cold, 1.8) + handArt;
 Q.wallNeutral = brickPanel + handArt;
 Q.wallWarm = brickPanel + R(3, 3, 42, 42, '#FFB15C', 5, '').replace('/>', ' opacity=".3"/>') + T('M7 15c-1.6-2 1.6-3 0-5s1.6-3 0-5M12 15c-1.6-2 1.6-3 0-5s1.6-3 0-5M37 43c-1.6-2 1.6-3 0-5s1.6-3 0-5M42 43c-1.6-2 1.6-3 0-5s1.6-3 0-5', M.flameD, 1.8) + handArt;
+Q.wallHot = brickPanel + R(3, 3, 42, 42, '#FF7A2E', 5, '').replace('/>', ' opacity=".55"/>') + T('M7 15c-1.6-2 1.6-3 0-5s1.6-3 0-5M12 15c-1.6-2 1.6-3 0-5s1.6-3 0-5M37 43c-1.6-2 1.6-3 0-5s1.6-3 0-5M42 43c-1.6-2 1.6-3 0-5s1.6-3 0-5', M.flameD, 2.4) + handArt;
 Q.wallFar = R(29, 3, 16, 42, M.brick, 4) + courses(29, 3, 16, 42, 6.8, 8, M.mortar, .9) + G('translate(-5 8.4) scale(.74)', handArt) +
   T('M20.6 22h5.4', M.metalD, 1.4).replace('/>', ' stroke-dasharray="1.4 1.8"/>') + Cc(23.6, 12, 4.4, M.paper) + T('M21.6 10l4 4M25.6 10l-4 4', M.bad, 1.8);
 /* what you did */
@@ -648,6 +650,208 @@ Q.socks = SH(24, 44, 16) + G('translate(-4 2) scale(1.6)', Pp('M9 3h6v9l3 3a3 3 
 Q.slippers = SH(24, 43, 18) + G('rotate(-8 15 25)', E(15, 25, 7.4, 15, '#A67C52') + E(15, 17, 6.6, 6.6, '#F1E6D0') + T('M10 15c1-.8 2-.8 3 0M14 13c1-.8 2-.8 3 0M17 16c1-.8 2-.8 3 0', '#D9CBB0', .9)) +
   G('rotate(8 33 25)', E(33, 25, 7.4, 15, '#A67C52') + E(33, 17, 6.6, 6.6, '#F1E6D0') + T('M28 15c1-.8 2-.8 3 0M32 13c1-.8 2-.8 3 0M35 16c1-.8 2-.8 3 0', '#D9CBB0', .9));
 Q.duvet = Q.bed;
+
+/* ---- 1.3: pictures for the join questions agreed after the November 2026 review ---- */
+const faded = s => `<g opacity=".45">${s}</g>`;
+/* "something else": three dots on a white badge, or a plus on the grey disc */
+const dotsBadge = (x, y, r=7) => Cc(x, y, r, M.paper) + [-1, 0, 1].map(i => Cc(x + i * r * .36, y, r * .13, INK, '')).join('');
+A['other:other'] = Cc(24, 24, 15, '#F3F5F8') + T('M24 15.6v16.8M15.6 24h16.8', INK, 2.2);
+const sunAt = (x, y, s) => G(`translate(${n1(x - 24 * s)} ${n1(y - 24 * s)}) scale(${s})`, Q.sun);
+const drop = (x, y, s=1, col='#7FC3F0') => Pp(`M${n1(x)} ${n1(y - 2.2 * s)}c${n1(s)} ${n1(1.3 * s)} ${n1(1.6 * s)} ${n1(2.2 * s)} ${n1(1.6 * s)} ${n1(2.9 * s)}a${n1(1.6 * s)} ${n1(1.6 * s)} 0 0 1-${n1(3.2 * s)} 0c0-${n1(.7 * s)} ${n1(.6 * s)}-${n1(1.6 * s)} ${n1(1.6 * s)}-${n1(2.9 * s)}z`, col);
+/* a wavy arrow (heat or air) from x0 to x1 along y; the head at x1 */
+const waveArrow = (x0, x1, y, col, w=1.8) => { const dir = x1 < x0 ? -1 : 1, n = Math.max(1, Math.round(Math.abs(x1 - x0) / 4)), st = (x1 - x0) / n; let d = `M${n1(x0)} ${y}`;
+  for(let i = 0; i < n; i++) d += `q${n1(st / 2)} ${i % 2 ? 2 : -2} ${n1(st)} 0`;
+  return T(d, col, w) + T(`M${n1(x1 - dir * 2.8)} ${n1(y - 2.6)}L${n1(x1)} ${y}l${n1(-dir * 2.8)} 2.6`, col, w); };
+/* arcs round cx cy (sound) between the angles a0 and a1 in degrees, 0 = right, -90 = up */
+const arcsAt = (cx, cy, radii, a0, a1, col, w=1.8) => T(radii.map(r => { const p = a => [n1(cx + Math.cos(a * Math.PI / 180) * r), n1(cy + Math.sin(a * Math.PI / 180) * r)];
+  const [x0, y0] = p(a0), [x1, y1] = p(a1); return `M${x0} ${y0}A${r} ${r} 0 0 1 ${x1} ${y1}`; }).join(''), col, w);
+
+/* about you: the same person from the waist up, face on. o.top/o.topD the top's colours; o.bare bare forearms (a T-shirt);
+ * o.arms 'down', 'hug' (hugging themselves) or 'fan'; o.face 'calm', 'smile', 'shiver' or 'hot'; o.scarf; o.knit a jumper's ribbing */
+const faceOf = k => {
+  const eyes = k === 'smile' ? T('M20.8 18.9q.8-.9 1.6 0M25.6 18.9q.8-.9 1.6 0', INK, 1) : Cc(21.6, 18.7, .62, INK, '') + Cc(26.4, 18.7, .62, INK, '');
+  const cheeks = c => E(19.9, 20.7, 1.4, .9, c, '') + E(28.1, 20.7, 1.4, .9, c, '');
+  if(k === 'smile') return eyes + cheeks('#F2B3A3') + T('M21.5 20.9q2.5 2.3 5 0', INK, 1);
+  if(k === 'shiver') return eyes + T('M20.5 17.6l1.9-.5M27.5 17.6l-1.9-.5', INK, .9) + T('M21.6 21.6l.8-.6.8.6.8-.6.8.6.8-.6.8.6', INK, .9);
+  if(k === 'hot') return eyes + cheeks('#EE8C7A') + E(24, 21.6, 1.2, 1, '#8E3B3B', '');
+  return eyes + T('M22.6 21.2q1.4.9 2.8 0', INK, .9);
+};
+const handFan = (px, py, r, a0, a1, col='#D84A3A') => { const p = a => `${n1(px + Math.cos(a * Math.PI / 180) * r)} ${n1(py + Math.sin(a * Math.PI / 180) * r)}`;
+  return Pp(`M${px} ${py}L${p(a0)}A${r} ${r} 0 0 1 ${p(a1)}z`, col) + T([1, 2, 3, 4].map(i => `M${px} ${py}L${p(a0 + (a1 - a0) * i / 5)}`).join(''), '#F4E3C2', .8); };
+const bust = (o={}) => {
+  const top = o.top || '#9DC3B5', topD = o.topD || '#7FA697', arm = o.bare ? M.skin : top, arms = o.arms || 'down';
+  const upper = (x, h) => R(x, 29.4, 5, h, arm, 2.5) + (o.bare ? Pp(`M${x} 34.8v-2.9a2.5 2.5 0 0 1 5 0v2.9z`, top) : '');
+  let s = SH(24, 43.6, 15, 1.4) + R(21.5, 21, 5, 7, M.skin, 1.2) + Pp('M13 43.4v-9.2c0-4.8 4.8-7.6 11-7.6s11 2.8 11 7.6v9.2z', top) + T('M20.4 27c2 1.8 5.2 1.8 7.2 0', topD, 1);
+  if(o.knit) s += T('M13.4 41.2h21.2', topD, 1.2) + T('M19 31.4v8.4M24 30.4v9.4M29 31.4v8.4', topD, .7, .7);
+  if(o.scarf) s += Pp('M18.2 24.6c3.4 2.6 8.2 2.6 11.6 0l.9 3.6c-4.2 2.8-9.2 2.8-13.4 0z', '#D84A3A') + T('M19.2 26.4c3 1.9 6.6 1.9 9.6 0', '#F4E3C2', 1.1);
+  if(arms === 'down') s += upper(9.6, 12.4) + upper(33.4, 12.4) + Cc(12.1, 41.6, 2.1, M.skin) + Cc(35.9, 41.6, 2.1, M.skin);
+  if(arms === 'hug') s += upper(9.6, 9.6) + upper(33.4, 9.6) + G('rotate(17.5 26.5 34)', R(16.1, 31.6, 20.8, 4.8, arm, 2.4)) + G('rotate(-17.5 21.5 34)', R(11.1, 31.6, 20.8, 4.8, arm, 2.4)) +
+    Cc(16.6, 30.6, 2.2, M.skin) + Cc(31.4, 30.6, 2.2, M.skin);
+  if(arms === 'fan') s += upper(9.6, 12.4) + Cc(12.1, 41.6, 2.1, M.skin) + upper(33.4, 9.6) + G('rotate(12 36 37)', R(33.8, 24, 4.6, 15, arm, 2.3)) +
+    handFan(38.4, 23, 8.4, -150, -85) + Cc(38.6, 24.6, 2.2, M.skin) + T('M42.4 13.6c1.2 1.6 1.2 3.6 0 5.2M44.6 12.4c1.6 2.2 1.6 5 0 7.2', '#A9B1B8', 1.2);
+  return s + G('translate(0 .8)', head(24, 16.6, 6.4, M.hair) + faceOf(o.face));
+};
+const tee = {top:'#7CB9E8', topD:'#5E9BCB', bare:true};
+A['feel_cold:more'] = bust({top:'#6B7A8F', topD:'#5A6779', arms:'hug', face:'shiver', scarf:true}) +
+  T('M6.4 27.4l-1.6 1.6 1.6 1.6-1.6 1.6 1.6 1.6M41.6 27.4l1.6 1.6-1.6 1.6 1.6 1.6-1.6 1.6', M.cold, 1.4) + T('M15.2 12.4c-1.2 1.6-1.2 3.8 0 5.4M32.8 12.4c1.2 1.6 1.2 3.8 0 5.4', M.cold, 1.4) +
+  snowflake(7.4, 8, .55) + snowflake(40.8, 8.6, .45);
+A['feel_cold:same'] = bust({face:'calm'}) + snowflake(40.4, 9, .42);
+A['feel_cold:less'] = bust(Object.assign({face:'smile'}, tee)) + snowflake(7.4, 8.4, .5) + snowflake(40.6, 7.4, .55) + snowflake(5, 21.4, .36) + snowflake(43, 20.6, .38);
+A['feel_warm:more'] = sunAt(9.4, 9.4, .48) + bust(Object.assign({arms:'fan', face:'hot'}, tee)) + drop(15.8, 20.8, .9) + drop(13.4, 26.2, .8) + drop(30.8, 9.4, .8);
+A['feel_warm:same'] = sunAt(40.4, 8.6, .3) + bust({face:'calm'});
+A['feel_warm:less'] = sunAt(39.8, 9, .42) + bust({top:'#C98A5B', topD:'#A86E44', knit:true, face:'smile'});
+
+/* the home: a car side on (16 x 8.5 at s = 1; x y its top left), facing right or, flip, left */
+const carSide = (x, y, s=1, col='#D84A3A', flip=false) => G(`translate(${n1(flip ? x + 16 * s : x)} ${n1(y)}) scale(${flip ? -s : s} ${s})`,
+  Pp('M.6 6.6V4c0-.8.4-1.1 1.2-1.1l2.6-.2L6.6.6C7 .2 7.2.2 7.8.2h3.8c.6 0 .8.1 1.1.5l1.6 2.1c1.2.2 1.6.6 1.6 1.4v2.4c0 .3-.2.4-.4.4H1c-.3 0-.4-.1-.4-.4z', col) +
+  Pp('M5.4 2.7L7.1 1h2.6v1.7z', M.glass, '') + Pp('M10.5 2.7V1h1.3l1.4 1.7z', M.glass, '') + T('M10.1 3v3.4', INK, .6, .5) + T('M2 4.2h12.6', '#FFFFFF', .8, .35) +
+  R(15, 3.8, .8, 1, M.lit, .3, '') + R(.6, 3.8, .7, 1, '#B8392B', .2, '') + [4, 12.4].map(wx => Cc(wx, 6.8, 1.7, M.iron) + Cc(wx, 6.8, .7, M.metal, '')).join(''));
+const roadStrip = (y, h, x0=1, x1=47) => R(x0, y, x1 - x0, h, '#757B81', .8) + T(Array.from({length: Math.floor((x1 - x0 - 2) / 7)}, (_, i) => `M${n1(x0 + 2 + i * 7)} ${n1(y + h / 2)}h3.6`).join(''), '#FFFFFF', 1.3);
+A['road:on'] = SH(24, 44.2, 22, 1.2) + smallHouse(13, 3, 22, M.teal) + R(1, 32, 46, 2.6, M.stone, .6) + roadStrip(34.6, 9.4) + carSide(2.6, 34.7, .92, M.navy) + carSide(27.4, 34.7, 1.05, '#D84A3A') +
+  T('M24.4 37.6h-3.6M25.2 40.4h-4.4', '#FFFFFF', 1, .7);
+A['road:near'] = SH(16, 43.4, 14) + R(1, 26.8, 46, 16.4, M.lawn, 1, '') + roadStrip(21.8, 5, 1, 47) + carSide(32.4, 20.8, .62, '#D84A3A') + smallHouse(5, 13, 22, M.teal) + bush(41, 41.2, 7);
+A['road:no'] = SH(22, 43.4, 20) + smallHouse(6, 13, 22, M.green) + tree(38.6, 26.4, 6.2) + bush(4.6, 41.4, 5) + ground(2, 46) + T('M30.4 40.4h.01M33 41.4h.01', '#F2C230', 2.2);
+A['road:unsure'] = unsureArt;
+A['home_type:other'] = faded(A['home_type:detached']) + dotsBadge(24, 26);
+
+/* the household: a calendar page (hl: the days marked) */
+const calPage = (x, y, w, h, hl=[]) => { const cw = (w - 5.2 - 4 * 1.3) / 5, chh = (h - 13.6 - 2 * 1.3) / 3;
+  return R(x, y, w, h, M.paper, 3) + R(x, y, w, 8, '#D84A3A', 3) + R(x, y + 5, w, 3, '#D84A3A', 0, '') + T(`M${x} ${y + 8}h${w}`, INK, .8) + R(x, y, w, h, 'none', 3) +
+    R(x + w * .22 - 1.2, y - 3, 2.4, 6, M.metalD, 1.2) + R(x + w * .78 - 1.2, y - 3, 2.4, 6, M.metalD, 1.2) +
+    Array.from({length: 15}, (_, i) => R(x + 2.6 + (i % 5) * (cw + 1.3), y + 11 + Math.floor(i / 5) * (chh + 1.3), cw, chh, hl.includes(i) ? '#FBD9A8' : '#EEF0F2', .8, hl.includes(i) ? OL : '')).join(''); };
+const suitcase = (x, y, w, h, col='#E8A33A', colD='#C98426') => R(x + w * .3 - .6, y - 6, 1.2, 6.4, M.metalD, 0) + R(x + w * .7 - .6, y - 6, 1.2, 6.4, M.metalD, 0) + R(x + w * .24, y - 7.4, w * .52, 1.8, M.iron, .9) +
+  R(x, y, w, h, col, 2.4) + T(`M${n1(x + w * .25)} ${y + 1.6}v${h - 3.2}M${n1(x + w * .5)} ${y + 1.6}v${h - 3.2}M${n1(x + w * .75)} ${y + 1.6}v${h - 3.2}`, colD, 1) + T(`M${x + 1.4} ${y + 2}v${h - 4}`, '#FFFFFF', 1, .4) +
+  Cc(x + 2.6, y + h + .8, 1.3, M.iron) + Cc(x + w - 2.6, y + h + .8, 1.3, M.iron);
+A['changes:no'] = SH(22, 43.4, 17) + calPage(5, 9, 32, 32) + tickBadge(37.4, 36.6, 7);
+A['changes:yes'] = SH(25, 43.6, 21) + calPage(3, 9, 30, 32, [6, 7, 8]) + suitcase(30, 25, 14, 16.4);
+/* the back door from inside: the wall round it, the frame, a half-glazed door; open: swung in, the garden outside, the dog going out */
+const dogSide = (x, y, s=1, col='#B07A48', colD='#7E5534') => G(`translate(${x} ${y}) scale(${s})`,
+  T('M2 4.4c-1.2-.8-1.6-2.4-1-3.8', col, 2) + R(3.6, 6, 1.5, 3, colD, .6) + R(8.6, 6, 1.5, 3, colD, .6) + R(1.4, 3.4, 9, 4, col, 2) + R(2, 6, 1.5, 3, col, .6) + R(7, 6, 1.5, 3, col, .6) +
+  Cc(10.6, 2.8, 2.4, col) + E(12.6, 3.7, 1.5, 1.1, col) + Cc(13.9, 3.4, .45, INK, '') + Cc(11.2, 2.2, .35, INK, '') + Pp('M9.4 1.2c-.9.2-1.5 1.6-1.1 3.1.7-.2 1.3-.9 1.5-1.8z', colD) + T('M9.2 4.6l.6 1.6', '#D84A3A', 1.2));
+const backDoor = open => { const dc = '#3E7D4E';
+  let s = SH(24, 43.8, 20, 1.2) + R(3, 3, 42, 39.4, '#EDE6DA', 2) + R(3, 41.6, 42, 1.8, M.oak, .6) + R(10, 6, 28, 36, M.white, .6);
+  if(!open) return s + R(12, 8, 24, 34, dc, .4) + R(14.6, 10.6, 18.8, 12.4, M.white) + R(15.6, 11.6, 16.8, 10.4, M.glass, 0, '') + T('M24 11.6v10.4M15.6 16.8h16.8', M.white, 1.4) +
+    T('M17 21l4-8.4M26 21l3.6-7.6', '#FFFFFF', 1, .8) + R(15.6, 11.6, 16.8, 10.4, 'none') + T('M15 26h18v12.6H15z', '#000000', .7, .25) + R(32.2, 25.6, 1.2, 4, '#C9A04A', .5) + R(28.6, 26.4, 4.6, 1.2, '#C9A04A', .5);
+  return s + R(12, 8, 24, 34, M.sky, 0, '') + R(12, 30, 24, 12, M.lawn, 0, '') + E(31, 30, 6, 3, M.leaf, '') + T('M14 30h22', M.leaf, 1) + R(12, 8, 24, 34, 'none', 0) +
+    Pp('M12 8l7.4-2.4v40.2L12 42z', dc) + Pp('M13.4 10.6l4.6-1.4v12l-4.6 1.2z', M.glass) + R(17.2, 26.4, .9, 3.4, '#C9A04A', .3) + dogSide(21.6, 32.4, 1.06);
+};
+A['pet_door:no'] = backDoor(false);
+A['pet_door:yes'] = backDoor(true);
+/* drying the washing: on the line in the garden, or on an airer indoors by the radiator */
+const shirt = (x, y, s, col) => G(`translate(${n1(x - 12 * s)} ${n1(y - 4 * s)}) scale(${s})`, Pp('M8 4l4 1.5L16 4l4 3-2 3-2-1v11H8V9l-2 1-2-3z', col));
+const peg = (x, y) => R(x - .5, y - 1.4, 1, 2.6, '#E3B23C', .3);
+A['drying:no'] = SH(24, 43.4, 21) + sunAt(24, 5, .2) + R(5, 9.4, 1.8, 33, M.woodD, .4) + R(41.2, 9.4, 1.8, 33, M.woodD, .4) + T('M6.8 11Q24 15 41.2 11', '#7A8794', 1) +
+  shirt(13, 12.2, .64, '#7CB9E8') + T('M10.8 14.6c1 .9 3.4.9 4.4 0', '#5E9BCB', .8) + R(18.8, 12.8, 6.8, 11.2, '#D84A3A', .5) + T('M18.8 21h6.8M18.8 22.4h6.8', '#F4E3C2', 1) +
+  G('translate(24.1 11.1) scale(.58)', Pp('M7 3h10l1 18h-5l-1-9-1 9H6z', '#4F6B8F')) + Pp('M35.6 11.8h2.2v4.4l1.6 1.2a1.1 1.1 0 0 1-1.4 1.7l-2.4-1.9z', '#E8A33A') +
+  peg(11, 12.3) + peg(15, 12.6) + peg(19.6, 12.9) + peg(24.8, 13) + peg(27.6, 12.9) + peg(34.6, 12.4) + peg(36.6, 12.1) + ground(2, 46) + bush(24, 41.4, 6);
+A['drying:yes'] = SH(26, 43.6, 20) + R(2, 4, 44, 36, '#F3EDE2', 2) + R(2, 38.4, 44, 4.8, M.oak, 1) + T('M2 40.8h44', M.woodD, .6, .6) + radiator(4.2, 19.6, 13, 13) + R(5.6, 32.6, 1.6, 6, M.metalD, 0) + R(14.4, 32.6, 1.6, 6, M.metalD, 0) +
+  T('M20.6 15.6L19 42.4M43.4 15.6L45 42.4', M.whiteDD, 2.6) + T('M20.6 15.6L19 42.4M43.4 15.6L45 42.4', M.white, 1.4) + R(19.6, 15, 24.8, 1.4, M.white, .7) + R(19.4, 27.4, 25.4, 1.4, M.white, .7) +
+  R(21.6, 15.6, 8, 10.6, '#7FA8D6', .5) + T('M21.6 24h8', '#FFFFFF', 1) + shirt(37, 15.6, .58, '#E8A33A') + R(22.4, 28, 4.6, 7, '#FBFBF9', .4) + Pp('M30 28h2v4.6l1.4 1a1 1 0 0 1-1.2 1.6l-2.2-1.6z', '#D84A3A') +
+  Pp('M35 28h2v4.6l1.4 1a1 1 0 0 1-1.2 1.6l-2.2-1.6z', '#D84A3A') + T('M24.6 12.6c-1.2-1.4 1.2-2.2 0-3.6M32.6 12.6c-1.2-1.4 1.2-2.2 0-3.6M38.6 12.6c-1.2-1.4 1.2-2.2 0-3.6', '#A9B1B8', 1.3);
+/* the energy tariff: a bill, a key meter, a clock with the cheap night hours */
+const pound = (x, y, s=1, col=INK, w=1.6) => G(`translate(${x} ${y}) scale(${s})`, T('M2.4-3.2C2-4.8-1-5.2-1.6-3c-.4 1.6.4 3.2.2 4.8C-1.6 3.2-2.2 4-3 4.4H3M-3.2.4h4.4', col, w));
+A['tariff:standard'] = SH(22, 43.6, 15) + Pp('M8 4h19l7 7v31H8z', M.paper) + Pp('M27 4v7h7z', M.whiteD) + Pp('M13 6.4l-2.6 4.2h2.2l-1.4 3.4 3.6-4.6h-2.2l1.4-3z', '#F2C230') +
+  T('M17 8.4h7.4M17 11h5', '#9AA4AD', 1) + T('M11.4 17.4h18.6M11.4 20.8h18.6M11.4 24.2h13M11.4 27.6h16', '#9AA4AD', 1) + R(11.4, 31, 12, 4.6, '#EEF0F2', .6) +
+  Cc(33.4, 34.4, 8, '#E3B23C') + Cc(33.4, 34.4, 6.2, 'none', ` stroke="#B88A1E" stroke-width=".8" vector-effect="non-scaling-stroke"`) + pound(33.4, 34.6, 1.05, '#7A5A14', 1.8);
+A['tariff:prepay'] = SH(22, 43.6, 16) + R(8, 4, 28, 38, '#ECE8DF', 3) + R(8, 37, 28, 5, '#D9D3C6', 2.4) + R(11.6, 7.6, 20.8, 9, M.screen, 1.2) + pound(16, 12.2, .62, M.screenL, 1.4) +
+  T('M20.4 9.8h2.6v4.6h-2.6zM24.8 9.8h2.6v4.6h-2.6zM29.2 9.8v4.6', M.screenL, 1.2) +
+  Array.from({length: 9}, (_, i) => R(12 + (i % 3) * 5.2, 20 + Math.floor(i / 3) * 4.6, 3.8, 3, i === 8 ? '#7BB662' : '#F8F6F1', .8)).join('') +
+  R(28.6, 21, 4.4, 9.4, '#D9D3C6', 1) + R(29.8, 22.6, 2, 6, M.iron, .5) + G('rotate(-90 30.8 25.6)', Pp('M29.4 25.6h2.8v6h1.6a3.4 3.4 0 0 1 0 6.8h-6a3.4 3.4 0 0 1 0-6.8h1.6z', '#2F7BD6') + Cc(30.8, 35, 1, '#ECE8DF') + R(29.8, 22.4, 2, 3.4, '#C9A04A', 0));
+A['tariff:time'] = (() => { const cx = 21, cy = 26.6, Rr = 15, pt = h => [n1(cx + Math.sin(h * Math.PI / 6) * Rr), n1(cy - Math.cos(h * Math.PI / 6) * Rr)];
+  const [x0, y0] = pt(0), [x1, y1] = pt(7);
+  return SH(21, 44.2, 12, 1.3) + Cc(cx, cy, Rr + 2.2, M.metalD) + Cc(cx, cy, Rr, M.paper) + Pp(`M${cx} ${cy}L${x0} ${y0}A${Rr} ${Rr} 0 1 1 ${x1} ${y1}z`, '#C9D3EE', '') +
+    Array.from({length: 12}, (_, i) => { const a = i * Math.PI / 6, r0 = i % 3 ? 13.2 : 11.8; return T(`M${n1(cx + Math.sin(a) * r0)} ${n1(cy - Math.cos(a) * r0)}L${n1(cx + Math.sin(a) * 14.2)} ${n1(cy - Math.cos(a) * 14.2)}`, INK, i % 3 ? .8 : 1.4); }).join('') +
+    T(`M${cx} ${cy}V${cy - 9.6}M${cx} ${cy}l${n1(Math.sin(2 * Math.PI / 6) * 6.4)} ${n1(-Math.cos(2 * Math.PI / 6) * 6.4)}`, INK, 1.6) + Cc(cx, cy, 1.3, INK, '') +
+    G('translate(31.4 -.6) scale(.34)', Q.moon); })();
+A['tariff:unsure'] = unsureArt;
+
+/* heating */
+A['heat:infrared'] = SH(24, 44.2, 18) + R(5, 5, 38, 14.6, M.white, 1.4) + R(6.8, 6.8, 34.4, 11, '#FCEBDD', .8, '') + T('M8.4 8.4h31.2', '#FFFFFF', 1.2, .9) + R(9, 3.6, 3, 1.6, M.metalD, .3) + R(36, 3.6, 3, 1.6, M.metalD, .3) +
+  Cc(39.6, 16.6, .7, '#D84A3A', '') + [10.4, 17.6, 24.8, 32, 39.2].map((x, i) => T(`M${x} 23c-1.6 1.6 1.6 3.2 0 4.8s1.6 3.2 0 4.8 1.6 3.2 0 4.8`, i % 2 ? M.flameD : M.heat, 1.8)).join('') +
+  '';
+A['heat:gas'] = A['heat:gas_combi']; A['heat:oil_lpg'] = A['heat:oil']; A['heat:heat_pump'] = A['heat:ashp'];
+A['pattern:unsure'] = unsureArt;
+A['other:fire'] = A['other:stove'];
+A['other:hot_water_bottle'] = SH(24, 44, 12) + G('rotate(-10 24 25) translate(0 -.6)',
+  Pp('M20.6 7.4H27.4V10.4C27.4 11.6 28 12.2 29.2 12.6L33.6 14C35 14.6 35.6 15.8 35.6 17.2V38C35.6 40.2 33.8 42 31.6 42H16.4C14.2 42 12.4 40.2 12.4 38V17.2C12.4 15.8 13 14.6 14.4 14L18.8 12.6C20 12.2 20.6 11.6 20.6 10.4Z', '#D8505E') +
+  R(15.6, 18, 16.8, 20.8, 'none', 2, ` stroke="#A83846" stroke-width=".9" vector-effect="non-scaling-stroke"`) + T(Array.from({length: 8}, (_, i) => `M17 ${n1(20.2 + i * 2.4)}h14`).join(''), '#B23E4C', 1) +
+  T('M14.8 19.4v17', '#FFFFFF', 1.4, .4) + R(19.8, 9.6, 8.4, 1.6, '#B23E4C', .6) + R(20.8, 2.6, 6.4, 5.6, M.iron, 1.2) + T('M22.6 3.6v3.6M24 3.6v3.6M25.4 3.6v3.6', M.ironL, .8));
+const folded = (x, y, w, h, col, colD, tex='') => R(x, y, w, h, col, 2.6) + T(`M${x + 2.6} ${n1(y + h * .38)}h${w - 5.2}`, colD, .8) + tex;
+A['other:blankets'] = SH(24, 43.6, 18) + folded(7, 34.4, 34, 8, '#7FA8D6', '#5F8CC0', T('M10 38h28', '#FFFFFF', 1, .5)) +
+  folded(8.6, 26.8, 31, 7.6, '#C94F3D', '#9C3B2E', T('M15 26.8v7.6M21 26.8v7.6M27 26.8v7.6M33 26.8v7.6M8.6 31.6h31', '#F4E3C2', .8, .7)) +
+  folded(6.4, 19.6, 33, 7.2, '#E8D9A6', '#C9B37A', T('M10 24.6h.01M14 24.6h.01M18 24.6h.01M22 24.6h.01M26 24.6h.01M30 24.6h.01M34 24.6h.01', '#B89F62', 1.6)) +
+  folded(10, 12.8, 28, 6.8, '#5E8C8A', '#4A7472', T('M13 17.2h22', '#8FB5B3', 1)) + T('M41 36v4M42.4 36.4v3.4M40.4 29v3.4M41.8 29.4v3', '#9C3B2E', .8, .8);
+A['other:curtains'] = SH(24, 44, 19) + R(8, 6, 32, 34, M.glass, 0) + R(4, 3.8, 40, 2.6, M.woodD, 1.2) + Cc(3.6, 5.1, 1.6, M.woodD) + Cc(44.4, 5.1, 1.6, M.woodD) +
+  Pp('M5.4 6.4h18.6v36H6.4C6.6 30 6.4 18 5.4 6.4z', '#8E3B4A') + Pp('M42.6 6.4H24v36h17.6c-.2-12 0-24 1-36z', '#8E3B4A') +
+  T('M9.4 7v35M13.6 7v35M18 7v35M38.6 7v35M34.4 7v35M30 7v35', '#6E2A37', 1) + T('M11.4 8v33M15.8 8v33M20.4 8v33M36.6 8v33M32.2 8v33M27.6 8v33', '#B0606E', .8, .6) +
+  T('M5.6 8.8q2 1.6 4 0t4 0 4 0 4 0 4 0M24.4 8.8q2 1.6 4 0t4 0 4 0 4 0 4 0', '#6E2A37', .8) + T('M24 6.4v36', INK, 1);
+/* windows opened: a casement from inside, the sash hinged on the left; aw how wide the open sash looks (iw: shut); out the view outside */
+const sashWin = (x, y, w, h, aw, out) => { const ix = x + 2.4, iy = y + 2.4, iw = w - 4.8, ih = h - 4.8, fx = ix + aw, dy = (iw - aw) * .18, lx = ix + 1.5, rx = fx - 1.5;
+  const tY = xx => iy + dy * (xx - ix) / aw, bY = xx => iy + ih + dy * 1.15 * (xx - ix) / aw;
+  return R(x, y, w, h, M.white, 1.2) + out + R(ix, iy, iw, ih, 'none', 0) +
+    Pp(`M${n1(ix)} ${n1(iy)}L${n1(fx)} ${n1(tY(fx))}V${n1(bY(fx))}L${n1(ix)} ${n1(iy + ih)}z`, M.white) +
+    Pp(`M${n1(lx)} ${n1(tY(lx) + 1.5)}L${n1(rx)} ${n1(tY(rx) + 1.5)}V${n1(bY(rx) - 1.5)}L${n1(lx)} ${n1(bY(lx) - 1.5)}z`, M.glass) +
+    T(`M${n1(lx + 1.2)} ${n1(bY(lx) - 4)}L${n1(Math.min(rx - 1, lx + aw * .5))} ${n1(tY(lx) + 6)}`, '#FFFFFF', 1.1, .8); };
+const stopwatch = (x, y, r, frac) => { const a = frac * 2 * Math.PI, ex = n1(x + Math.sin(a) * r), ey = n1(y - Math.cos(a) * r);
+  return R(x - 1.3, y - r - 3.6, 2.6, 2.6, M.metalD, .6) + Cc(x, y, r + 1.3, M.metalD) + Cc(x, y, r, M.paper) + Pp(`M${x} ${y}V${n1(y - r)}A${r} ${r} 0 ${frac > .5 ? 1 : 0} 1 ${ex} ${ey}z`, '#FBD9A8', '') +
+    T([0, 1, 2, 3].map(i => { const b = i * Math.PI / 2; return `M${n1(x + Math.sin(b) * r * .72)} ${n1(y - Math.cos(b) * r * .72)}L${n1(x + Math.sin(b) * r * .92)} ${n1(y - Math.cos(b) * r * .92)}`; }).join(''), INK, 1) +
+    T(`M${x} ${y}L${n1(x + Math.sin(a) * r * .78)} ${n1(y - Math.cos(a) * r * .78)}`, M.flameD, 1.6) + Cc(x, y, .9, INK, ''); };
+const sill = (x, y, w) => R(x, y, w, 2.2, M.white, .6);
+A['winopen:short'] = SH(22, 43.6, 17) + sashWin(7, 4, 30, 36, 18.4, R(9.4, 6.4, 25.2, 31.2, M.sky, 0, '') + R(9.4, 30, 25.2, 7.6, M.leaf, 0, '') + T('M33.4 14c-1.2 0-1.2 1.2-2.4 1.2M33.4 21c-1.2 0-1.2 1.2-2.4 1.2', M.cold, 1.3)) +
+  sill(5.4, 39.6, 33.2) + stopwatch(38.6, 35.6, 6.4, 10 / 60);
+A['winopen:long'] = SH(24, 43.8, 18) + sashWin(9, 4, 30, 36, 8, R(11.4, 6.4, 25.2, 31.2, M.sky, 0, '') + sunAt(29.4, 15.4, .32) + R(11.4, 30, 25.2, 7.6, M.leaf, 0, '')) + sill(7.4, 39.6, 33.2);
+A['winopen:night'] = SH(26, 43.8, 20) + sashWin(5, 3, 28, 32, 8, R(7.4, 5.4, 23.2, 27.2, M.night, 0, '') + G('translate(17.4 1.4) scale(.42)', Pp('M30 31A11 11 0 0 1 20.6 13a11 11 0 1 0 13.6 15 11 11 0 0 1-4.2 3z', '#F4E3A2')) +
+  Cc(19.6, 9, .7, '#FFFFFF', '') + Cc(29, 27, .6, '#FFFFFF', '') + Cc(20.6, 22.6, .55, '#FFFFFF', '') + Cc(28.4, 8.2, .5, '#FFFFFF', '')) + sill(3.4, 34.6, 31.2) +
+  R(44, 24, 2.6, 19.2, M.oak, 1) + R(35.4, 29.4, 9, 4.6, M.pillow, 2) + Pp('M18 34h26.2v8.6H19.4z', M.duvet) + T('M20 38.4h24', M.duvetD, .8) + R(18.6, 42.4, 25.6, 1, M.woodD, .4);
+/* what puts you off: the window in the house wall seen from outside; open: the casement pushed out, the warm room behind */
+const outWall = open => R(15.2, 2, 31.6, 1.8, M.slateD) + R(16, 3.6, 30, 37, M.render, 0) + T('M19 8h.01M44 12h.01M18.6 33h.01M43.4 35.6h.01M21 37.6h.01', M.renderD, 1.6) +
+  R(22.2, 7.2, 19.6, 1.4, M.stoneD) + (open ? R(23, 9, 18, 20, M.white, .5) + R(24.4, 10.4, 15.2, 17.2, M.roomD, 0, '') + Pp('M33 10.4h4.4l-1 2.4h-2.4z', '#F7D27A', '') + T('M35.2 10.4v-.01', INK, .8) +
+    R(24.4, 10.4, 15.2, 17.2, 'none', 0) + Pp('M24.4 10.4l6.2-1.6v21.6l-6.2-2.8z', M.white) + Pp('M25.6 12l3.8-1v17.4l-3.8-1.6z', M.glass) : win(23, 9, 18, 20)) + R(22, 29, 20, 1.8, M.stone);
+A['putoff:noise'] = SH(24, 44.2, 22, 1.2) + outWall(true) + roadStrip(38.2, 5.6) + carSide(2.4, 35, .95, '#D84A3A') + arcsAt(17, 36.4, [5, 9.4, 13.8], -78, -18, INK, 1.8);
+A['putoff:fumes'] = SH(24, 44.2, 22, 1.2) + outWall(true) + roadStrip(38.2, 5.6) + carSide(2.4, 35, .95, M.navy, true) + R(17.2, 40.2, 2.2, .9, M.metalD, .3) +
+  Cc(21, 38.6, 1.8, '#B8BEC4') + Cc(23.8, 34.8, 2.6, '#A9B1B8') + Cc(27.4, 29.8, 3.4, '#9AA1A8') + Cc(31.6, 24.6, 4, '#A9B1B8').replace('/>', ' opacity=".9"/>') + T('M26 29.4a2 2 0 0 1 2-1.6M30 24a2.6 2.6 0 0 1 2.4-2', '#FFFFFF', 1, .6);
+A['putoff:security'] = SH(24, 43.4, 18) + outWall(false) + R(1, 40.6, 46, 2.4, M.stoneD, .6) + lockBadge(39.6, 30.4);
+A['putoff:heat'] = SH(24, 43.4, 18) + outWall(true) + R(1, 40.6, 46, 2.4, M.stoneD, .6) + waveArrow(32, 6, 15, M.flameD) + waveArrow(32, 9.4, 22, M.heat) + snowflake(7.4, 31.4, .5) + snowflake(9.6, 5.8, .36);
+A['putoff:other'] = A['other:other']; A['putoff:none'] = noneArt;
+/* ventilation */
+A['vent:kitchen'] = SH(24, 44.2, 21) + R(4, 18, 40, 16.6, '#EEF2F3', 0, '') + T('M4 23.4h40M4 28.8h40M10 18v16.6M18 18v16.6M26 18v16.6M34 18v16.6M42 18v16.6', '#D3DCE0', .8) +
+  R(19.6, 1.4, 8.8, 7.6, M.steelD, .4) + T('M24 7.2V3.2M22.4 4.8L24 3.2l1.6 1.6', M.metalD, 1.2) + Pp('M8.4 15.8L15 8.6h18l6.6 7.2z', M.steel) + R(6.6, 15.6, 34.8, 2.6, M.steelD, .8) + Cc(14, 18.6, .6, M.lit, '') + Cc(34, 18.6, .6, M.lit, '') +
+  R(3, 34.4, 42, 2.2, M.stone, .6) + R(4, 36.6, 40, 6.6, M.white, .4) + T('M17.4 36.6v6.6M30.6 36.6v6.6', M.whiteDD, .8) + T('M14.8 38.2v2.6M20 38.2v2.6M33.2 38.2v2.6', M.metalD, 1.2) + R(9, 33.4, 30, 1.2, '#2B2F34', .4) +
+  Pp('M16.4 26.8h15.2v4.8a2 2 0 0 1-2 2H18.4a2 2 0 0 1-2-2z', M.steelD) + R(15.6, 25.8, 16.8, 1.6, M.steel, .8) + R(12.8, 27.6, 3.6, 1.4, M.iron, .7) + R(31.6, 27.6, 3.6, 1.4, M.iron, .7) +
+  T('M19.6 24.4c-1.4-1.4 1.4-2.2 0-3.6M24 24.4c-1.4-1.4 1.4-2.2 0-3.6M28.4 24.4c-1.4-1.4 1.4-2.2 0-3.6', '#A9B1B8', 1.4);
+A['vent:bathroom'] = R(3, 3, 42, 40, '#E8F1F4', 2) + T('M3 9.6h42M3 16.2h42M3 22.8h42M3 29.4h42M3 36h42M9.6 3v40M16.2 3v40M22.8 3v40M29.4 3v40M36 3v40', '#C9D6DC', .8) + R(3, 3, 42, 40, 'none', 2) +
+  Cc(24, 17, 10.4, M.white) + Cc(24, 17, 8, M.whiteD) + [6.4, 4.8].map(r => Cc(24, 17, r, 'none', ` stroke="${M.whiteDD}" stroke-width="1" vector-effect="non-scaling-stroke"`)).join('') +
+  T('M24 9.4v4M24 20.6v4M16.4 17h4M27.6 17h4', M.whiteDD, 1) + Cc(24, 17, 2.4, M.white) + T('M35 13.4v13', '#7A8794', .8) + Cc(35, 27.4, 1, M.white) +
+  T('M17 38.6c-1.6-1.6 1.6-2.6 0-4.2s1.6-2.6 0-4.2M24 39.4c-1.6-1.6 1.6-2.6 0-4.2s1.6-2.6 0-4.2M31 38.6c-1.6-1.6 1.6-2.6 0-4.2s1.6-2.6 0-4.2', '#9DB4C4', 1.4) +
+  T('M15.2 31.4l1.8-2.2 1.8 2.2M22.2 32.2l1.8-2.2 1.8 2.2M29.2 31.4l1.8-2.2 1.8 2.2', '#9DB4C4', 1.4);
+A['vent:trickle'] = SH(24, 44.4, 21, 1.2) + R(3, 4, 42, 39.4, M.white, 1.4) + R(7, 19, 34, 24.4, M.whiteD, 0) + R(9.4, 21.4, 29.2, 22, M.glass, 0, '') + T('M12 43l6-19M17 43l5.4-17', '#FFFFFF', 1.2, .8) +
+  T('M7 19h34M9.4 21.4h29.2', M.whiteDD, .8) + R(7, 8.2, 34, 6.4, M.whiteD, 3.2) + R(8.6, 9.6, 30.8, 3.6, '#F4F6F7', 1.8, '') +
+  T(Array.from({length: 12}, (_, i) => `M${n1(10.4 + i * 2.5)} 10.4v2`).join(''), '#5A6068', 1.2) + R(22, 8.8, 4, 5.2, M.whiteDD, 1) +
+  T('M13 16.6c-1.2 1.2 1.2 2 0 3.2M24 16.6c-1.2 1.2 1.2 2 0 3.2M35 16.6c-1.2 1.2 1.2 2 0 3.2', M.cold, 1.4);
+A['vent:whole_house'] = SH(24, 43.4, 19) + Pp('M3 17L24 4.6 45 17v25.4H3z', '#F3EDE2') + Pp('M1.6 17.6L24 4.4l22.4 13.2', 'none') +
+  [[2.2, 18.8], [2.2, 30.4], [35, 18.8], [35, 30.4]].map(([x, y]) => R(x, y, 11, 4, M.steelD, 1) + T([1, 2, 3, 4, 5].map(k => `M${n1(x + k * 1.8)} ${y}v4`).join(''), M.metal, .7)).join('') +
+  R(13, 14.6, 22, 23.6, M.white, 2.4) + Pp('M24 18.8l7 7-7 7-7-7z', '#E6EAED') + T('M20.5 22.3l7 7M27.5 22.3l-7 7', M.whiteDD, .9) + Cc(31.4, 35.6, .7, M.screenL, '') +
+  T('M3.4 15h7.2M8.4 12.8l2.4 2.2-2.4 2.2', M.cold, 1.8) + T('M10.8 37.4H3.6M6 35.2l-2.4 2.2 2.4 2.2', '#8C949B', 1.8) +
+  T('M37.2 15h7.2M42 12.8l2.4 2.2-2.4 2.2', M.flameD, 1.8) + T('M44.6 37.4h-7.2M39.8 35.2l-2.4 2.2 2.4 2.2', '#8C949B', 1.8);
+
+/* keeping cool */
+const thermoAt = (x, top, col) => SH(x, 44.4, 7, 1.2) + Pp(`M${x - 4} 8a4 4 0 0 1 8 0v20.4a8 8 0 1 1-8 0z`, M.paper) + R(x - 1.4, top, 2.8, 33 - top, col, 1.4, '') + Cc(x, 35, 5.4, col) +
+  T(`M${x + 4} 12h2.4M${x + 4} 16h1.6M${x + 4} 20h2.4M${x + 4} 24h1.6`, INK, .8) + T(`M${x - 2.4} 9v17`, '#FFFFFF', 1, .5);
+const CLOUD = 'M11 37a7 7 0 0 1-.6-14A10 10 0 0 1 29.6 20a7.6 7.6 0 0 1 8.4 7.6A5 5 0 0 1 37 37z';
+A['overheat:often'] = thermoAt(13, 9.4, '#D84A3A') + sunAt(33.6, 17, .6);
+A['overheat:sometimes'] = thermoAt(13, 19.4, '#E8862E') + G('translate(18.4 4.6) scale(.66)', Q.cloud);
+A['overheat:rarely'] = thermoAt(13, 27, M.cold) + G('translate(16.4 -1) scale(.72)', Pp(CLOUD, '#F3F5F8') + T('M14 33.4c4 1.2 12 1.2 20 0', '#C9D6E2', 1.2));
+A['cool:windows'] = Q.windowOpen; A['cool:fan'] = Q.fan; A['cool:lighter'] = Q.tshirt;
+A['cool:blinds'] = SH(22, 43.8, 18) + sunAt(38.4, 8.6, .44) + R(7, 5, 30, 36, M.white, 1.2) + R(9.4, 7.4, 25.2, 31.2, M.lit, 0, '') +
+  Array.from({length: 12}, (_, i) => R(9.4, 9.6 + i * 2.5, 25.2, 2.1, '#F1EBDD', .3, '')).join('') + T(Array.from({length: 12}, (_, i) => `M9.4 ${n1(11.7 + i * 2.5)}h25.2`).join(''), '#D9CDB1', .6) +
+  R(9.4, 7.4, 25.2, 31.2, 'none', 0) + R(8.4, 7, 27.2, 2.8, M.whiteD, .8) + T('M31.6 9.8v20', '#9AA4AD', .8) + R(30.8, 29.8, 1.6, 2.6, '#9AA4AD', .6) + sill(5.4, 40.6, 33.2);
+A['cool:ac'] = SH(24, 44.2, 16, 1.2) + Pp('M4 12a4 4 0 0 1 4-4h32a4 4 0 0 1 4 4v7.4c0 2.2-1.8 4-4 4H8c-2.2 0-4-1.8-4-4z', M.white) + T('M8 10.4h32', '#FFFFFF', 1.2) + R(6.4, 17.6, 35.2, 2.4, '#5A6068', 1.2) +
+  Pp('M7 20.2h34l-1.6 3H8.6z', M.whiteD) + R(30, 11.4, 8, 3.4, M.screen, .8) + T('M31.4 13.1h2.4M34.8 13.1h1.6', '#7FC3F0', 1.2) + Cc(27.6, 13.1, .6, '#7FC3F0', '') +
+  [11, 19, 27, 35].map(x => T(`M${x} 26.4c-1.4 1.6 1.4 2.8 0 4.4s1.4 2.8 0 4.4 1.4 2.8 0 4.4M${x - 2} 37.8l2 1.8 2-1.8`, M.cold, 1.8)).join('');
+A['cool:room'] = SH(22, 43.6, 21) + R(22, 4, 22, 39.4, M.white, .6) + R(24.4, 6.4, 17.2, 37, M.sky, 0, '') + R(24.4, 37.4, 17.2, 6, '#C3DCEC', 0, '') + R(28, 12, 7, 7, M.white, .4) + R(28.8, 12.8, 5.4, 5.4, M.glass, 0, '') +
+  T('M30.4 24.8c-1.2 0-1.2 1-2.4 1M36.4 28.4c-1.2 0-1.2 1-2.4 1', M.cold, 1.2) + R(24.4, 6.4, 17.2, 37, 'none', 0) + Pp('M41.6 6.4l-4.4 2.2v30.6l4.4 4.2z', M.oak) + Cc(38.4, 25, .6, '#F2C230', '') +
+  G('translate(-4.6 12.2) scale(.7)', Q.walk) + Pp('M4 9.6h17V6.8l5.4 4.4-5.4 4.4v-2.8H4z', M.cold);
+A['cool:other'] = A['other:other']; A['cool:none'] = noneArt;
 
 return { ART: A, PIC: Q, M, INK };
 })();
@@ -709,8 +913,15 @@ const GARMENTS = [
   {id:'socks',       n:'Socks',            clo:0.03, ic:'socks'},
   {id:'slippers',    n:'Slippers',         clo:0.03, ic:'slippers'},
   {id:'blanket',     n:'Blanket',          clo:0.60, ic:'blanket', est:true},
-  {id:'duvet',       n:'Duvet',            clo:2.00, ic:'bed',     est:true}
+  {id:'duvet',       n:'Duvet',            clo:2.00, ic:'bed',     est:true},
+  /* From 1.3 the check-in asks for one of four ready-made outfits instead (OUTFITS). look: the garments drawn on the
+   * avatar; clo: typical ASHRAE 55 ensembles, about 0.35, 0.55, 0.75 and 1.0 or more. */
+  {id:'outfit_vlight', n:'Very light', s:'A T-shirt with shorts, or a light dress',                         clo:0.35, look:['tshirt','shorts']},
+  {id:'outfit_light',  n:'Light',      s:'A T-shirt or thin top with trousers or a long skirt',             clo:0.55, look:['tshirt','trousers']},
+  {id:'outfit_medium', n:'Medium',     s:'A long-sleeved top or a light jumper with trousers',              clo:0.75, look:['long','trousers','socks']},
+  {id:'outfit_warm',   n:'Warm',       s:'A thick jumper or hoodie, several layers, or a blanket over you', clo:1.00, look:['jumper','joggers','socks','slippers']}
 ];
+const OUTFITS = ['outfit_vlight','outfit_light','outfit_medium','outfit_warm'];
 /* the clothing screen shows the garments in boxes; "pair" boxes sit side by side */
 const GARMENT_GROUPS = [
   {n:'Tops',                ic:'tshirt',  ids:['tshirt','long','jumper','hoodie']},
@@ -724,7 +935,7 @@ const cloOf = ids => Math.round((ids||[]).reduce((s,id)=>s+(GARMENTS.find(g=>g.i
 
 /* A friendly front-facing figure. Garments are drawn in wearing order with a soft outline so layers read clearly. */
 function avatar(ids){
-  ids = ids || [];
+  ids = (ids || []).flatMap(id => GARMENTS.find(g => g.id === id)?.look || [id]);   // an outfit (1.3) draws its garments
   const has = id => ids.includes(id);
   const O = 'stroke="#3B342E" stroke-opacity=".62" stroke-width="1.3" stroke-linejoin="round"';
   const tex = (d, c, w=1.4, o=.5) => `<path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-opacity="${o}" stroke-linecap="round"/>`;

@@ -87,7 +87,7 @@ a{color:var(--accent);font-weight:700}
 /* anything that should stretch to the bottom of the screen */
 .fill{flex:1;min-height:0}
 /* scale colour for tinted tiles and rows */
-.t-cold{--sc:var(--c-3)} .t-cool{--sc:var(--c-1)} .t-mild{--sc:var(--c0)} .t-hot{--sc:var(--c3)} .t-good{--sc:var(--good)} .t-bad{--sc:var(--bad)}
+.t-cold{--sc:var(--c-3)} .t-cool{--sc:var(--c-1)} .t-mild{--sc:var(--c0)} .t-hot{--sc:var(--c3)} .t-warm{--sc:var(--c1)} .t-good{--sc:var(--good)} .t-bad{--sc:var(--bad)}
 /* tiles */
 .tiles{display:grid;gap:8px}
 .tiles.c2{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -130,6 +130,32 @@ a{color:var(--accent);font-weight:700}
 .row.tall b{font-size:1.12rem;line-height:1.2}
 .row.tall span{font-size:.88rem;margin-top:2px}
 .row.tall.on .orb{background:var(--card)}
+/* the join wizard (1.3): a question asked row by row (windows, vents), the consent statements, typed notes, the heating times */
+.gq{display:flex;flex-direction:column;gap:8px}
+.gq-row{border:1.5px solid var(--line);border-radius:16px;background:var(--card);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.gq-h{display:flex;align-items:center;gap:10px;text-align:left}
+.gq-h > span{flex:1;min-width:0}
+.gq-h .art{width:46px;height:46px;flex:none}
+.gq-h b{font-size:.98rem;line-height:1.25}
+.gq-h small{display:block;color:var(--muted);font-size:.82rem}
+.gq-opts{display:grid;gap:6px;grid-template-columns:repeat(var(--n),minmax(0,1fr))}
+.gq-opts button{border:1.5px solid var(--line);border-radius:12px;background:var(--card2);padding:8px 4px;font-size:.82rem;font-weight:600;line-height:1.2;color:var(--text);min-height:42px;text-align:center}
+.gq-opts button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.consent{display:flex;flex-direction:column;gap:8px}
+.consent button{display:flex;gap:10px;align-items:flex-start;text-align:left;border:1.5px solid var(--line);border-radius:14px;background:var(--card);padding:10px 12px;font-size:.92rem;line-height:1.35;color:var(--text);width:100%}
+.consent button .box{flex:none;width:22px;height:22px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;margin-top:1px}
+.consent button.on{border-color:var(--accent)}
+.consent button.on .box{background:var(--accent);border-color:var(--accent);color:#fff}
+.consent .box .ic{width:16px;height:16px}
+.chip.pns{margin-top:6px;align-self:flex-start}
+.note-in{margin-top:10px}
+.htimes{display:grid;grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr);gap:8px 10px;align-items:center}
+.htimes b{font-size:.92rem}
+.dial-f{display:block}
+/* the clothing question (1.3): an outfit per row, its figure in a tall rounded box, the clo value at the end */
+.row.tall.outfit .orb{width:50px;height:64px;border-radius:16px}
+.row.tall.outfit .orb svg{height:58px;width:auto;display:block}
+.row.tall.outfit small{margin-left:auto;padding-left:8px;font-size:.78rem;color:var(--muted);white-space:nowrap}
 /* multiple choice rows: a tick at the end when chosen */
 .row.mrow{min-height:52px;padding:10px 14px;gap:12px}
 .row.mrow .ic{width:26px;height:26px}
@@ -536,7 +562,7 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 .msg.warn .ic{color:var(--warn)}
 .opt{font-weight:600;color:var(--muted)}
 /* the join wizard */
-.reg-track{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:4px;flex:none}
+.reg-track{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:3px;flex:none}   /* 11 steps from 1.3 */
 .reg-track li{display:grid;place-items:center;height:30px;border-radius:10px;background:var(--card2);color:var(--muted)}
 .reg-track li .ic{width:16px;height:16px}
 .reg-track li.ok{background:var(--accent-soft);color:var(--accent)}

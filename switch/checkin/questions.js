@@ -22,7 +22,12 @@ const ROOMS = [
   {id:'living',n:'Living room',ic:'sofa',main:true},{id:'bedroom',n:'Bedroom',ic:'bed',main:true},{id:'kitchen',n:'Kitchen',ic:'pan'},
   {id:'office',n:'Home office',ic:'laptop'},{id:'bathroom',n:'Bathroom',ic:'bath'},{id:'other',n:'Elsewhere',ic:'door'}
 ];
-const TP  = [{id:'cooler',n:'Cooler',ic:'snow',cls:'cold'},{id:'same',n:'No change',ic:'check'},{id:'warmer',n:'Warmer',ic:'flame',cls:'hot'}];
+/* Five points from 1.3: "cooler" and "warmer" (plain Cooler / Warmer before 1.3) read "A bit cooler" and "A bit warmer",
+ * with "Much cooler" and "Much warmer" around them; all five fold back into ASHRAE's three points. */
+const TP  = [
+  {id:'much_cooler',n:'Much cooler',ic:'snow',cls:'cold'},{id:'cooler',n:'A bit cooler',ic:'snow',cls:'cool'},{id:'same',n:'No change',ic:'check'},
+  {id:'warmer',n:'A bit warmer',ic:'flame',cls:'warm'},{id:'much_warmer',n:'Much warmer',ic:'flame',cls:'hot'}
+];
 /* Binary thermal acceptability of the environment as a whole */
 const TA  = [
   {id:'acceptable',  n:'Acceptable',     s:'I can stay like this',  ic:'up',   cls:'good'},
@@ -61,7 +66,8 @@ const WALL = [
   {id:'cold',     n:'Cold',                  ic:'wallCold',    cls:'cold'},
   {id:'cool',     n:'Cool',                  ic:'wallCool',    cls:'cool'},
   {id:'neutral',  n:'Neither cold nor warm', ic:'wallNeutral', cls:'mild'},
-  {id:'warm',     n:'Warm',                  ic:'wallWarm',    cls:'hot'}
+  {id:'warm',     n:'Warm',                  ic:'wallWarm',    cls:'warm'},
+  {id:'hot',      n:'Hot',                   ic:'wallHot',     cls:'hot'}     // from 1.3: two warm answers balance the two cold ones
 ];
 /* What the participant DID in the last 30 minutes (not how things are now). Shown as boxes (window, door,
  * heating, clothes and blankets) and rows on their own; within a box the two sides of a pair exclude each
@@ -70,18 +76,19 @@ const ACTIONS = [
   {id:'win_open',  n:'Opened a window', q:'I opened a window',  ic:'windowOpen'}, {id:'win_close',  n:'Closed a window', q:'I closed a window', ic:'window'},
   {id:'door_open', n:'Opened a door',   q:'I opened a door',    ic:'doorOpen'},   {id:'door_close', n:'Closed a door',   q:'I closed a door',   ic:'door'},
   {id:'heat_up',   n:'Turned the heating up', q:'I turned the heating up', ic:'heatUp'}, {id:'heat_down', n:'Turned the heating down or off', q:'I turned the heating down or off', ic:'heatDown'},
-  {id:'layer_on',  n:'Put on a layer',  q:'I put on a layer',   ic:'layerOn'}, {id:'layer_off', n:'Took off a layer', q:'I took off a layer', ic:'layerOff'}, {id:'blanket', n:'Got a blanket', q:'I got a blanket', ic:'blanket'},
+  {id:'layer_on',  n:'Put on more clothes or a blanket', q:'I put on more clothes or a blanket', ic:'layerOn'}, {id:'layer_off', n:'Took off some clothes', q:'I took off some clothes', ic:'layerOff'}, {id:'blanket', n:'Got a blanket', q:'I got a blanket', ic:'blanket'},
   {id:'fan',       n:'Turned a fan on', q:'I turned a fan on',  ic:'fan'},
-  {id:'curtains',  n:'Drew the curtains or blinds', q:'I drew the curtains or blinds', ic:'curtain'},
+  {id:'curtains',  n:'Closed the curtains or blinds', q:'I closed the curtains or blinds', ic:'curtain'},
   {id:'moved',     n:'Moved to another room', q:'I moved to another room', ic:'walk'}
 ];
+/* From 1.3 the question offers eight of these and "none": the door pair, "Got a blanket" (now part of layer_on) and
+ * "Moved to another room" are no longer asked. They stay in ACTIONS so older check-ins keep their words. */
 const ACTION_BOXES = [
   {n:'Window',               ic:'window',   ids:['win_open','win_close']},
-  {n:'Door',                 ic:'door',     ids:['door_open','door_close']},
   {n:'Heating',              ic:'radiator', ids:['heat_up','heat_down']},
-  {n:'Clothes and blankets', ic:'layerOn',  ids:['layer_on','layer_off','blanket']}
+  {n:'Clothes and blankets', ic:'layerOn',  ids:['layer_on','layer_off']}
 ];
-const ACTION_SOLO = ['fan','curtains','moved'];
+const ACTION_SOLO = ['fan','curtains'];
 const PAIRED = { win_open:'win_close', win_close:'win_open', door_open:'door_close', door_close:'door_open', heat_up:'heat_down', heat_down:'heat_up', layer_on:'layer_off', layer_off:'layer_on' };
 /* Also the last 30 minutes: drinks and food in boxes, two rows on their own (any number may be chosen). */
 const NOTES = [
@@ -89,8 +96,9 @@ const NOTES = [
   {id:'ate',n:'Ate something',q:'I ate something',ic:'fork'}, {id:'hungry',n:'Felt hungry',q:'I felt hungry',ic:'apple'},
   {id:'tired',n:'Felt tired',q:'I felt tired',ic:'zzz'}, {id:'unwell',n:'Felt unwell',q:'I felt unwell',ic:'unwell'}
 ];
-const NOTE_BOXES = [{n:'Drinks', ic:'mug', ids:['hot_drink','cold_drink']}, {n:'Food', ic:'fork', ids:['ate','hungry']}];
-const NOTE_SOLO = ['tired','unwell'];
+/* From 1.3 "Felt hungry" and "Felt tired" are no longer asked (kept in NOTES for older check-ins). */
+const NOTE_BOXES = [{n:'Drinks', ic:'mug', ids:['hot_drink','cold_drink']}];
+const NOTE_SOLO = ['ate','unwell'];
 
 /* Every check-in asks these, in this order, all unanswered at the start: 12 questions, 13 when the heating is on (how
  * long it has been on, heat_for). Which heating is on (heat_src, 1.0 and 1.1) and the thermostat reading (1.0) are no
@@ -147,18 +155,14 @@ const Q = {
   tp: () => qhead(tr('Preference'), tr('Would you like to be&hellip;')) +
     `<div class="rows fill" role="radiogroup" aria-label="${tr('Would you like to be')}">${TP.map(o=>tallRow('tp',o,S.a.tp===o.id)).join('')}</div>`,
   /* two tall rows (like the preference screen), tinted green and red */
-  ta: () => qhead(tr('Acceptability'), tr('Are these conditions acceptable to you?'), tr('The thermal environment as a whole.')) +
+  ta: () => qhead(tr('Acceptability'), tr('Is the temperature here acceptable to you right now?'), tr('Whether or not you feel too warm or too cold.')) +
     `<div class="rows fill" role="radiogroup" aria-label="${tr('Acceptability')}">${TA.map(o=>tallRow('ta',o,S.a.ta===o.id)).join('')}</div>`,
+  /* From 1.3: four ready-made outfits (OUTFITS in icons.js), one tap; stored as garments [the outfit id] and its clo */
   clo: () => {
-    const ids = S.a.clo || [], last = lastVote();
-    const lastIds = last && (last.garments || []).filter(id => byId(GARMENTS, id));
-    const lastBtn = lastIds && lastIds.length && !sameSet(lastIds, ids)
-      ? `<button class="chip" data-act="lastclo">${ic('refresh')}${tr('Same as last time')}</button>` : '';
-    const pair = k => `<div class="gpair">${GARMENT_GROUPS.filter(g => g.pair === k).map(g => gbox(g, ids)).join('')}</div>`;
-    return qhead(tr('Clothing'), tr('What are you wearing?'), tr('Tap everything you have on, blankets too.')) +
-      `<div class="dressing">${avatar(ids)}<div class="side"><div class="clo" aria-live="polite"><b>${cloOf(ids).toFixed(2)}</b><span>${tr('clo insulation')}</span></div>${lastBtn}<p class="note">${tr('Values follow ASHRAE 55 and ISO 7730. Blanket and duvet are estimates.')}</p></div></div>` +
-      `<div class="gboxes">${gbox(GARMENT_GROUPS[0], ids)}${gbox(GARMENT_GROUPS[1], ids)}${pair(1)}${pair(2)}</div>` +
-      nextBtn(ids.length>0);
+    const cur = (S.a.clo || [])[0];
+    return qhead(tr('Clothing'), tr('How warmly are you dressed right now?'), tr('Choose the closest match. Any style of clothing counts (for example, a sari or a shalwar kameez): just think about how warm it is overall.')) +
+      `<div class="rows fill" role="radiogroup" aria-label="${tr('Clothing')}">${OUTFITS.map(id => { const g = byId(GARMENTS, id), on = cur === id;
+        return `<button class="row tall outfit ${on?'on':''}" role="radio" aria-checked="${on}" data-act="pick" data-q="clo" data-v="${id}"><span class="orb">${avatar([id])}</span><div><b>${g.n}</b><span>${g.s}</span></div><small>${g.clo.toFixed(2)} clo</small></button>`; }).join('')}</div>`;
   },
   act: () => qhead(tr('Activity'), tr('What have you been doing for the last 15 minutes?')) +
     `<div class="tiles c2 fill" role="radiogroup" aria-label="${tr('Activity')}">${ACTS.map(o=>tile('act',o,S.a.act===o.id,`<small>${o.met.toFixed(1)} met</small>`)).join('')}</div>`,
@@ -193,6 +197,7 @@ const Q = {
  * Every value is stored as listed (participants columns, or participants.home). Labels n, hints h; k is a
  * shorter name where one is shown in a summary. */
 const GENDERS = [{id:'woman',n:'Woman'},{id:'man',n:'Man'},{id:'non_binary',n:'Non-binary'},{id:'self_describe',n:'Another identity'},{id:'prefer_not',n:'Prefer not to say'}];
+/* asked until 1.2 (one question); from 1.3 two questions, FEEL below, and the column keeps one word made from them */
 const SENSITIVITY = [
   {id:'cold',    n:'I feel the cold easily',  ic:'snow', cls:'cold'},
   {id:'average', n:'I&rsquo;m about average', ic:'leaf'},
@@ -200,7 +205,8 @@ const SENSITIVITY = [
 ];
 const HOME_TYPES = [
   {id:'detached',    n:'Detached'}, {id:'semi', n:'Semi-detached'}, {id:'end_terrace', n:'End of terrace'},
-  {id:'mid_terrace', n:'Terraced', h:'Mid-terrace'}, {id:'bungalow', n:'Bungalow'}, {id:'flat', n:'Flat or maisonette'}
+  {id:'mid_terrace', n:'Terraced', h:'Mid-terrace'}, {id:'bungalow', n:'Bungalow'}, {id:'flat', n:'Flat or maisonette'},
+  {id:'other',       n:'Something else'}   // 1.3, with home_type_other (typed)
 ];
 const FLAT_POS = [{id:'basement',n:'Basement'},{id:'ground',n:'Ground floor'},{id:'middle',n:'A middle floor'},{id:'top',n:'Top floor'}];
 const TENURE = [
@@ -215,36 +221,49 @@ const YEAR_BUILT = [
   {id:'pre1919',n:'Before 1919'},{id:'1919_1944',n:'1919–1944'},{id:'1945_1964',n:'1945–1964'},{id:'1965_1982',n:'1965–1982'},
   {id:'1983_2002',n:'1983–2002'},{id:'2003_plus',n:'2003 or later'},{id:'unsure',n:'Not sure'}
 ];
-const FLOORS = [{id:1,n:'1',h:'floor'},{id:2,n:'2',h:'floors'},{id:3,n:'3',h:'floors'},{id:4,n:'4+',h:'or more'}];
-const BEDROOMS = [0,1,2,3,4,5,6].map(n => ({ id:n, n: n === 6 ? '6+' : String(n) }));
+/* old: kept so older answers keep their words, never offered (pick1 and the bedroom row skip them); from 1.3 floors stop at
+ * "3 or more" and bedrooms at "4+" */
+const FLOORS = [{id:1,n:'1',h:'floor'},{id:2,n:'2',h:'floors'},{id:3,n:'3+',h:'or more'},{id:4,n:'4+',h:'or more',old:true}];
+const BEDROOMS = [0,1,2,3,4,5,6].map(n => ({ id:n, n: n === 4 ? '4+' : n === 6 ? '6+' : String(n), old: n > 4 }));
 const EPC = ['A','B','C','D','E','F','G'].map(x => ({ id:x, n:x })).concat([{ id:'unsure', n:'I don&rsquo;t know' }]);
 const BED_SHARE = [{id:0,n:'Just me'},{id:1,n:'1 other person'},{id:2,n:'2 others'},{id:3,n:'3 or more'}];
 const MAIN_HEATING = [
-  {id:'gas_combi', n:'Gas boiler, no hot water tank', h:'A combi boiler', k:'Gas boiler'},
-  {id:'gas_tank',  n:'Gas boiler with a hot water tank', k:'Gas boiler'},
-  {id:'oil',       n:'Oil boiler'},
-  {id:'lpg',       n:'LPG boiler'},
-  {id:'ashp',      n:'Air source heat pump', k:'Heat pump'},
-  {id:'gshp',      n:'Ground source heat pump', k:'Heat pump'},
+  {id:'gas',       n:'Gas boiler'},
+  {id:'oil_lpg',   n:'Oil or LPG boiler'},
+  {id:'heat_pump', n:'Heat pump', h:'Air source or ground source'},
   {id:'storage',   n:'Electric storage heaters', k:'Storage heaters'},
   {id:'electric',  n:'Electric radiators or panel heaters', k:'Electric radiators'},
-  {id:'communal',  n:'Communal or district heating', k:'Communal heating'},
-  {id:'solid',     n:'Solid fuel', h:'Coal or wood', k:'Solid fuel'},
+  {id:'infrared',  n:'Infrared heating panels', k:'Infrared panels'},
+  {id:'communal',  n:'Communal or district heating', h:'Shared by several homes', k:'Communal heating'},
+  {id:'solid',     n:'Wood, coal or another solid fuel', k:'Solid fuel'},
   {id:'none',      n:'No central heating'},
-  {id:'unsure',    n:'Not sure'}
+  {id:'unsure',    n:'Not sure'},
+  /* asked until 1.2 (1.3 groups them as above) */
+  {id:'gas_combi', n:'Gas boiler, no hot water tank', h:'A combi boiler', k:'Gas boiler', old:true},
+  {id:'gas_tank',  n:'Gas boiler with a hot water tank', k:'Gas boiler', old:true},
+  {id:'oil',       n:'Oil boiler', old:true},
+  {id:'lpg',       n:'LPG boiler', old:true},
+  {id:'ashp',      n:'Air source heat pump', k:'Heat pump', old:true},
+  {id:'gshp',      n:'Ground source heat pump', k:'Heat pump', old:true}
 ];
+/* From 1.3 "Do you use anything else to keep warm?" (the same key, other_heaters) */
 const OTHER_HEATERS = [
-  {id:'plugin',n:'Plug-in electric heater', k:'Plug-in heater'}, {id:'gas_fire',n:'Gas fire'}, {id:'electric_fire',n:'Electric fire'},
-  {id:'stove',n:'Wood burner or multi-fuel stove', k:'Wood burner or stove'}, {id:'open_fire',n:'Open fire'}, {id:'electric_blanket',n:'Electric blanket'},
-  {id:'none',n:'None of these'}
+  {id:'plugin',n:'Plug-in electric heater', k:'Plug-in heater'}, {id:'fire',n:'Fire or stove', h:'Gas, electric, wood or coal', k:'Fire or stove'},
+  {id:'electric_blanket',n:'Electric blanket'}, {id:'hot_water_bottle',n:'Hot water bottle'}, {id:'blankets',n:'Extra blankets or throws', k:'Extra blankets'},
+  {id:'curtains',n:'Closing curtains or blinds', h:'To keep the heat in', k:'Closing curtains'}, {id:'other',n:'Something else'},
+  {id:'none',n:'No, nothing else', k:'Nothing else'},
+  /* asked until 1.2 */
+  {id:'gas_fire',n:'Gas fire', old:true}, {id:'electric_fire',n:'Electric fire', old:true},
+  {id:'stove',n:'Wood burner or multi-fuel stove', k:'Wood burner or stove', old:true}, {id:'open_fire',n:'Open fire', old:true}
 ];
 const HEAT_PATTERN = [
-  {id:'always_on',   n:'Always on: the thermostat turns it on and off', h:'Set to a temperature and I rarely touch it', ic:'stat'},
-  {id:'timer',       n:'On a timer at set times', ic:'clock'},
+  {id:'always_on',   n:'It stays on and the thermostat turns it on and off', ic:'stat'},
+  {id:'timer',       n:'It comes on at set times', h:'On a timer', ic:'clock'},
   {id:'when_needed', n:'I switch it on when I need it', ic:'power'},
-  {id:'most_day',    n:'On most of the day', ic:'sun'},
+  {id:'most_day',    n:'It&rsquo;s on for most of the day', ic:'sun'},
   {id:'rarely',      n:'I rarely use it', ic:'moon'},
-  {id:'not_me',      n:'Someone else controls it', ic:'users'}
+  {id:'unsure',      n:'Not sure', ic:'help'},
+  {id:'not_me',      n:'Someone else controls it', ic:'users', old:true}   // until 1.2
 ];
 /* 1.0 also asked how energy is paid for (payment), whether the thermostat shows the room temperature
  * (stat_display) and whether the bedroom radiator has a dial (bedroom_trv). They are no longer asked; answers
@@ -265,7 +284,8 @@ const WALL_INS = [
   {id:'unsure',   n:'Not sure',                 h:'A guess is fine'}
 ];
 const LOFT = [{id:'yes',n:'Yes',h:'A thick soft layer up there'},{id:'no',n:'No',h:'Bare boards or a thin layer'},{id:'no_loft',n:'No loft',h:'e.g. a flat below another home'},{id:'unsure',n:'Not sure',h:'A guess is fine'}];
-const GLAZING = [{id:'single',n:'Single',h:'One sheet of glass'},{id:'double',n:'Double',h:'Two sheets, a gap between'},{id:'triple',n:'Triple',h:'Three sheets'},{id:'mixed',n:'A mix',h:'Some of each'},{id:'unsure',n:'Not sure',h:'A guess is fine'}];
+/* "A mix" until 1.2; from 1.3 a mix goes in the notes (glazing_notes) */
+const GLAZING = [{id:'single',n:'Single',h:'One sheet of glass'},{id:'double',n:'Double',h:'Two sheets, a gap between'},{id:'triple',n:'Triple',h:'Three sheets'},{id:'mixed',n:'A mix',h:'Some of each',old:true},{id:'unsure',n:'Not sure',h:'A guess is fine'}];
 const WINDOWS_OPEN = [{id:'yes',n:'Yes, all of them',h:'Every window opens'},{id:'some',n:'Some of them',h:'Some are stuck or fixed'},{id:'no',n:'No',h:'Sealed or stuck shut'}];
 const DAMP = [
   {id:'bedroom',n:'Bedroom'},{id:'living',n:'Living room'},{id:'kitchen',n:'Kitchen'},{id:'bathroom',n:'Bathroom'},
@@ -274,6 +294,48 @@ const DAMP = [
 const FACING = [
   {id:'N',n:'North'},{id:'NE',n:'North-east'},{id:'E',n:'East'},{id:'SE',n:'South-east'},
   {id:'S',n:'South'},{id:'SW',n:'South-west'},{id:'W',n:'West'},{id:'NW',n:'North-west'}
+];
+/* ---- 1.3: the rest of the Home Visit Questionnaire (v2, November 2026). Stored in participants.home under the key
+ * named here; art: the picture key (icons.js). ---- */
+/* compared with most people, how easily do you feel cold (feel_cold) / too warm (feel_warm) */
+const FEEL = [{id:'more',n:'More easily'},{id:'same',n:'About the same'},{id:'less',n:'Less easily'}];
+const MAIN_ROAD = [{id:'on',n:'Yes, on a main road'},{id:'near',n:'Yes, near a main road'},{id:'no',n:'No'},{id:'unsure',n:'Not sure'}];
+/* changes during the study, an outside door for pets, drying clothes indoors */
+const YES_NO = [{id:'no',n:'No'},{id:'yes',n:'Yes'}];
+const TARIFF = [
+  {id:'standard',n:'Standard',art:'tariff:standard'}, {id:'prepay',n:'Prepayment',art:'tariff:prepay'},
+  {id:'time_of_use',n:'Cheaper at certain times of day',h:'For example Economy 7',art:'tariff:time'}, {id:'unsure',n:'Not sure',art:'tariff:unsure'}
+];
+/* how often (windows opened each way, the home too warm) */
+const FREQ = [{id:'often',n:'Often'},{id:'sometimes',n:'Sometimes'},{id:'rarely',n:'Rarely or never'}];
+/* one key each: window_short, window_long, window_night (FREQ) */
+const WINDOW_WAYS = [
+  {id:'window_short',n:'For a few minutes, to let fresh air in',art:'winopen:short'},
+  {id:'window_long', n:'For an hour or more during the day',art:'winopen:long'},
+  {id:'window_night',n:'Overnight in the bedroom',art:'winopen:night'}
+];
+const PUT_OFF = [
+  {id:'noise',n:'Noise from outside'}, {id:'fumes',n:'Traffic fumes or poor outside air'}, {id:'security',n:'Security'},
+  {id:'heat',n:'It lets the heat out or makes the room cold'}, {id:'other',n:'Something else'}, {id:'none',n:'No, nothing'}
+];
+/* one key each: vent_kitchen, vent_bathroom, vent_trickle, vent_whole_house (VENT_USE) */
+const VENTS = [
+  {id:'vent_kitchen',n:'Extractor fan in the kitchen',art:'vent:kitchen'}, {id:'vent_bathroom',n:'Extractor fan in the bathroom',art:'vent:bathroom'},
+  {id:'vent_trickle',n:'Small vents in the window frames',h:'Trickle vents',art:'vent:trickle'}, {id:'vent_whole_house',n:'A whole-house ventilation system',art:'vent:whole_house'}
+];
+const VENT_USE = [{id:'use',n:'Have it and use it'},{id:'rarely',n:'Have it, rarely use it'},{id:'no',n:'Don&rsquo;t have it'},{id:'unsure',n:'Not sure'}];
+const COOL_DOWN = [
+  {id:'windows',n:'Open windows'}, {id:'fan',n:'Use a fan'}, {id:'ac',n:'Use air conditioning',h:'Fixed or portable'},
+  {id:'blinds',n:'Close blinds or curtains during the day'}, {id:'lighter',n:'Wear lighter clothes'}, {id:'room',n:'Move to a cooler room'},
+  {id:'other',n:'Something else'}, {id:'none',n:'Nothing'}
+];
+/* the five consent statements of the questionnaire; joining needs all five (kept as home.consent and consent_at) */
+const CONSENT = [
+  {id:'info',   n:'I have read the participant information sheet. I had the chance to ask questions, and any questions I asked were answered.'},
+  {id:'choice', n:'I understand that taking part is my choice and that I can stop at any time without giving a reason. If I stop, I can ask for the answers and sensor readings already collected to be deleted up to 31 January 2027. After that date they will already be part of the analysis and cannot be removed.'},
+  {id:'link',   n:'I agree that the study team can link my answers to the temperature and humidity readings from the sensors in my home.'},
+  {id:'skip',   n:'I understand that I do not have to answer any question I would rather not answer.'},
+  {id:'agree',  n:'I agree to take part in this study.'}
 ];
 /* "first half of the postcode": SA1, CF10, SW1A (never the full postcode) */
 const POSTCODE_AREA_RE = /^[A-Z]{1,2}[0-9][A-Z0-9]?$/;
