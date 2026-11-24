@@ -118,6 +118,7 @@ const P = {
   wallCool:'<rect class="i-cf" x="2.5" y="3" width="19" height="18" rx="1"/><path class="i-brl" d="M2.5 9h19M2.5 15h19M8 3v6M16 3v6M12 9v6M5 15v6M19 15v6" stroke-width="1"/><path class="i-hd" d="M9.2 21.5v-8a1.3 1.3 0 0 1 2.6 0V9.8a1.3 1.3 0 0 1 2.6 0v.6a1.3 1.3 0 0 1 2.6 0v1a1.3 1.3 0 0 1 2.6 0v5.2c0 2.7-2 4.9-4.8 4.9zM9.2 17.2l-1.8-2a1.25 1.25 0 0 0-1.9 1.6l3.7 4.7"/><path class="i-c" d="M3.4 5h4.4M3.4 8h3" stroke-width="1.6"/>',
   wallNeutral:'<rect class="i-br" x="2.5" y="3" width="19" height="18" rx="1"/><path class="i-brl" d="M2.5 9h19M2.5 15h19M8 3v6M16 3v6M12 9v6M5 15v6M19 15v6" stroke-width="1"/><path class="i-hd" d="M9.2 21.5v-8a1.3 1.3 0 0 1 2.6 0V9.8a1.3 1.3 0 0 1 2.6 0v.6a1.3 1.3 0 0 1 2.6 0v1a1.3 1.3 0 0 1 2.6 0v5.2c0 2.7-2 4.9-4.8 4.9zM9.2 17.2l-1.8-2a1.25 1.25 0 0 0-1.9 1.6l3.7 4.7"/>',
   wallWarm:'<rect class="i-wf" x="2.5" y="3" width="19" height="18" rx="1"/><path class="i-brl" d="M2.5 9h19M2.5 15h19M8 3v6M16 3v6M12 9v6M5 15v6M19 15v6" stroke-width="1"/><path class="i-hd" d="M9.2 21.5v-8a1.3 1.3 0 0 1 2.6 0V9.8a1.3 1.3 0 0 1 2.6 0v.6a1.3 1.3 0 0 1 2.6 0v1a1.3 1.3 0 0 1 2.6 0v5.2c0 2.7-2 4.9-4.8 4.9zM9.2 17.2l-1.8-2a1.25 1.25 0 0 0-1.9 1.6l3.7 4.7"/><path class="i-w" d="M4.4 9.4c-1.2-1.4 1.2-2.1 0-3.6M7.4 9.4c-1.2-1.4 1.2-2.1 0-3.6" stroke-width="1.6"/>',
+  wallHot:'<rect class="i-wf" x="2.5" y="3" width="19" height="18" rx="1"/><path class="i-brl" d="M2.5 9h19M2.5 15h19M8 3v6M16 3v6M12 9v6M5 15v6M19 15v6" stroke-width="1"/><path class="i-hd" d="M9.2 21.5v-8a1.3 1.3 0 0 1 2.6 0V9.8a1.3 1.3 0 0 1 2.6 0v.6a1.3 1.3 0 0 1 2.6 0v1a1.3 1.3 0 0 1 2.6 0v5.2c0 2.7-2 4.9-4.8 4.9zM9.2 17.2l-1.8-2a1.25 1.25 0 0 0-1.9 1.6l3.7 4.7"/><path class="i-w" d="M4.4 9.4c-1.2-1.4 1.2-2.1 0-3.6M7.4 9.4c-1.2-1.4 1.2-2.1 0-3.6M10.4 7.6c-1.2-1.4 1.2-2.1 0-3.6" stroke-width="1.9"/>',
   wallFar:'<rect class="i-br" x="15" y="3" width="6.5" height="18" rx="1"/><path class="i-brl" d="M15 7.5h6.5M15 12h6.5M15 16.5h6.5M18 3v4.5M18 12v4.5" stroke-width="1"/><path class="i-hd" d="M2.5 21v-8.4a1.2 1.2 0 0 1 2.4 0V9.4a1.2 1.2 0 0 1 2.4 0v1.6a1.2 1.2 0 0 1 2.4 0v5.4c0 2.6-1.8 4.6-4.4 4.6z"/><path class="i-d" d="M10.5 12.5h3.5" stroke-dasharray="1.2 1.6"/><path d="M11 4l3 3M14 4l-3 3" stroke-width="1.5"/>',
   undo:'<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
   wifi:'<path d="M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0"/><path d="M12 19.5h.01"/>',
@@ -589,6 +590,7 @@ Q.wallCold = brickPanel + Pp('M3 22C7 21 8 15 12 16S18 10 22 9 30 6 34 3H8A5 5 0
 Q.wallCool = brickPanel + Pp('M3 14C6 13 8 10 11 10.6S16 7 18 3H8A5 5 0 0 0 3 8z', M.frost, '') + T('M6 7.4h6.4M6 11h3.6', M.cold, 1.8) + T('M36 40h6.4M38.6 36.4h3.6', M.cold, 1.8) + handArt;
 Q.wallNeutral = brickPanel + handArt;
 Q.wallWarm = brickPanel + R(3, 3, 42, 42, '#FFB15C', 5, '').replace('/>', ' opacity=".3"/>') + T('M7 15c-1.6-2 1.6-3 0-5s1.6-3 0-5M12 15c-1.6-2 1.6-3 0-5s1.6-3 0-5M37 43c-1.6-2 1.6-3 0-5s1.6-3 0-5M42 43c-1.6-2 1.6-3 0-5s1.6-3 0-5', M.flameD, 1.8) + handArt;
+Q.wallHot = brickPanel + R(3, 3, 42, 42, '#FF7A2E', 5, '').replace('/>', ' opacity=".55"/>') + T('M7 15c-1.6-2 1.6-3 0-5s1.6-3 0-5M12 15c-1.6-2 1.6-3 0-5s1.6-3 0-5M37 43c-1.6-2 1.6-3 0-5s1.6-3 0-5M42 43c-1.6-2 1.6-3 0-5s1.6-3 0-5', M.flameD, 2.4) + handArt;
 Q.wallFar = R(29, 3, 16, 42, M.brick, 4) + courses(29, 3, 16, 42, 6.8, 8, M.mortar, .9) + G('translate(-5 8.4) scale(.74)', handArt) +
   T('M20.6 22h5.4', M.metalD, 1.4).replace('/>', ' stroke-dasharray="1.4 1.8"/>') + Cc(23.6, 12, 4.4, M.paper) + T('M21.6 10l4 4M25.6 10l-4 4', M.bad, 1.8);
 /* what you did */
@@ -709,8 +711,15 @@ const GARMENTS = [
   {id:'socks',       n:'Socks',            clo:0.03, ic:'socks'},
   {id:'slippers',    n:'Slippers',         clo:0.03, ic:'slippers'},
   {id:'blanket',     n:'Blanket',          clo:0.60, ic:'blanket', est:true},
-  {id:'duvet',       n:'Duvet',            clo:2.00, ic:'bed',     est:true}
+  {id:'duvet',       n:'Duvet',            clo:2.00, ic:'bed',     est:true},
+  /* From 1.3 the check-in asks for one of four ready-made outfits instead (OUTFITS). look: the garments drawn on the
+   * avatar; clo: typical ASHRAE 55 ensembles, about 0.35, 0.55, 0.75 and 1.0 or more. */
+  {id:'outfit_vlight', n:'Very light', s:'A T-shirt with shorts, or a light dress',                         clo:0.35, look:['tshirt','shorts']},
+  {id:'outfit_light',  n:'Light',      s:'A T-shirt or thin top with trousers or a long skirt',             clo:0.55, look:['tshirt','trousers']},
+  {id:'outfit_medium', n:'Medium',     s:'A long-sleeved top or a light jumper with trousers',              clo:0.75, look:['long','trousers','socks']},
+  {id:'outfit_warm',   n:'Warm',       s:'A thick jumper or hoodie, several layers, or a blanket over you', clo:1.00, look:['jumper','joggers','socks','slippers']}
 ];
+const OUTFITS = ['outfit_vlight','outfit_light','outfit_medium','outfit_warm'];
 /* the clothing screen shows the garments in boxes; "pair" boxes sit side by side */
 const GARMENT_GROUPS = [
   {n:'Tops',                ic:'tshirt',  ids:['tshirt','long','jumper','hoodie']},
@@ -724,7 +733,7 @@ const cloOf = ids => Math.round((ids||[]).reduce((s,id)=>s+(GARMENTS.find(g=>g.i
 
 /* A friendly front-facing figure. Garments are drawn in wearing order with a soft outline so layers read clearly. */
 function avatar(ids){
-  ids = ids || [];
+  ids = (ids || []).flatMap(id => GARMENTS.find(g => g.id === id)?.look || [id]);   // an outfit (1.3) draws its garments
   const has = id => ids.includes(id);
   const O = 'stroke="#3B342E" stroke-opacity=".62" stroke-width="1.3" stroke-linejoin="round"';
   const tex = (d, c, w=1.4, o=.5) => `<path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-opacity="${o}" stroke-linecap="round"/>`;

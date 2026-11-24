@@ -1059,7 +1059,7 @@ function animateGame(){ if(hasGame() && (S.screen === 'race' || S.screen === 'to
 /* ---------- answering ---------- */
 let pickTimer = 0;                                          // cancelled by the browser's Back (popstate)
 function pick(q, raw){
-  const v = q==='tsv' ? Number(raw) : raw;
+  const v = q==='tsv' ? Number(raw) : q==='clo' ? [raw] : raw;   // clothing (1.3): one outfit, kept as a list like the garments
   S.a[q] = v;
   if(q==='heat') heatRules();
   rerender();

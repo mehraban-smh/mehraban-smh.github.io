@@ -22,7 +22,12 @@ const ROOMS = [
   {id:'living',n:'Living room',ic:'sofa',main:true},{id:'bedroom',n:'Bedroom',ic:'bed',main:true},{id:'kitchen',n:'Kitchen',ic:'pan'},
   {id:'office',n:'Home office',ic:'laptop'},{id:'bathroom',n:'Bathroom',ic:'bath'},{id:'other',n:'Elsewhere',ic:'door'}
 ];
-const TP  = [{id:'cooler',n:'Cooler',ic:'snow',cls:'cold'},{id:'same',n:'No change',ic:'check'},{id:'warmer',n:'Warmer',ic:'flame',cls:'hot'}];
+/* Five points from 1.3: "cooler" and "warmer" (plain Cooler / Warmer before 1.3) read "A bit cooler" and "A bit warmer",
+ * with "Much cooler" and "Much warmer" around them; all five fold back into ASHRAE's three points. */
+const TP  = [
+  {id:'much_cooler',n:'Much cooler',ic:'snow',cls:'cold'},{id:'cooler',n:'A bit cooler',ic:'snow',cls:'cool'},{id:'same',n:'No change',ic:'check'},
+  {id:'warmer',n:'A bit warmer',ic:'flame',cls:'warm'},{id:'much_warmer',n:'Much warmer',ic:'flame',cls:'hot'}
+];
 /* Binary thermal acceptability of the environment as a whole */
 const TA  = [
   {id:'acceptable',  n:'Acceptable',     s:'I can stay like this',  ic:'up',   cls:'good'},
@@ -61,7 +66,8 @@ const WALL = [
   {id:'cold',     n:'Cold',                  ic:'wallCold',    cls:'cold'},
   {id:'cool',     n:'Cool',                  ic:'wallCool',    cls:'cool'},
   {id:'neutral',  n:'Neither cold nor warm', ic:'wallNeutral', cls:'mild'},
-  {id:'warm',     n:'Warm',                  ic:'wallWarm',    cls:'hot'}
+  {id:'warm',     n:'Warm',                  ic:'wallWarm',    cls:'warm'},
+  {id:'hot',      n:'Hot',                   ic:'wallHot',     cls:'hot'}     // from 1.3: two warm answers balance the two cold ones
 ];
 /* What the participant DID in the last 30 minutes (not how things are now). Shown as boxes (window, door,
  * heating, clothes and blankets) and rows on their own; within a box the two sides of a pair exclude each
@@ -70,18 +76,19 @@ const ACTIONS = [
   {id:'win_open',  n:'Opened a window', q:'I opened a window',  ic:'windowOpen'}, {id:'win_close',  n:'Closed a window', q:'I closed a window', ic:'window'},
   {id:'door_open', n:'Opened a door',   q:'I opened a door',    ic:'doorOpen'},   {id:'door_close', n:'Closed a door',   q:'I closed a door',   ic:'door'},
   {id:'heat_up',   n:'Turned the heating up', q:'I turned the heating up', ic:'heatUp'}, {id:'heat_down', n:'Turned the heating down or off', q:'I turned the heating down or off', ic:'heatDown'},
-  {id:'layer_on',  n:'Put on a layer',  q:'I put on a layer',   ic:'layerOn'}, {id:'layer_off', n:'Took off a layer', q:'I took off a layer', ic:'layerOff'}, {id:'blanket', n:'Got a blanket', q:'I got a blanket', ic:'blanket'},
+  {id:'layer_on',  n:'Put on more clothes or a blanket', q:'I put on more clothes or a blanket', ic:'layerOn'}, {id:'layer_off', n:'Took off some clothes', q:'I took off some clothes', ic:'layerOff'}, {id:'blanket', n:'Got a blanket', q:'I got a blanket', ic:'blanket'},
   {id:'fan',       n:'Turned a fan on', q:'I turned a fan on',  ic:'fan'},
-  {id:'curtains',  n:'Drew the curtains or blinds', q:'I drew the curtains or blinds', ic:'curtain'},
+  {id:'curtains',  n:'Closed the curtains or blinds', q:'I closed the curtains or blinds', ic:'curtain'},
   {id:'moved',     n:'Moved to another room', q:'I moved to another room', ic:'walk'}
 ];
+/* From 1.3 the question offers eight of these and "none": the door pair, "Got a blanket" (now part of layer_on) and
+ * "Moved to another room" are no longer asked. They stay in ACTIONS so older check-ins keep their words. */
 const ACTION_BOXES = [
   {n:'Window',               ic:'window',   ids:['win_open','win_close']},
-  {n:'Door',                 ic:'door',     ids:['door_open','door_close']},
   {n:'Heating',              ic:'radiator', ids:['heat_up','heat_down']},
-  {n:'Clothes and blankets', ic:'layerOn',  ids:['layer_on','layer_off','blanket']}
+  {n:'Clothes and blankets', ic:'layerOn',  ids:['layer_on','layer_off']}
 ];
-const ACTION_SOLO = ['fan','curtains','moved'];
+const ACTION_SOLO = ['fan','curtains'];
 const PAIRED = { win_open:'win_close', win_close:'win_open', door_open:'door_close', door_close:'door_open', heat_up:'heat_down', heat_down:'heat_up', layer_on:'layer_off', layer_off:'layer_on' };
 /* Also the last 30 minutes: drinks and food in boxes, two rows on their own (any number may be chosen). */
 const NOTES = [
@@ -89,8 +96,9 @@ const NOTES = [
   {id:'ate',n:'Ate something',q:'I ate something',ic:'fork'}, {id:'hungry',n:'Felt hungry',q:'I felt hungry',ic:'apple'},
   {id:'tired',n:'Felt tired',q:'I felt tired',ic:'zzz'}, {id:'unwell',n:'Felt unwell',q:'I felt unwell',ic:'unwell'}
 ];
-const NOTE_BOXES = [{n:'Drinks', ic:'mug', ids:['hot_drink','cold_drink']}, {n:'Food', ic:'fork', ids:['ate','hungry']}];
-const NOTE_SOLO = ['tired','unwell'];
+/* From 1.3 "Felt hungry" and "Felt tired" are no longer asked (kept in NOTES for older check-ins). */
+const NOTE_BOXES = [{n:'Drinks', ic:'mug', ids:['hot_drink','cold_drink']}];
+const NOTE_SOLO = ['ate','unwell'];
 
 /* Every check-in asks these, in this order, all unanswered at the start: 12 questions, 13 when the heating is on (how
  * long it has been on, heat_for). Which heating is on (heat_src, 1.0 and 1.1) and the thermostat reading (1.0) are no
@@ -147,18 +155,14 @@ const Q = {
   tp: () => qhead(tr('Preference'), tr('Would you like to be&hellip;')) +
     `<div class="rows fill" role="radiogroup" aria-label="${tr('Would you like to be')}">${TP.map(o=>tallRow('tp',o,S.a.tp===o.id)).join('')}</div>`,
   /* two tall rows (like the preference screen), tinted green and red */
-  ta: () => qhead(tr('Acceptability'), tr('Are these conditions acceptable to you?'), tr('The thermal environment as a whole.')) +
+  ta: () => qhead(tr('Acceptability'), tr('Is the temperature here acceptable to you right now?'), tr('Whether or not you feel too warm or too cold.')) +
     `<div class="rows fill" role="radiogroup" aria-label="${tr('Acceptability')}">${TA.map(o=>tallRow('ta',o,S.a.ta===o.id)).join('')}</div>`,
+  /* From 1.3: four ready-made outfits (OUTFITS in icons.js), one tap; stored as garments [the outfit id] and its clo */
   clo: () => {
-    const ids = S.a.clo || [], last = lastVote();
-    const lastIds = last && (last.garments || []).filter(id => byId(GARMENTS, id));
-    const lastBtn = lastIds && lastIds.length && !sameSet(lastIds, ids)
-      ? `<button class="chip" data-act="lastclo">${ic('refresh')}${tr('Same as last time')}</button>` : '';
-    const pair = k => `<div class="gpair">${GARMENT_GROUPS.filter(g => g.pair === k).map(g => gbox(g, ids)).join('')}</div>`;
-    return qhead(tr('Clothing'), tr('What are you wearing?'), tr('Tap everything you have on, blankets too.')) +
-      `<div class="dressing">${avatar(ids)}<div class="side"><div class="clo" aria-live="polite"><b>${cloOf(ids).toFixed(2)}</b><span>${tr('clo insulation')}</span></div>${lastBtn}<p class="note">${tr('Values follow ASHRAE 55 and ISO 7730. Blanket and duvet are estimates.')}</p></div></div>` +
-      `<div class="gboxes">${gbox(GARMENT_GROUPS[0], ids)}${gbox(GARMENT_GROUPS[1], ids)}${pair(1)}${pair(2)}</div>` +
-      nextBtn(ids.length>0);
+    const cur = (S.a.clo || [])[0];
+    return qhead(tr('Clothing'), tr('How warmly are you dressed right now?'), tr('Choose the closest match. Any style of clothing counts (for example, a sari or a shalwar kameez): just think about how warm it is overall.')) +
+      `<div class="rows fill" role="radiogroup" aria-label="${tr('Clothing')}">${OUTFITS.map(id => { const g = byId(GARMENTS, id), on = cur === id;
+        return `<button class="row tall outfit ${on?'on':''}" role="radio" aria-checked="${on}" data-act="pick" data-q="clo" data-v="${id}"><span class="orb">${avatar([id])}</span><div><b>${g.n}</b><span>${g.s}</span></div><small>${g.clo.toFixed(2)} clo</small></button>`; }).join('')}</div>`;
   },
   act: () => qhead(tr('Activity'), tr('What have you been doing for the last 15 minutes?')) +
     `<div class="tiles c2 fill" role="radiogroup" aria-label="${tr('Activity')}">${ACTS.map(o=>tile('act',o,S.a.act===o.id,`<small>${o.met.toFixed(1)} met</small>`)).join('')}</div>`,

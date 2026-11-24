@@ -55,17 +55,18 @@
     tsv: { '-3': 'Cold', '-2': 'Cool', '-1': 'Slightly cool', 0: 'Neutral', 1: 'Slightly warm', 2: 'Warm', 3: 'Hot' },
     prompt: { scheduled: 'From a reminder', self: 'Self-started' },
     at_home: { long: 'Home for over an hour', recent: 'Just got in', out: 'Out' },
-    preference: { cooler: 'Cooler', same: 'No change', warmer: 'Warmer' },
+    preference: { much_cooler: 'Much cooler', cooler: 'Cooler', same: 'No change', warmer: 'Warmer', much_warmer: 'Much warmer' },   // much_*: from 1.3 (cooler / warmer read "a bit" there)
     acceptability: { acceptable: 'Acceptable', unacceptable: 'Not acceptable', clearly_acc: 'Clearly acceptable (older scale)', just_acc: 'Just acceptable (older scale)', just_unacc: 'Just unacceptable (older scale)', clearly_unacc: 'Clearly unacceptable (older scale)' },
-    garments: { tshirt: 'T-shirt', long: 'Long sleeves', jumper: 'Thick jumper', hoodie: 'Hoodie or fleece', shorts: 'Shorts', trousers: 'Jeans or trousers', joggers: 'Joggers', skirt: 'Skirt or dress', pyjamas: 'Pyjamas', coat_light: 'Light jacket or summer coat', coat_winter: 'Winter coat', socks: 'Socks', slippers: 'Slippers', blanket: 'Blanket', duvet: 'Duvet' },
+    garments: { tshirt: 'T-shirt', long: 'Long sleeves', jumper: 'Thick jumper', hoodie: 'Hoodie or fleece', shorts: 'Shorts', trousers: 'Jeans or trousers', joggers: 'Joggers', skirt: 'Skirt or dress', pyjamas: 'Pyjamas', coat_light: 'Light jacket or summer coat', coat_winter: 'Winter coat', socks: 'Socks', slippers: 'Slippers', blanket: 'Blanket', duvet: 'Duvet',
+      outfit_vlight: 'Very light outfit (0.35 clo)', outfit_light: 'Light outfit (0.55 clo)', outfit_medium: 'Medium outfit (0.75 clo)', outfit_warm: 'Warm outfit (1.00 clo)' },
     activity: { sleep: 'Sleeping', lying: 'Lying down', sit: 'Sitting relaxed', desk: 'Desk work', stand: 'Standing', house: 'Cooking or housework', walk: 'Walking about', exercise: 'Exercising' },
     room: { living: 'Living room', bedroom: 'Bedroom', kitchen: 'Kitchen', office: 'Home office', bathroom: 'Bathroom', other: 'Elsewhere' },
     air: { still: 'Still', slight: 'A little air movement', draughty: 'Clearly draughty', drafty: 'Clearly draughty' },
     sun: { yes: 'Sun on me', no: 'No direct sun', dark: 'It’s dark' },
     heating_on: { on: 'On', off: 'Off', unsure: 'Not sure' },
     heating_for: { lt30: 'Less than 30 minutes (no longer offered)', '30_60': '30 minutes to an hour', '1_2h': '1 to 2 hours', '2_4h': '2 to 4 hours', gt4h: 'More than 4 hours', always: 'Always on (the thermostat switches it on and off)', unsure: 'Not sure' },
-    wall: { cold: 'Cold', cool: 'Cool', neutral: 'Neither cold nor warm', warm: 'Warm', no_reach: 'Can’t reach one' },
-    actions: { win_open: 'Opened a window', win_close: 'Closed a window', door_open: 'Opened a door', door_close: 'Closed a door', heat_up: 'Turned the heating up', heat_down: 'Turned the heating down or off', layer_on: 'Put on a layer', layer_off: 'Took off a layer', blanket: 'Got a blanket', fan: 'Turned a fan on', curtains: 'Drew the curtains or blinds', moved: 'Moved to another room', none: 'None of these' },
+    wall: { cold: 'Cold', cool: 'Cool', neutral: 'Neither cold nor warm', warm: 'Warm', hot: 'Hot', no_reach: 'Can’t reach one' },
+    actions: { win_open: 'Opened a window', win_close: 'Closed a window', door_open: 'Opened a door', door_close: 'Closed a door', heat_up: 'Turned the heating up', heat_down: 'Turned the heating down or off', layer_on: 'Put on a layer or more clothes', layer_off: 'Took off a layer or some clothes', blanket: 'Got a blanket', fan: 'Turned a fan on', curtains: 'Drew or closed the curtains or blinds', moved: 'Moved to another room', none: 'None of these' },
     notes: { hot_drink: 'Hot drink', cold_drink: 'Cold drink', ate: 'Ate something', hungry: 'Felt hungry', tired: 'Felt tired', unwell: 'Felt unwell', none: 'None of these' },
     gender: { woman: 'Woman', man: 'Man', non_binary: 'Non-binary', self_describe: 'Another identity', prefer_not: 'Prefer not to say' },
     sensitivity: { cold: 'Feels the cold easily', average: 'About average', warm: 'Feels the heat easily' },
@@ -972,19 +973,20 @@
       <div class="slegend">${parts.map(x => `<span><i class="sw" style="background:${x.colour}"></i>${esc(x.label)} <b>${pct(x.n, of)}</b></span>`).join('')}</div></div>`;
   }
   function prefFig(ctx) {
-    const P = { cooler: 0, same: 0, warmer: 0 }, A = { acceptable: 0, unacceptable: 0 };
+    const P = { much_cooler: 0, cooler: 0, same: 0, warmer: 0, much_warmer: 0 }, A = { acceptable: 0, unacceptable: 0 };
     let nP = 0, nA = 0, old = 0;
     ctx.V.forEach(x => {
       if (Object.prototype.hasOwnProperty.call(P, x.r.preference)) { P[x.r.preference]++; nP++; }
       const a = ACC_OF[x.r.acceptability]; if (a) { A[a]++; nA++; if (a !== x.r.acceptability) old++; }
     });
-    const pref = [{ k: 'cooler', label: 'Cooler', n: P.cooler, colour: 'var(--d-2)' }, { k: 'same', label: 'No change', n: P.same, colour: 'var(--d0)' }, { k: 'warmer', label: 'Warmer', n: P.warmer, colour: 'var(--d2)' }];
+    const PREF_COL = { much_cooler: 'var(--d-3)', cooler: 'var(--d-2)', same: 'var(--d0)', warmer: 'var(--d2)', much_warmer: 'var(--d3)' };
+    const pref = Object.keys(P).map(k => ({ k, label: L.preference[k], n: P[k], colour: PREF_COL[k] })).filter(x => x.n || !x.k.startsWith('much_'));
     const acc = [{ k: 'acceptable', label: 'Acceptable', n: A.acceptable, colour: 'var(--teal)' }, { k: 'unacceptable', label: 'Not acceptable', n: A.unacceptable, colour: 'var(--bad)' }];
     // how acceptability and preference move with sensation (in the table view)
-    const bySense = [-3, -2, -1, 0, 1, 2, 3].map(v => { const g = ctx.V.filter(x => x.tsv === v); const a = g.filter(x => ACC_OF[x.r.acceptability]); const un = a.filter(x => ACC_OF[x.r.acceptability] === 'unacceptable').length; const p = g.filter(x => P.hasOwnProperty(x.r.preference)); return [`${signed(v)} ${esc(tsvWord(v))}`, fmtN(g.length), pct(p.filter(x => x.r.preference === 'cooler').length, p.length), pct(p.filter(x => x.r.preference === 'same').length, p.length), pct(p.filter(x => x.r.preference === 'warmer').length, p.length), pct(un, a.length)]; });
+    const bySense = [-3, -2, -1, 0, 1, 2, 3].map(v => { const g = ctx.V.filter(x => x.tsv === v); const a = g.filter(x => ACC_OF[x.r.acceptability]); const un = a.filter(x => ACC_OF[x.r.acceptability] === 'unacceptable').length; const p = g.filter(x => P.hasOwnProperty(x.r.preference)); return [`${signed(v)} ${esc(tsvWord(v))}`, fmtN(g.length), ...Object.keys(P).map(k => pct(p.filter(x => x.r.preference === k).length, p.length)), pct(un, a.length)]; });
     const body = nP || nA ? `<div class="split">${nP ? splitRow('Would like to be', pref, nP) : ''}${nA ? splitRow('Conditions are', acc, nA, old ? plural(old, 'older four-point answer') + ' grouped in' : '') : ''}</div>` : '<p class="tnote">No answers yet.</p>';
     return fig('pref', 'Preference and acceptability', 'Share of check-ins', body,
-      { table: tbl(['Sensation', 'Check-ins', 'Cooler', 'No change', 'Warmer', 'Not acceptable'], bySense) });
+      { table: tbl(['Sensation', 'Check-ins', ...Object.keys(P).map(k => L.preference[k]), 'Not acceptable'], bySense) });
   }
   /* (5) heating on, which heating, for how long */
   function heatingFig(ctx) {
@@ -1047,7 +1049,7 @@
     return s + '</svg>';
   }
   /* (7) outside wall by touch */
-  const WALL_COL = { cold: 'var(--d-2)', cool: 'var(--d-1)', neutral: 'var(--d0)', warm: 'var(--d1)', no_reach: 'var(--ink-muted)' };
+  const WALL_COL = { cold: 'var(--d-2)', cool: 'var(--d-1)', neutral: 'var(--d0)', warm: 'var(--d1)', hot: 'var(--d2)', no_reach: 'var(--ink-muted)' };
   function wallFig(ctx) {
     const asked = answered(ctx.V, 'wall');
     const list = countBy(asked, 'wall', 'wall', false, true).map(x => { const g = asked.filter(y => String(y.r.wall) === x.k); return Object.assign(x, { colour: WALL_COL[x.k], tip: 'Mean feeling ' + signed(meanTsv(g)) }); });
