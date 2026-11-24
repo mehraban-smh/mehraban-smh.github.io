@@ -46,10 +46,16 @@
   const PNUM = new Set(['birth_year', 'height_cm', 'weight_kg', 'alias_colour']);
   const HOME_KEYS = ['postcode_area', 'home_type', 'flat_position', 'tenure', 'year_built', 'floors', 'bedrooms', 'floor_area_m2', 'epc', 'adults', 'children', 'pets', 'bedroom_share',
     'main_heating', 'other_heaters', 'heating_pattern', 'payment', 'controls', 'stat_display', 'setpoint_c', 'bedroom_trv', 'wall_insulation', 'loft', 'glazing', 'windows_open', 'damp',
-    'bedroom_facing', 'bedroom_facing_deg', 'bedroom_side', 'bedroom_side_deg'];
+    'bedroom_facing', 'bedroom_facing_deg', 'bedroom_side', 'bedroom_side_deg',
+    // 1.3: the Home Visit Questionnaire v2
+    'feel_cold', 'feel_warm', 'prefer_not', 'main_road', 'home_type_other', 'glazing_notes', 'changes', 'changes_note', 'pet_door', 'drying', 'drying_room', 'tariff',
+    'heating_times', 'heating_wd_start', 'heating_wd_end', 'heating_we_start', 'heating_we_end', 'other_heaters_other', 'window_short', 'window_long', 'window_night',
+    'window_putoff', 'window_putoff_other', 'vent_kitchen', 'vent_bathroom', 'vent_trickle', 'vent_whole_house', 'overheat', 'cool_down', 'cool_down_other', 'consent', 'consent_at'];
   const HOME_NUM = new Set(['floors', 'bedrooms', 'floor_area_m2', 'adults', 'children', 'pets', 'bedroom_share', 'setpoint_c', 'bedroom_facing_deg', 'bedroom_side_deg']);
 
   /* ---------------------------------------------------------------- words for stored values (spec 3 and 4) */
+  const FREQ = { often: 'Often', sometimes: 'Sometimes', rarely: 'Rarely or never' };
+  const VENT = { use: 'Has it and uses it', rarely: 'Has it, rarely uses it', no: 'Doesn’t have it', unsure: 'Not sure' };
   const FACING = { N: 'North', NE: 'North-east', E: 'East', SE: 'South-east', S: 'South', SW: 'South-west', W: 'West', NW: 'North-west', unsure: 'Not sure' };
   const L = {
     tsv: { '-3': 'Cold', '-2': 'Cool', '-1': 'Slightly cool', 0: 'Neutral', 1: 'Slightly warm', 2: 'Warm', 3: 'Hot' },
@@ -72,11 +78,11 @@
     sensitivity: { cold: 'Feels the cold easily', average: 'About average', warm: 'Feels the heat easily' },
     lang: { en: 'English', cy: 'Cymraeg (Welsh)' },
     age: { a18: '18–24', a25: '25–34', a35: '35–44', a45: '45–54', a55: '55–64', a65: '65–74', a75: '75 or older' },
-    home_type: { detached: 'Detached', semi: 'Semi-detached', end_terrace: 'End of terrace', mid_terrace: 'Terraced (mid-terrace)', bungalow: 'Bungalow', flat: 'Flat or maisonette' },
+    home_type: { detached: 'Detached', semi: 'Semi-detached', end_terrace: 'End of terrace', mid_terrace: 'Terraced (mid-terrace)', bungalow: 'Bungalow', flat: 'Flat or maisonette', other: 'Something else' },
     flat_position: { basement: 'Basement', ground: 'Ground floor', middle: 'Middle floor', top: 'Top floor' },
     tenure: { own: 'Owns it (outright or mortgage)', housing_association: 'Rents from a housing association', council: 'Rents from the council', private_rent: 'Rents privately', shared_ownership: 'Shared ownership', other: 'Something else (e.g. with family)' },
     year_built: { pre1919: 'Before 1919', '1919_1944': '1919–1944', '1945_1964': '1945–1964', '1965_1982': '1965–1982', '1983_2002': '1983–2002', '2003_plus': '2003 or later', unsure: 'Not sure' },
-    floors: { 1: '1 floor', 2: '2 floors', 3: '3 floors', 4: '4 or more floors' },
+    floors: { 1: '1 floor', 2: '2 floors', 3: '3 floors (3 or more from 1.3)', 4: '4 or more floors' },
     bedrooms: { 0: 'No separate bedroom', 1: '1 bedroom', 2: '2 bedrooms', 3: '3 bedrooms', 4: '4 bedrooms', 5: '5 bedrooms', 6: '6 or more bedrooms' },
     floor_area: { lt50: 'Under 50 m²', a50: '50–79 m²', a80: '80–109 m²', a110: '110–149 m²', a150: '150 m² or more' },
     epc: { A: 'A', B: 'B', C: 'C', D: 'D', E: 'E', F: 'F', G: 'G', unsure: 'Doesn’t know' },
@@ -84,9 +90,11 @@
     children: { 0: 'No children', 1: '1 child', 2: '2 children', 3: '3 children', 4: '4 children', 5: '5 children', 6: '6 children', 7: '7 children', 8: '8 or more children' },
     pets: { 0: 'No pets', 1: '1 pet', 2: '2 pets', 3: '3 pets', 4: '4 pets', 5: '5 pets', 6: '6 pets', 7: '7 pets', 8: '8 or more pets' },
     bedroom_share: { 0: 'Just me', 1: 'With 1 other person', 2: 'With 2 others', 3: 'With 3 or more others' },
-    main_heating: { gas_combi: 'Gas combi boiler (no tank)', gas_tank: 'Gas boiler with a hot water tank', oil: 'Oil boiler', lpg: 'LPG boiler', ashp: 'Air source heat pump', gshp: 'Ground source heat pump', storage: 'Electric storage heaters', electric: 'Electric radiators or panel heaters', communal: 'Communal or district heating', solid: 'Solid fuel (coal or wood)', none: 'No central heating', unsure: 'Not sure' },
-    other_heaters: { plugin: 'Plug-in electric heater', gas_fire: 'Gas fire', electric_fire: 'Electric fire', stove: 'Wood burner or multi-fuel stove', open_fire: 'Open fire', electric_blanket: 'Electric blanket', none: 'None of these' },
-    heating_pattern: { timer: 'On a timer at set times', when_needed: 'Switched on when needed', most_day: 'On most of the day', always_on: 'Always on (the thermostat switches it on and off)', rarely: 'Rarely used', not_me: 'Someone else controls it' },
+    main_heating: { gas_combi: 'Gas combi boiler (no tank)', gas_tank: 'Gas boiler with a hot water tank', oil: 'Oil boiler', lpg: 'LPG boiler', ashp: 'Air source heat pump', gshp: 'Ground source heat pump', storage: 'Electric storage heaters', electric: 'Electric radiators or panel heaters', communal: 'Communal or district heating', solid: 'Solid fuel (wood, coal or another)', none: 'No central heating', unsure: 'Not sure',
+      gas: 'Gas boiler', oil_lpg: 'Oil or LPG boiler', heat_pump: 'Heat pump (air or ground source)', infrared: 'Infrared heating panels' },
+    other_heaters: { plugin: 'Plug-in electric heater', gas_fire: 'Gas fire', electric_fire: 'Electric fire', stove: 'Wood burner or multi-fuel stove', open_fire: 'Open fire', electric_blanket: 'Electric blanket', none: 'None of these',
+      fire: 'Fire or stove', hot_water_bottle: 'Hot water bottle', blankets: 'Extra blankets or throws', curtains: 'Closing curtains or blinds', other: 'Something else' },
+    heating_pattern: { timer: 'On a timer at set times', when_needed: 'Switched on when needed', most_day: 'On most of the day', always_on: 'Always on (the thermostat switches it on and off)', rarely: 'Rarely used', unsure: 'Not sure', not_me: 'Someone else controls it' },
     payment: { prepay: 'Prepayment meter', bill: 'Bill or Direct Debit', in_rent: 'Included in the rent', unsure: 'Not sure', prefer_not: 'Prefer not to say' },
     controls: { room_stat: 'Wall thermostat', smart: 'Smart thermostat', programmer: 'Timer or programmer', trvs: 'Radiator dials (TRVs)', none: 'None of these', unsure: 'Not sure' },
     stat_display: { yes: 'Shows the room temperature', no: 'No temperature on screen', no_stat: 'No thermostat' },
@@ -94,10 +102,21 @@
     bedroom_trv: { yes: 'Yes', no: 'No', no_radiator: 'No radiator in the bedroom', unsure: 'Not sure' },
     wall_insulation: { cavity: 'Filled cavity walls', external: 'External insulation (render or cladding)', internal: 'Internal insulation', none: 'No insulation', unsure: 'Not sure' },
     loft: { yes: 'Insulated loft', no: 'Loft not insulated', no_loft: 'No loft', unsure: 'Not sure' },
-    glazing: { single: 'Single', double: 'Double', triple: 'Triple', mixed: 'A mix', unsure: 'Not sure' },
+    glazing: { single: 'Single', double: 'Double', triple: 'Triple', mixed: 'A mix (until 1.2)', unsure: 'Not sure' },
     windows_open: { yes: 'All can be opened', some: 'Some can be opened', no: 'None can be opened' },
     damp: { bedroom: 'Bedroom', living: 'Living room', kitchen: 'Kitchen', bathroom: 'Bathroom', elsewhere: 'Elsewhere', none: 'No damp or mould', unsure: 'Not sure' },
-    bedroom_facing: FACING, bedroom_side: FACING
+    bedroom_facing: FACING, bedroom_side: FACING,
+    // 1.3
+    feel_cold: { more: 'More easily than most', same: 'About the same', less: 'Less easily' },
+    feel_warm: { more: 'More easily than most', same: 'About the same', less: 'Less easily' },
+    main_road: { on: 'On a main road', near: 'Near a main road', no: 'No', unsure: 'Not sure' },
+    changes: { no: 'No', yes: 'Yes' }, pet_door: { no: 'No', yes: 'Yes' }, drying: { no: 'No', yes: 'Yes' },
+    tariff: { standard: 'Standard', prepay: 'Prepayment', time_of_use: 'Cheaper at certain times (e.g. Economy 7)', unsure: 'Not sure' },
+    heating_times: { set: 'Set times', varies: 'It varies', unsure: 'Not sure' },
+    window_short: FREQ, window_long: FREQ, window_night: FREQ, overheat: FREQ,
+    window_putoff: { noise: 'Noise from outside', fumes: 'Traffic fumes or poor outside air', security: 'Security', heat: 'Lets the heat out or makes the room cold', other: 'Something else', none: 'Nothing' },
+    vent_kitchen: VENT, vent_bathroom: VENT, vent_trickle: VENT, vent_whole_house: VENT,
+    cool_down: { windows: 'Opens windows', fan: 'Uses a fan', ac: 'Uses air conditioning', blinds: 'Closes blinds or curtains in the day', lighter: 'Wears lighter clothes', room: 'Moves to a cooler room', other: 'Something else', none: 'Nothing' }
   };
   L.heating_src = Object.assign({}, L.main_heating, L.other_heaters, { other: 'Something else', main: 'The main heating (not named)', unsure: 'Not sure' });
   delete L.heating_src.none;
@@ -106,7 +125,9 @@
   const langWord = l => l === 'en' || l === 'cy' ? L.lang[l] : '–';
   // Home questions the app no longer asks (dropped after 1.0): older answers are kept, shown only where someone gave
   // one, marked as no longer asked, and still exported.
-  const RETIRED = new Set(['payment', 'stat_display', 'bedroom_trv']);
+  const RETIRED = new Set(['payment', 'stat_display', 'bedroom_trv', 'tenure', 'loft', 'windows_open', 'damp']);   // tenure to damp: until 1.2
+  /* asked only for some homes: a flat's floor, the pet door with pets */
+  const notAsked = (key, h) => (key === 'flat_position' && h.home_type !== 'flat') || (key === 'pet_door' && !(num(h.pets) > 0));
   const RETIRED_NOTE = ' (no longer asked)';
   const answeredHome = (p, key) => { const h = homeOf(p) || {}; const v = h[key]; return Object.prototype.hasOwnProperty.call(h, key) && v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && !v.length); };
   // The thermostat reading is no longer asked either: its chart and table column appear only while some check-in has one.
@@ -1171,13 +1192,17 @@
   const setBand = v => { const r = Math.round(v); return r <= 17 ? 'le17' : r >= 24 ? 'ge24' : String(r); };
   // [key, title, kind]: kind p = participant column, multi = several answers, area / setp = binned numbers
   const HOME_GROUPS = [
-    ['The people', [['gender', 'Gender', 'p'], ['sensitivity', 'Thermal sensitivity', 'p'], ['age', 'Age', 'age'], ['lang', 'App language', 'p']]],
-    ['Area and home', [['postcode_area', 'Postcode area', 'free'], ['home_type', 'Home type'], ['flat_position', 'Flat position (flats only)'], ['tenure', 'Tenure']]],
+    ['The people', [['gender', 'Gender', 'p'], ['feel_cold', 'Feels the cold'], ['feel_warm', 'Feels too warm'], ['sensitivity', 'Thermal sensitivity (from the two above since 1.3)', 'p'], ['age', 'Age', 'age'], ['lang', 'App language', 'p']]],
+    ['Area and home', [['postcode_area', 'Postcode area', 'free'], ['main_road', 'On or near a main road'], ['home_type', 'Home type'], ['flat_position', 'Flat position (flats only)'], ['tenure', 'Tenure']]],
     ['Age and size', [['year_built', 'Year built'], ['floors', 'Floors'], ['bedrooms', 'Bedrooms'], ['floor_area_m2', 'Floor area', 'area'], ['epc', 'EPC rating']]],
-    ['Who lives here', [['adults', 'Adults'], ['children', 'Children'], ['pets', 'Pets'], ['bedroom_share', 'Sharing the bedroom']]],
-    ['Heating', [['main_heating', 'Main heating'], ['other_heaters', 'Other heaters', 'multi'], ['heating_pattern', 'How the heating is used'], ['payment', 'How the heating is paid for']]],
+    ['Who lives here', [['adults', 'Adults'], ['children', 'Children'], ['pets', 'Pets'], ['bedroom_share', 'Sharing the bedroom'], ['changes', 'Expects changes during the study'],
+      ['pet_door', 'Opens an outside door for pets'], ['drying', 'Dries clothes indoors'], ['tariff', 'Energy tariff']]],
+    ['Heating', [['main_heating', 'Main heating'], ['heating_pattern', 'How the heating is used'], ['heating_times', 'Heating times'], ['other_heaters', 'Other ways to keep warm', 'multi'], ['payment', 'How the heating is paid for']]],
     ['Heating controls', [['controls', 'Controls', 'multi'], ['stat_display', 'Thermostat screen'], ['setpoint_c', 'Usual thermostat setting', 'setp'], ['bedroom_trv', 'Dial on the bedroom radiator']]],
     ['Walls, roof and windows', [['wall_insulation', 'Wall insulation'], ['loft', 'Loft'], ['glazing', 'Glazing'], ['windows_open', 'Windows that open'], ['damp', 'Damp or mould in the last year', 'multi']]],
+    ['Windows and fresh air', [['window_short', 'Opens a window for a few minutes'], ['window_long', 'Opens a window for an hour or more'], ['window_night', 'Window open overnight in the bedroom'],
+      ['window_putoff', 'Put off opening windows by', 'multi'], ['vent_kitchen', 'Kitchen extractor fan'], ['vent_bathroom', 'Bathroom extractor fan'], ['vent_trickle', 'Trickle vents'], ['vent_whole_house', 'Whole-house ventilation']]],
+    ['Keeping cool', [['overheat', 'Home gets uncomfortably warm'], ['cool_down', 'Cools down by', 'multi']]],
     ['The bedroom', [['bedroom_facing', 'Bedroom window faces'], ['bedroom_side', 'Bedroom side of the home']]]
   ];
   function tallyHome(list, key, kind) {
@@ -1188,11 +1213,11 @@
       const h = homeOf(p) || {};
       if (kind === 'p') { const v = p[key]; if (v === null || v === undefined || v === '') add(NOT_ANSWERED); else add(String(v)); return; }
       if (kind === 'age') { const b = ageBand(p.birth_year); add(b || NOT_ANSWERED); return; }
-      if (!Object.prototype.hasOwnProperty.call(h, key)) { if (key === 'flat_position' && h.home_type !== 'flat') return; if (RETIRED.has(key)) return; add(NOT_ANSWERED); return; }
+      if (!Object.prototype.hasOwnProperty.call(h, key)) { if (notAsked(key, h)) return; if (RETIRED.has(key)) return; add(NOT_ANSWERED); return; }
       const v = h[key];
       if (kind === 'multi') { const a = [...new Set(listOf(v))]; if (!a.length) add(NOT_ANSWERED); a.forEach(x => add(String(x))); return; }
       if (kind === 'area' || kind === 'setp') { const n = num(v); if (n === null) { add(NOT_SURE); return; } vals.push(n); add(kind === 'area' ? areaBand(n) : setBand(n)); return; }
-      if (v === null || v === undefined || v === '') { if ((key === 'flat_position' && h.home_type !== 'flat') || RETIRED.has(key)) return; add(NOT_ANSWERED); return; }
+      if (v === null || v === undefined || v === '') { if ((notAsked(key, h)) || RETIRED.has(key)) return; add(NOT_ANSWERED); return; }
       add(String(v));   // 0 counts (bedroom_share 0 = "Just me")
     });
     if (vals.length) med = median(vals);

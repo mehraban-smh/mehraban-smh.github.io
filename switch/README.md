@@ -114,34 +114,49 @@ fill it in. Only the first half of the postcode is stored: the database refuses 
 | Key | Values |
 |---|---|
 | `postcode_area` | first half of the postcode, upper case (`SA1`, `CF10`): matches check-ins to local weather |
-| `home_type` | `detached`, `semi`, `end_terrace`, `mid_terrace`, `bungalow`, `flat` (flat or maisonette) |
+| `home_type` | `detached`, `semi`, `end_terrace`, `mid_terrace`, `bungalow`, `flat` (flat or maisonette), `other` (1.3, with `home_type_other` as typed) |
+| `main_road` | 1.3: `on`, `near`, `no`, `unsure` (on or near a main road) |
 | `flat_position` | flats only: `basement`, `ground`, `middle`, `top` |
-| `tenure` | `own`, `housing_association`, `council`, `private_rent`, `shared_ownership`, `other` |
+| `tenure` | not asked from 1.3; older profiles: `own`, `housing_association`, `council`, `private_rent`, `shared_ownership`, `other` |
 | `year_built` | `pre1919`, `1919_1944`, `1945_1964`, `1965_1982`, `1983_2002`, `2003_plus`, `unsure` |
-| `floors` | 1–4 (4 means 4 or more) |
-| `bedrooms` | 0–6 (6 means 6 or more) |
-| `floor_area_m2` | number (the EPC's "Total floor area"), or null when not sure |
+| `floors` | 1–3 from 1.3 (3 means 3 or more); 4 (4 or more) in older profiles |
+| `bedrooms` | 0–4 from 1.3 (4 means 4 or more); up to 6 in older profiles |
+| `floor_area_m2` | number (the EPC's "Total floor area"), or null when not sure; can be typed in square feet (1.3), stored in m² |
 | `epc` | `A`–`G` or `unsure` |
 | `adults`, `children`, `pets` | counts |
 | `bedroom_share` | others sleeping in the participant's bedroom: 0, 1, 2, 3 (3 or more) |
-| `main_heating` | `gas_combi` (no hot water tank), `gas_tank`, `oil`, `lpg`, `ashp` (air source heat pump), `gshp`, `storage` (storage heaters), `electric` (radiators or panel heaters), `communal`, `solid`, `none`, `unsure` |
-| `other_heaters` | list of `plugin`, `gas_fire`, `electric_fire`, `stove` (wood burner or multi-fuel), `open_fire`, `electric_blanket`, or `none` |
-| `heating_pattern` | `always_on` (the thermostat turns it on and off; added 1.1), `timer`, `when_needed`, `most_day`, `rarely`, `not_me` (someone else controls it) |
+| `changes`, `changes_note` | 1.3: `no` / `yes` (changes at home expected during the study), and what, as typed |
+| `pet_door` | 1.3, homes with pets: `no` / `yes` (opens an outside door for them regularly) |
+| `drying`, `drying_room` | 1.3: `no` / `yes` (dries clothes indoors), and the room, as typed |
+| `tariff` | 1.3: `standard`, `prepay`, `time_of_use` (cheaper at certain times, e.g. Economy 7), `unsure` |
+| `main_heating` | from 1.3: `gas`, `oil_lpg`, `heat_pump`, `storage`, `electric`, `infrared`, `communal`, `solid`, `none`, `unsure`; older profiles also `gas_combi` (no hot water tank), `gas_tank`, `oil`, `lpg`, `ashp` (air source heat pump), `gshp`, `storage` (storage heaters), `electric` (radiators or panel heaters), `communal`, `solid`, `none`, `unsure` |
+| `other_heaters` | anything else used to keep warm, from 1.3: list of `plugin`, `fire` (fire or stove), `electric_blanket`, `hot_water_bottle`, `blankets`, `curtains` (closing them), `other` (with `other_heaters_other` as typed), or `none`; older profiles: `plugin`, `gas_fire`, `electric_fire`, `stove` (wood burner or multi-fuel), `open_fire`, `electric_blanket`, or `none` |
+| `heating_pattern` | `always_on` (the thermostat turns it on and off; added 1.1), `timer`, `when_needed`, `most_day`, `rarely`, `unsure` (1.3), `not_me` (someone else controls it; until 1.2) |
+| `heating_times` | 1.3: `set` (with `heating_wd_start`, `heating_wd_end`, `heating_we_start`, `heating_we_end` as HH:MM, weekdays and weekends), `varies` or `unsure` |
 | `payment` | no longer asked since 1.1; older profiles: `prepay`, `bill`, `in_rent`, `unsure`, `prefer_not` |
 | `controls` | list of `room_stat`, `smart`, `programmer`, `trvs`, or `none` / `unsure` |
 | `stat_display` | no longer asked since 1.1; older profiles: `yes`, `no`, `no_stat` |
 | `setpoint_c` | usual thermostat setting in °C, or null |
 | `bedroom_trv` | no longer asked since 1.1; older profiles: `yes`, `no`, `no_radiator`, `unsure` |
 | `wall_insulation` | `cavity`, `external`, `internal`, `none`, `unsure` |
-| `loft` | `yes`, `no`, `no_loft`, `unsure` |
-| `glazing` | `single`, `double`, `triple`, `mixed`, `unsure` |
-| `windows_open` | `yes`, `some`, `no` |
-| `damp` | damp or mould seen in the last year: list of `bedroom`, `living`, `kitchen`, `bathroom`, `elsewhere`, or `none` / `unsure` |
+| `loft` | not asked from 1.3; older profiles: `yes`, `no`, `no_loft`, `unsure` |
+| `glazing`, `glazing_notes` | `single`, `double`, `triple`, `unsure` (`mixed` until 1.2), and from 1.3 optional notes as typed (rooms with another type) |
+| `windows_open` | not asked from 1.3; older profiles: `yes`, `some`, `no` |
+| `damp` | not asked from 1.3; older profiles, damp or mould seen in the last year: list of `bedroom`, `living`, `kitchen`, `bathroom`, `elsewhere`, or `none` / `unsure` |
 | `bedroom_facing`, `bedroom_side` | `N` … `NW` or `unsure`: the way the bedroom window faces, and the side of the home the bedroom is on, read from the phone's own compass app |
 | `bedroom_facing_deg`, `bedroom_side_deg` | the compass number typed (0–359), when typed |
+| `window_short`, `window_long`, `window_night` | 1.3, in winter, how often a window is opened for a few minutes / for an hour or more in the day / overnight in the bedroom: `often`, `sometimes`, `rarely` |
+| `window_putoff`, `window_putoff_other` | 1.3, what puts them off opening windows: list of `noise`, `fumes`, `security`, `heat`, `other` (as typed), or `none` |
+| `vent_kitchen`, `vent_bathroom`, `vent_trickle`, `vent_whole_house` | 1.3, kitchen and bathroom extractor fans, trickle vents, whole-house ventilation: `use` (has it and uses it), `rarely`, `no` (doesn't have it), `unsure` |
+| `overheat` | 1.3, the home gets uncomfortably warm: `often`, `sometimes`, `rarely` |
+| `cool_down`, `cool_down_other` | 1.3, how they cool down: list of `windows`, `fan`, `ac`, `blinds`, `lighter` (clothes), `room` (a cooler room), `other` (as typed), or `none` |
+| `feel_cold`, `feel_warm` | 1.3, compared with most people, how easily they feel cold / too warm: `more`, `same`, `less` |
+| `prefer_not` | 1.3, list of `birth_year`, `height`, `weight` answered "Prefer not to say" (those columns are then empty) |
+| `consent`, `consent_at` | 1.3, the five consent statements ticked when joining (`info`, `choice`, `link`, `skip`, `agree`) and when |
 
 Gender, year of birth, height (cm), weight (kg) and thermal sensitivity (`cold`, `average`, `warm`) stay in their
-own `participants` columns. Height and weight can be typed in ft/in and st/lb; they are stored metric.
+own `participants` columns. From 1.3 the sensitivity is made from `feel_cold` and `feel_warm`: `cold` when only the cold comes
+more easily than to most people, `warm` when only the warmth does, otherwise `average`. Height and weight can be typed in ft/in and st/lb; they are stored metric.
 
 ## The check-in
 

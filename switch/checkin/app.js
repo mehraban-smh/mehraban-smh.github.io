@@ -134,10 +134,12 @@ function seed(){
   if(!homeProfile()) LS.set(HOME_KEY, JSON.stringify(EXAMPLE_HOME));
   if(!meKnown()) LS.set(ME_KEY, JSON.stringify(Object.assign({ code:PARTICIPANT, name:NAME, gender:'prefer_not', birth_year:1985, height_cm:170, weight_kg:70, sensitivity:'average', alias:'Puffin', alias_colour:3 }, meProfile(), { code:PARTICIPANT })));
 }
-const EXAMPLE_HOME = { postcode_area:'SA2', home_type:'semi', tenure:'own', year_built:'1945_1964', floors:2, bedrooms:3, floor_area_m2:86, epc:'D',
-  adults:2, children:1, pets:0, bedroom_share:1, main_heating:'gas_combi', other_heaters:['electric_fire'], heating_pattern:'timer',
-  controls:['room_stat','trvs'], setpoint_c:20, wall_insulation:'cavity', loft:'yes', glazing:'double',
-  windows_open:'yes', damp:['bathroom'], bedroom_facing:'SW', bedroom_side:'S' };
+const EXAMPLE_HOME = { postcode_area:'SA2', main_road:'near', home_type:'semi', year_built:'1945_1964', floors:2, bedrooms:3, floor_area_m2:86, epc:'D',
+  adults:2, children:1, pets:0, bedroom_share:1, changes:'no', drying:'yes', drying_room:'Kitchen', tariff:'standard', main_heating:'gas', heating_pattern:'timer',
+  heating_times:'set', heating_wd_start:'06:30', heating_wd_end:'22:00', heating_we_start:'08:00', heating_we_end:'22:30',
+  controls:['room_stat','trvs'], setpoint_c:20, other_heaters:['blankets'], wall_insulation:'cavity', glazing:'double', bedroom_facing:'SW', bedroom_side:'S',
+  feel_cold:'more', feel_warm:'same', window_short:'often', window_long:'rarely', window_night:'sometimes', window_putoff:['noise'],
+  vent_kitchen:'use', vent_bathroom:'use', vent_trickle:'rarely', vent_whole_house:'no', overheat:'sometimes', cool_down:['windows','fan'] };
 
 /* ---------- goals, the gap, the streak ---------- */
 /* Monday 00:00 of the current calendar week (the week strip and the "this week" figures use it). */
@@ -804,30 +806,43 @@ const notSure = v => v === null ? tr('Not sure') : null;
 /* Sections of "Your home": [title, wizard step id, items [art, key, value or null]] from the profile, in the
  * wizard's own fields (r: name, gender... as REG holds them; h: the home). */
 function homeSections(r, h, withEmail){
-  const f = regFieldsOf(r);
+  const f = regFieldsOf(r), pns = r.pns || [];
   const share = typeof h.bedroom_share === 'number' ? label(BED_SHARE, h.bedroom_share) : null;
+  const pn = (k, v) => pns.includes(k) ? tr('Prefer not to say') : v;
+  const withNote = (v, note) => v && note ? v + ': ' + note : (v || null);
+  const picked = (k, id) => Array.isArray(h[k]) && h[k].includes(id);
+  const times = h.heating_times === 'set' && h.heating_wd_start ? tr('Weekdays {a}–{b}, weekends {c}–{d}', { a:h.heating_wd_start, b:h.heating_wd_end, c:h.heating_we_start, d:h.heating_we_end })
+    : h.heating_times === 'varies' ? tr('It varies') : h.heating_times === 'unsure' ? tr('Not sure') : null;
+  const grid = (rows, opts) => rows.map(w => [art(w.art), (w.__en && w.__en.n) || w.n, label(opts, h[w.id]) || null]);   // the English name: glanceItem translates it
   const you = [[ic('user'), 'Name', f.name || null]].concat(withEmail ? [[ic('mail'), 'Email', f.email || null]] : [])
-    .concat([[ic('users'), 'Gender', label(GENDERS, f.gender) || null], [ic('calendar'), 'Year of birth', f.birth_year ? String(f.birth_year) : null],
-      [ic('ruler'), 'Height', f.height_cm ? Math.round(f.height_cm) + ' cm' : null], [ic('scale'), 'Weight', f.weight_kg ? f.weight_kg + ' kg' : null],
-      [pic('thermo'), 'Most like you', label(SENSITIVITY, f.sensitivity) || null]]);
+    .concat([[ic('users'), 'Gender', label(GENDERS, f.gender) || null], [ic('calendar'), 'Year of birth', pn('birth_year', f.birth_year ? String(f.birth_year) : null)],
+      [ic('ruler'), 'Height', pn('height', f.height_cm ? Math.round(f.height_cm) + ' cm' : null)], [ic('scale'), 'Weight', pn('weight', f.weight_kg ? f.weight_kg + ' kg' : null)],
+      [art('feel_cold:' + (h.feel_cold || 'same')), 'Feels the cold', label(FEEL, h.feel_cold) || null], [art('feel_warm:' + (h.feel_warm || 'same')), 'Feels too warm', label(FEEL, h.feel_warm) || null]]);
   return [
     ['About you', 'you', you],
-    ['Your area and home', 'area', [[ic('pin'), 'Postcode area', h.postcode_area || null], [art(h.home_type ? 'home_type:' + h.home_type : 'home_type:detached'), 'Home', label(HOME_TYPES, h.home_type) || null]]
-      .concat(h.home_type === 'flat' ? [[art(h.flat_position ? 'flat_position:' + h.flat_position : 'flat_position:middle'), 'Floor', label(FLAT_POS, h.flat_position) || null]] : [])
-      .concat([[art(h.tenure ? 'tenure:' + h.tenure : 'tenure:own'), 'Tenure', label(TENURE, h.tenure) || null]])],
-    ['Age and size', 'size', [[h.year_built ? art('year_built:' + h.year_built) : ic('calendar'), 'Built', label(YEAR_BUILT, h.year_built) || null], [art('floors:' + (h.floors || 2)), 'Floors', h.floors ? (h.floors >= 4 ? tr('4 or more') : String(h.floors)) : null],
-      [pic('bed'), 'Bedrooms', countWord(h.bedrooms, 6)], [ic('ruler'), 'Floor area', typeof h.floor_area_m2 === 'number' ? h.floor_area_m2 + ' m²' : notSure(h.floor_area_m2)],
+    ['Your area and home', 'area', [[ic('pin'), 'Postcode area', h.postcode_area || null], [art('road:' + (h.main_road || 'no')), 'Main road', label(MAIN_ROAD, h.main_road) || null],
+      [art(h.home_type ? 'home_type:' + h.home_type : 'home_type:detached'), 'Home', withNote(label(HOME_TYPES, h.home_type), h.home_type === 'other' && h.home_type_other)]]
+      .concat(h.home_type === 'flat' ? [[art(h.flat_position ? 'flat_position:' + h.flat_position : 'flat_position:middle'), 'Floor', label(FLAT_POS, h.flat_position) || null]] : [])],
+    ['Age and size', 'size', [[h.year_built ? art('year_built:' + h.year_built) : ic('calendar'), 'Built', label(YEAR_BUILT, h.year_built) || null], [art('floors:' + Math.min(h.floors || 2, 4)), 'Floors', h.floors ? (h.floors >= 4 ? tr('4 or more') : h.floors === 3 ? tr('3 or more') : String(h.floors)) : null],
+      [pic('bed'), 'Bedrooms', countWord(h.bedrooms, h.bedrooms > 4 ? 6 : 4)], [ic('ruler'), 'Floor area', typeof h.floor_area_m2 === 'number' ? h.floor_area_m2 + ' m²' + (r.au === 'ft2' ? ' (' + Math.round(h.floor_area_m2 / SQFT) + ' sq ft)' : '') : notSure(h.floor_area_m2)],
       [epcArt(h.epc), 'EPC rating', label(EPC, h.epc) || null]]],
-    ['Who lives here', 'people', [[pic('user'), 'Adults', countWord(h.adults)], [pic('child'), 'Children', countWord(h.children)], [pic('paw'), 'Pets', countWord(h.pets)], [typeof h.bedroom_share === 'number' ? art('share:' + h.bedroom_share) : pic('bed'), 'Bedroom', share]]],
-    ['Heating', 'heat', [[art(h.main_heating ? 'heat:' + h.main_heating : 'heat:gas_combi'), 'Main heating', label(MAIN_HEATING, h.main_heating) || null],
-      [firstArt('other', h.other_heaters, pic('flame')), 'Other heaters', listWord(OTHER_HEATERS, h.other_heaters)], [artx('pattern:' + h.heating_pattern, 'clock'), 'How it&rsquo;s used', label(HEAT_PATTERN, h.heating_pattern) || null]]],
-    ['Heating controls', 'controls', [[firstArt('controls', h.controls, ic('sliders')), 'Controls', listWord(CONTROLS, h.controls)],
-      [pic('thermo'), 'Usual setting', typeof h.setpoint_c === 'number' ? h.setpoint_c.toFixed(1) + ' °C' : notSure(h.setpoint_c)]]],
-    ['Walls, roof and windows', 'fabric', [[art(h.wall_insulation ? 'wall:' + h.wall_insulation : 'wall:none'), 'Walls', label(WALL_INS, h.wall_insulation) || null],
-      [art(h.loft ? 'loft:' + h.loft : 'loft:yes'), 'Loft insulation', label(LOFT, h.loft) || null], [h.glazing ? art('glazing:' + h.glazing) : pic('window'), 'Glazing', label(GLAZING, h.glazing) || null],
-      [h.windows_open ? art('windows_open:' + h.windows_open) : pic('windowOpen'), 'Windows open', label(WINDOWS_OPEN, h.windows_open) || null], [firstArt('damp', h.damp, ic('drop')), 'Damp or mould', listWord(DAMP, h.damp)]]],
+    ['Walls and windows', 'fabric', [[art(h.wall_insulation ? 'wall:' + h.wall_insulation : 'wall:none'), 'Walls', label(WALL_INS, h.wall_insulation) || null],
+      [h.glazing ? art('glazing:' + h.glazing) : pic('window'), 'Glazing', withNote(label(GLAZING, h.glazing), h.glazing_notes)]]],
     ['Your bedroom', 'bedroom', [[art('compass'), 'Window faces', facingWord(h.bedroom_facing, h.bedroom_facing_deg)],
-      [art('compass'), 'Bedroom is on the', h.bedroom_side === 'unsure' ? tr('Not sure') : facingWord(h.bedroom_side, h.bedroom_side_deg) && (LANG === 'cy' ? facingWord(h.bedroom_side, h.bedroom_side_deg) : facingWord(h.bedroom_side, h.bedroom_side_deg).replace(/^([\w-]+)/, '$1 side'))]]]
+      [art('compass'), 'Bedroom is on the', h.bedroom_side === 'unsure' ? tr('Not sure') : facingWord(h.bedroom_side, h.bedroom_side_deg) && (LANG === 'cy' ? facingWord(h.bedroom_side, h.bedroom_side_deg) : facingWord(h.bedroom_side, h.bedroom_side_deg).replace(/^([\w-]+)/, '$1 side'))]]],
+    ['Your household', 'people', [[pic('user'), 'Adults', countWord(h.adults)], [pic('child'), 'Children', countWord(h.children)], [pic('paw'), 'Pets', countWord(h.pets)], [typeof h.bedroom_share === 'number' ? art('share:' + h.bedroom_share) : pic('bed'), 'Bedroom', share],
+      [art('changes:' + (h.changes || 'no')), 'Changes during the study', withNote(label(YES_NO, h.changes), h.changes === 'yes' && h.changes_note)]]
+      .concat(h.pets > 0 ? [[art('pet_door:' + (h.pet_door || 'no')), 'Outside door for pets', label(YES_NO, h.pet_door) || null]] : [])
+      .concat([[art('drying:' + (h.drying || 'no')), 'Dries clothes indoors', withNote(label(YES_NO, h.drying), h.drying === 'yes' && h.drying_room)],
+        [art((byId(TARIFF, h.tariff) || {}).art || 'tariff:standard'), 'Energy tariff', label(TARIFF, h.tariff) || null]])],
+    ['Heating', 'heat', [[art(h.main_heating ? 'heat:' + h.main_heating : 'heat:gas'), 'Main heating', label(MAIN_HEATING, h.main_heating) || null],
+      [artx('pattern:' + h.heating_pattern, 'clock'), 'How it&rsquo;s used', label(HEAT_PATTERN, h.heating_pattern) || null], [art('pattern:timer'), 'Heating times', times]]],
+    ['Heating controls', 'controls', [[firstArt('controls', h.controls, ic('sliders')), 'Controls', listWord(CONTROLS, h.controls)],
+      [pic('thermo'), 'Usual setting', typeof h.setpoint_c === 'number' ? h.setpoint_c.toFixed(1) + ' °C (' + Math.round(h.setpoint_c * 9 / 5 + 32) + ' °F)' : notSure(h.setpoint_c)],
+      [firstArt('other', h.other_heaters, pic('flame')), 'Also keeps warm with', withNote(listWord(OTHER_HEATERS, h.other_heaters), picked('other_heaters', 'other') && h.other_heaters_other)]]],
+    ['Windows and fresh air', 'air', grid(WINDOW_WAYS, FREQ).concat([[firstArt('putoff', h.window_putoff, pic('windowOpen')), 'Put off opening windows by', withNote(listWord(PUT_OFF, h.window_putoff), picked('window_putoff', 'other') && h.window_putoff_other)]], grid(VENTS, VENT_USE))],
+    ['Keeping cool', 'cool', [[art('overheat:' + (h.overheat || 'sometimes')), 'Gets uncomfortably warm', label(FREQ, h.overheat) || null],
+      [firstArt('cool', h.cool_down, pic('fan')), 'Cools down by', withNote(listWord(COOL_DOWN, h.cool_down), picked('cool_down', 'other') && h.cool_down_other)]]]
   ];
 }
 /* the picture of the first answer of a multiple choice (the first heater, the first room with damp), else fb */
@@ -857,7 +872,7 @@ const SCREENS = {
     return `${langPick('lp-first')}<div class="hero welcome">${brand()}
         <p class="tagline">${tr('Every home has a pulse: the warmth you feel inside it. <b>{app}</b> listens, one moment at a time, to help Swansea University shape comfortable, low-carbon homes across Wales.', { app: APP })}</p>
         <h1 class="h1" tabindex="-1">${tr('How does your home feel?')}</h1>
-        <p class="sub">${tr('Short check-ins while you&rsquo;re at home teach the study what comfortable means for you. Joining takes about 5 minutes and happens once.')}</p></div>
+        <p class="sub">${tr('Short check-ins while you&rsquo;re at home teach the study what comfortable means for you. Joining takes about 10 minutes and happens once.')}</p></div>
       ${welcomeNote ? `<div class="msg" role="status">${ic('info')}<div>${esc(tr(welcomeNote))}</div></div>` : ''}
       <div class="rows">
         <button class="row" data-act="go" data-to="join">${ic('user')}<div><b>${tr('I&rsquo;m new here')}</b><span>${draft ? tr('Carry on where you left off') : tr('Join the study')}</span></div>${ic('chev','go')}</button>
@@ -1710,23 +1725,30 @@ function remMsg(t, kind){ const m = $('#remMsg'); if(!m) return; m.hidden = fals
  * complete profile: the last step saves it with update_my_profile). The 'homeedit' screen shows one step of
  * it from My home and saves that. Everything is stored metric. */
 const REG_STEPS = [
-  {id:'you',     ic:'user',    t:'About you',               min:1.2},
-  {id:'area',    ic:'pin',     t:'Your area and home',      min:0.7},
-  {id:'size',    ic:'ruler',   t:'Age and size',            min:0.8},
-  {id:'people',  ic:'users',   t:'Who lives here',          min:0.5},
-  {id:'heat',    ic:'flame',   t:'Heating',                 min:0.8},
-  {id:'controls',ic:'stat',    t:'Heating controls',        min:0.7},
-  {id:'fabric',  ic:'wall',    t:'Walls, roof and windows', min:0.8},
-  {id:'bedroom', ic:'compass', t:'Your bedroom',            min:1.2},
-  {id:'check',   ic:'check',   t:'Check and finish',        min:0.4}
+  {id:'you',     ic:'user',       t:'About you',          min:1.4},
+  {id:'area',    ic:'pin',        t:'Your area and home', min:0.8},
+  {id:'size',    ic:'ruler',      t:'Age and size',       min:0.8},
+  {id:'fabric',  ic:'wall',       t:'Walls and windows',  min:0.6},
+  {id:'bedroom', ic:'compass',    t:'Your bedroom',       min:1.2},
+  {id:'people',  ic:'users',      t:'Your household',     min:1.0},
+  {id:'heat',    ic:'flame',      t:'Heating',            min:1.0},
+  {id:'controls',ic:'stat',       t:'Heating controls',   min:0.9},
+  {id:'air',     ic:'windowOpen', t:'Fresh air',          min:1.2},
+  {id:'cool',    ic:'sun',        t:'Keeping cool',       min:0.5},
+  {id:'check',   ic:'check',      t:'Check and finish',   min:0.6}
 ];
-/* the keys the wizard asks today; a saved home also keeps any other key it already has (payment, stat_display and
- * bedroom_trv of 1.0, say), because update_my_profile replaces the whole object */
-const HOME_KEYS = ['postcode_area','home_type','flat_position','tenure','year_built','floors','bedrooms','floor_area_m2','epc','adults','children','pets','bedroom_share',
-  'main_heating','other_heaters','heating_pattern','controls','setpoint_c','wall_insulation','loft','glazing','windows_open','damp',
-  'bedroom_facing','bedroom_facing_deg','bedroom_side','bedroom_side_deg'];
+/* the keys the wizard asks today (1.3: the Home Visit Questionnaire v2); a saved home also keeps any other key it already
+ * has (tenure, loft, windows_open and damp of 1.0 to 1.2, payment of 1.0, say), because update_my_profile replaces the whole object */
+const HOME_KEYS = ['feel_cold','feel_warm','prefer_not','postcode_area','main_road','home_type','home_type_other','flat_position','year_built','floors','bedrooms',
+  'floor_area_m2','epc','wall_insulation','glazing','glazing_notes','bedroom_facing','bedroom_facing_deg','bedroom_side','bedroom_side_deg',
+  'adults','children','pets','bedroom_share','changes','changes_note','pet_door','drying','drying_room','tariff',
+  'main_heating','heating_pattern','heating_times','heating_wd_start','heating_wd_end','heating_we_start','heating_we_end','controls','setpoint_c',
+  'other_heaters','other_heaters_other','window_short','window_long','window_night','window_putoff','window_putoff_other',
+  'vent_kitchen','vent_bathroom','vent_trickle','vent_whole_house','overheat','cool_down','cool_down_other','consent','consent_at'];
+const SQFT = 0.09290304;   // one square foot in square metres
+const HEAT_TIME_KEYS = ['heating_wd_start','heating_wd_end','heating_we_start','heating_we_end'];
 const stepOf = id => Math.max(0, REG_STEPS.findIndex(s => s.id === id));
-const regFresh = mode => ({ v:1, mode: mode || 'join', code:'', step:0, touched:false, areaTxt:'', name:'', email:'', gender:'', birth_year:'', hu:'cm', cm:'', ft:'', inch:'', wu:'kg', kg:'', st:'', lb:'', sens:null, home:{}, edit:false, pin:'', pin2:'' });
+const regFresh = mode => ({ v:1, mode: mode || 'join', code:'', step:0, touched:false, areaTxt:'', au:'m2', name:'', email:'', gender:'', birth_year:'', hu:'cm', cm:'', ft:'', inch:'', wu:'kg', kg:'', st:'', lb:'', sens:null, pns:[], consent:[], home:{}, edit:false, pin:'', pin2:'' });
 function loadReg(mode){ try{ const r = JSON.parse(LS.get(REG_KEY) || 'null'); if(r && r.v === 1 && r.home && r.mode === mode) return Object.assign(regFresh(mode), r, { step: Math.max(0, Math.min(REG_STEPS.length-1, r.step|0)), pin:'', pin2:'' }); }catch(e){} return regFresh(mode); }
 let REG = regFresh('join');
 function saveReg(){ if(S.screen === 'homeedit') return; REG.touched = true; LS.set(REG_KEY, JSON.stringify(Object.assign({}, REG, { pin:'', pin2:'', edit:false }))); }   // the PIN is never kept in the draft
@@ -1740,21 +1762,37 @@ function regFromProfile(me, h){
   r.cm = typeof me.height_cm === 'number' ? String(Math.round(me.height_cm)) : ''; r.kg = typeof me.weight_kg === 'number' ? String(me.weight_kg) : '';
   r.sens = me.sensitivity || null;
   r.home = JSON.parse(JSON.stringify(h || {}));
+  r.pns = Array.isArray(r.home.prefer_not) ? [...r.home.prefer_not] : [];   // "Prefer not to say" (1.3): birth_year, height, weight
   return r;
 }
 /* height and weight in metric from what was typed (cm, or feet and inches; kg, or stone and pounds) */
 function regFieldsOf(r){
   let height_cm = null, weight_kg = null;
+  const pns = r.pns || [];
   if(r.hu === 'ftin'){ const ft = numOf(r.ft), inch = numOf(r.inch); if(ft !== null || inch !== null) height_cm = Math.round(((ft||0)*12 + (inch||0)) * 2.54 * 10) / 10; }
   else height_cm = numOf(r.cm);
   if(r.wu === 'stlb'){ const st = numOf(r.st), lb = numOf(r.lb); if(st !== null || lb !== null) weight_kg = Math.round(((st||0)*14 + (lb||0)) * 0.45359237 * 10) / 10; }
   else weight_kg = numOf(r.kg);
-  const by = numOf(r.birth_year), h = r.home || {}, home = {};
-  Object.keys(h).forEach(k => { if(h[k] !== undefined && h[k] !== '') home[k] = Array.isArray(h[k]) ? [...h[k]] : h[k]; });
+  if(pns.includes('height')) height_cm = null;
+  if(pns.includes('weight')) weight_kg = null;
+  const by = pns.includes('birth_year') ? null : numOf(r.birth_year), h = r.home || {}, home = {};
+  Object.keys(h).forEach(k => { const v = h[k]; if(v !== undefined && v !== '') home[k] = Array.isArray(v) ? [...v] : typeof v === 'string' ? v.trim() : v; });
   if(home.home_type !== 'flat') delete home.flat_position;
   if(home.postcode_area) home.postcode_area = String(home.postcode_area).toUpperCase().replace(/\s+/g, '');
+  /* 1.3: a typed answer goes only with the answer it belongs to; the pet door only with pets; the times only when given */
+  const only = (k, ok) => { if(!ok) delete home[k]; }, has = (k, id) => Array.isArray(home[k]) && home[k].includes(id);
+  only('home_type_other', home.home_type === 'other'); only('changes_note', home.changes === 'yes'); only('drying_room', home.drying === 'yes');
+  only('pet_door', home.pets > 0); only('other_heaters_other', has('other_heaters', 'other'));
+  only('window_putoff_other', has('window_putoff', 'other')); only('cool_down_other', has('cool_down', 'other'));
+  if(home.heating_times !== 'set') HEAT_TIME_KEYS.forEach(k => delete home[k]);
+  Object.keys(home).forEach(k => { if(home[k] === '') delete home[k]; });
+  if(pns.length) home.prefer_not = [...pns]; else delete home.prefer_not;
+  if(r.mode === 'join' && CONSENT.every(c => (r.consent || []).includes(c.id))){ home.consent = CONSENT.map(c => c.id); home.consent_at = new Date().toISOString(); }
+  /* the participants column keeps one word, made from the two 1.3 questions: cold, warm or average */
+  const fc = home.feel_cold, fw = home.feel_warm;
+  const sensitivity = fc || fw ? (fc === 'more' && fw !== 'more' ? 'cold' : fw === 'more' && fc !== 'more' ? 'warm' : 'average') : (r.sens || null);
   return { email: (r.email || '').trim(), name: (r.name || '').trim().replace(/\s+/g, ' '), gender: r.gender || null, birth_year: by !== null ? Math.round(by) : null,
-    height_cm, weight_kg, sensitivity: r.sens || null, home };
+    height_cm, weight_kg, sensitivity, home };
 }
 const regFields = () => regFieldsOf(REG);
 /* switching units converts what has been typed so far */
@@ -1770,81 +1808,115 @@ function convertUnits(kind, to){
     else { const st = numOf(r.st), lb = numOf(r.lb); if(st !== null || lb !== null) r.kg = String(Math.round(((st||0)*14 + (lb||0)) * 0.45359237 * 10) / 10); }
     r.wu = to;
   }
+  if(kind === 'a' && r.au !== to){                       // the floor area: square metres or square feet (kept in m²)
+    const n = numOf(r.areaTxt), m2 = r.home.floor_area_m2;
+    if(n !== null) r.areaTxt = String(to === 'ft2' ? Math.round(n / SQFT) : Math.round(n * SQFT));
+    else if(typeof m2 === 'number') r.areaTxt = String(to === 'ft2' ? Math.round(m2 / SQFT) : m2);
+    r.au = to;
+  }
 }
 /* friendly checks before leaving a step: [field id, message] or null. Every question needs an answer ("Not
  * sure" counts). */
 function regProblem(step, r){
   r = r || REG;
-  const y = new Date().getFullYear(), id = REG_STEPS[step].id, H = r.home || {}, num = k => typeof H[k] === 'number', mode = r.mode;
+  const y = new Date().getFullYear(), id = REG_STEPS[step].id, H = r.home || {}, num = k => typeof H[k] === 'number', mode = r.mode, pns = r.pns || [];
+  const has = k => H[k] !== undefined && H[k] !== null && H[k] !== '', some = k => Array.isArray(H[k]) && H[k].length > 0, picked = (k, v) => some(k) && H[k].includes(v);
   if(id === 'you'){
     if((r.name || '').trim().length < 2) return ['r_name', tr('Please enter your name.')];
     if(mode === 'join' && !EMAIL_RE.test((r.email || '').trim())) return ['r_email', tr('Please enter an email address, like name@example.com.')];
     if(!r.gender) return ['r_gender', tr('Please choose one. &ldquo;Prefer not to say&rdquo; is fine.')];
-    const by = numOf(r.birth_year);
-    if(blank(r.birth_year)) return ['r_year', tr('Please enter the year you were born.')];
-    if(by === null || by % 1 || by < 1900 || by > y) return ['r_year', tr('Please enter the year as four digits, like 1985.')];
-    if(by > y - 18) return ['r_year', tr('You need to be 18 or over to take part.')];
-    if(r.hu === 'ftin'){
-      const ft = numOf(r.ft), inch = numOf(r.inch);
-      if(blank(r.ft)) return ['r_ft', tr('Please enter your height in feet and inches.')];
-      if(ft === null || ft < 3 || ft > 8 || (!blank(r.inch) && (inch === null || inch < 0 || inch >= 12))) return ['r_ft', tr('Please check your height: feet from 3 to 8, inches from 0 to 11.')];
-    } else {
-      const cm = numOf(r.cm);
-      if(blank(r.cm)) return ['r_cm', tr('Please enter your height in centimetres.')];
-      if(cm === null || cm < 100 || cm > 250) return ['r_cm', tr('Please check your height: between 100 and 250 cm.')];
+    if(!pns.includes('birth_year')){
+      const by = numOf(r.birth_year);
+      if(blank(r.birth_year)) return ['r_year', tr('Please enter the year you were born.')];
+      if(by === null || by % 1 || by < 1900 || by > y) return ['r_year', tr('Please enter the year as four digits, like 1985.')];
+      if(by > y - 18) return ['r_year', tr('You need to be 18 or over to take part.')];
     }
-    if(r.wu === 'stlb'){
-      const st = numOf(r.st), lb = numOf(r.lb);
-      if(blank(r.st)) return ['r_st', tr('Please enter your weight in stone and pounds.')];
-      if(st === null || st < 4 || st > 47 || (!blank(r.lb) && (lb === null || lb < 0 || lb >= 14))) return ['r_st', tr('Please check your weight: stone from 4 to 47, pounds from 0 to 13.')];
-    } else {
-      const kg = numOf(r.kg);
-      if(blank(r.kg)) return ['r_kg', tr('Please enter your weight in kilograms.')];
-      if(kg === null || kg < 30 || kg > 300) return ['r_kg', tr('Please check your weight: between 30 and 300 kg.')];
+    if(!pns.includes('height')){
+      if(r.hu === 'ftin'){
+        const ft = numOf(r.ft), inch = numOf(r.inch);
+        if(blank(r.ft)) return ['r_ft', tr('Please enter your height in feet and inches.')];
+        if(ft === null || ft < 3 || ft > 8 || (!blank(r.inch) && (inch === null || inch < 0 || inch >= 12))) return ['r_ft', tr('Please check your height: feet from 3 to 8, inches from 0 to 11.')];
+      } else {
+        const cm = numOf(r.cm);
+        if(blank(r.cm)) return ['r_cm', tr('Please enter your height in centimetres.')];
+        if(cm === null || cm < 100 || cm > 250) return ['r_cm', tr('Please check your height: between 100 and 250 cm.')];
+      }
     }
-    if(!r.sens) return ['sens', tr('Please choose the one that sounds most like you.')];
+    if(!pns.includes('weight')){
+      if(r.wu === 'stlb'){
+        const st = numOf(r.st), lb = numOf(r.lb);
+        if(blank(r.st)) return ['r_st', tr('Please enter your weight in stone and pounds.')];
+        if(st === null || st < 4 || st > 47 || (!blank(r.lb) && (lb === null || lb < 0 || lb >= 14))) return ['r_st', tr('Please check your weight: stone from 4 to 47, pounds from 0 to 13.')];
+      } else {
+        const kg = numOf(r.kg);
+        if(blank(r.kg)) return ['r_kg', tr('Please enter your weight in kilograms.')];
+        if(kg === null || kg < 30 || kg > 300) return ['r_kg', tr('Please check your weight: between 30 and 300 kg.')];
+      }
+    }
+    if(!has('feel_cold')) return ['feel_cold', tr('Please choose one.')];
+    if(!has('feel_warm')) return ['feel_warm', tr('Please choose one.')];
   }
   if(id === 'area'){
     const pc = String(H.postcode_area || '').toUpperCase().replace(/\s+/g, '');
     if(!pc) return ['r_pc', tr('Please enter the first half of your postcode, like SA1.')];
     if(!POSTCODE_AREA_RE.test(pc)) return ['r_pc', tr('Please enter only the first half of your postcode: letters then numbers, like SA1 or CF10.')];
+    if(!has('main_road')) return ['main_road', tr('Please choose one.')];
     if(!HOME_TYPES.some(o => o.id === H.home_type)) return ['home_type', tr('Please pick the closest match.')];
+    if(H.home_type === 'other' && blank(H.home_type_other)) return ['home_type', tr('Please say what type of home it is.')];
     if(H.home_type === 'flat' && !FLAT_POS.some(o => o.id === H.flat_position)) return ['flat_position', tr('Please choose which floor your flat is on.')];
-    if(!H.tenure) return ['tenure', tr('Please choose one.')];
   }
   if(id === 'size'){
+    const ft = r.au === 'ft2';
     if(!H.year_built) return ['year', tr('Please choose when it was built, or &ldquo;Not sure&rdquo;.')];
     if(!H.floors) return ['floors', tr('Please choose how many floors.')];
     if(!num('bedrooms')) return ['bedrooms', tr('Please choose how many bedrooms.')];
-    if(H.floor_area_m2 === undefined) return ['area', tr(blank(r.areaTxt) ? 'Please type the floor area in square metres, or tap &ldquo;Not sure&rdquo;.' : 'Please type the floor area as a number of square metres, like 85.')];
-    if(H.floor_area_m2 !== null && !(H.floor_area_m2 >= 20 && H.floor_area_m2 <= 300)) return ['area', tr('Please check the floor area: between 20 and 300 m².')];
+    if(H.floor_area_m2 === undefined) return ['area', tr(ft ? (blank(r.areaTxt) ? 'Please type the floor area in square feet, or tap &ldquo;Not sure&rdquo;.' : 'Please type the floor area as a number of square feet, like 900.')
+      : (blank(r.areaTxt) ? 'Please type the floor area in square metres, or tap &ldquo;Not sure&rdquo;.' : 'Please type the floor area as a number of square metres, like 85.'))];
+    if(H.floor_area_m2 !== null && !(H.floor_area_m2 >= 20 && H.floor_area_m2 <= 300)) return ['area', tr(ft ? 'Please check the floor area: between 215 and 3,230 square feet.' : 'Please check the floor area: between 20 and 300 m².')];
     if(!H.epc) return ['epc', tr('Please choose the rating, or &ldquo;I don&rsquo;t know&rdquo;.')];
-  }
-  if(id === 'people'){
-    if(!num('adults') || !num('children') || !num('pets')) return ['people', tr('Please set adults, children and pets. Tap &minus; for none.')];
-    if(!num('bedroom_share')) return ['bedroom_share', tr('Please choose one.')];
-  }
-  if(id === 'heat'){
-    if(!H.main_heating) return ['main_heating', tr('Please choose your main heating, or &ldquo;Not sure&rdquo;.')];
-    if(!(Array.isArray(H.other_heaters) && H.other_heaters.length)) return ['other_heaters', tr('Please choose any you use, or &ldquo;None of these&rdquo;.')];
-    if(!H.heating_pattern) return ['heating_pattern', tr('Please choose the one closest to how it&rsquo;s used.')];
-  }
-  if(id === 'controls'){
-    if(!(Array.isArray(H.controls) && H.controls.length)) return ['controls', tr('Please choose any you have, or &ldquo;None of these&rdquo;.')];
-    if(H.setpoint_c === undefined) return ['setpoint', tr('Please set the usual temperature, or tap &ldquo;Not sure&rdquo;.')];
   }
   if(id === 'fabric'){
     if(!H.wall_insulation) return ['wall_insulation', tr('Please choose one, or &ldquo;Not sure&rdquo;.')];
-    if(!H.loft) return ['loft', tr('Please choose one, or &ldquo;Not sure&rdquo;.')];
     if(!H.glazing) return ['glazing', tr('Please choose one, or &ldquo;Not sure&rdquo;.')];
-    if(!H.windows_open) return ['windows_open', tr('Please choose one.')];
-    if(!(Array.isArray(H.damp) && H.damp.length)) return ['damp', tr('Please choose where, or &ldquo;No&rdquo;.')];
   }
   if(id === 'bedroom'){
     if(!H.bedroom_facing) return ['bedroom_facing', tr('Please tap a direction, or &ldquo;Not sure&rdquo;.')];
     if(!H.bedroom_side) return ['bedroom_side', tr('Please tap a direction, or &ldquo;Not sure&rdquo;.')];
   }
+  if(id === 'people'){
+    if(!num('adults') || !num('children') || !num('pets')) return ['people', tr('Please set adults, children and pets. Tap &minus; for none.')];
+    if(!num('bedroom_share')) return ['bedroom_share', tr('Please choose one.')];
+    if(!has('changes')) return ['changes', tr('Please choose one.')];
+    if(H.changes === 'yes' && blank(H.changes_note)) return ['changes', tr('Please say briefly what will change.')];
+    if(H.pets > 0 && !has('pet_door')) return ['pet_door', tr('Please choose one.')];
+    if(!has('drying')) return ['drying', tr('Please choose one.')];
+    if(H.drying === 'yes' && blank(H.drying_room)) return ['drying', tr('Please say which room.')];
+    if(!has('tariff')) return ['tariff', tr('Please choose one, or &ldquo;Not sure&rdquo;.')];
+  }
+  if(id === 'heat'){
+    if(!H.main_heating) return ['main_heating', tr('Please choose your main heating, or &ldquo;Not sure&rdquo;.')];
+    if(!H.heating_pattern) return ['heating_pattern', tr('Please choose the one closest to how it&rsquo;s used.')];
+    if(!['varies','unsure'].includes(H.heating_times) && !HEAT_TIME_KEYS.every(k => has(k))) return ['htimes', tr('Please give the times for weekdays and weekends, or tap &ldquo;It varies&rdquo; or &ldquo;Not sure&rdquo;.')];
+  }
+  if(id === 'controls'){
+    if(!(Array.isArray(H.controls) && H.controls.length)) return ['controls', tr('Please choose any you have, or &ldquo;None of these&rdquo;.')];
+    if(H.setpoint_c === undefined) return ['setpoint', tr('Please set the usual temperature, or tap &ldquo;Not sure&rdquo;.')];
+    if(!some('other_heaters')) return ['other_heaters', tr('Please choose any you use, or &ldquo;No, nothing else&rdquo;.')];
+    if(picked('other_heaters', 'other') && blank(H.other_heaters_other)) return ['other_heaters', tr('Please say what else you use.')];
+  }
+  if(id === 'air'){
+    if(WINDOW_WAYS.some(w => !has(w.id))) return ['windows', tr('Please answer each row.')];
+    if(!some('window_putoff')) return ['window_putoff', tr('Please choose any that apply, or &ldquo;No, nothing&rdquo;.')];
+    if(picked('window_putoff', 'other') && blank(H.window_putoff_other)) return ['window_putoff', tr('Please say what else.')];
+    if(VENTS.some(w => !has(w.id))) return ['vents', tr('Please answer each row.')];
+  }
+  if(id === 'cool'){
+    if(!has('overheat')) return ['overheat', tr('Please choose one.')];
+    if(!some('cool_down')) return ['cool_down', tr('Please choose any that apply, or &ldquo;Nothing&rdquo;.')];
+    if(picked('cool_down', 'other') && blank(H.cool_down_other)) return ['cool_down', tr('Please say what else.')];
+  }
   if(id === 'check' && mode === 'join'){
+    if(CONSENT.some(c => !(r.consent || []).includes(c.id))) return ['consent', tr('Please tick every statement to take part.')];
     if(!/^\d{4}$/.test(r.pin || '')) return ['r_pin', tr('Please choose a 4-digit PIN.')];
     if(weakPin(r.pin)) return ['r_pin', tr('That PIN is easy to guess. Please choose another.')];
     if(r.pin2 !== r.pin) return ['r_pin2', tr('The two PINs are not the same.')];
@@ -1956,8 +2028,8 @@ document.addEventListener('toggle', e => { const d = e.target; if(d && d.dataset
 /* title, hint and howTo are the English texts (translated here) */
 const fieldBlock = (id, title, hint, body, howTo) => `<div class="field rq" id="f-${id}" role="group" aria-labelledby="lab-${id}"><div class="rq-head"><b id="lab-${id}">${tr(title)}</b>${hint ? `<p class="note">${tr(hint)}</p>` : ''}${howTo ? `<details class="howto" data-howto="${id}"${HOWTO_OPEN.has(id) ? ' open' : ''}><summary>${ic('help')}${tr('How to tell')}</summary><p>${tr(howTo)}</p></details>` : ''}</div>${body}${groupErr(id)}</div>`;
 const tiles = (cols, inner, label, multi) => `<div class="ptiles c${cols}" ${multi ? 'role="group"' : 'role="radiogroup"'} aria-label="${tr(label)}">${inner}</div>`;
-const pick1 = (k, list, artFn, cols, label, cls='') => { const v = k.startsWith('home.') ? REG.home[k.slice(5)] : REG[k]; return tiles(cols, list.map(o => regTile(k, o, v === o.id, artFn ? artFn(o) : '', cls)).join(''), label); };
-const pickN = (k, list, artFn, cols, label, cls='') => { const v = REG.home[k.slice(5)] || []; return tiles(cols, list.map(o => regMulti(k, o, v.includes(o.id), artFn ? artFn(o) : '', cls)).join(''), label, true); };
+const pick1 = (k, list, artFn, cols, label, cls='') => { const v = k.startsWith('home.') ? REG.home[k.slice(5)] : REG[k]; return tiles(cols, list.filter(o => !o.old).map(o => regTile(k, o, v === o.id, artFn ? artFn(o) : '', cls)).join(''), label); };
+const pickN = (k, list, artFn, cols, label, cls='') => { const v = REG.home[k.slice(5)] || []; return tiles(cols, list.filter(o => !o.old).map(o => regMulti(k, o, v.includes(o.id), artFn ? artFn(o) : '', cls)).join(''), label, true); };
 /* A count of the home profile. Until it is tapped it shows "–" and stays out of the profile (not answered). A
  * button at its limit stays focusable (aria-disabled, not disabled), so focus is not lost when it is redrawn. */
 const STEP_LIMITS = { adults:[1,8], children:[0,8], pets:[0,8] };
@@ -1975,7 +2047,7 @@ function dialHtml(k, en){
       <svg viewBox="0 0 150 140" aria-hidden="true" focusable="false"><path class="dial-track" d=""/><path class="dial-fill" d=""/><circle class="dial-knob" r="11"/>
         <text class="dial-num" x="75" y="78" text-anchor="middle"></text><text class="dial-unit" x="75" y="98" text-anchor="middle"></text>
         <text class="dial-end" x="34" y="136" text-anchor="middle">${DIAL.min}</text><text class="dial-end" x="116" y="136" text-anchor="middle">${DIAL.max}</text></svg></div>
-    <div class="dial-side"><b>${title}</b><span class="note dial-hint">${tr(set ? 'Drag the dial or use &minus; and +' : unsure ? 'Marked as not sure' : 'Tap &minus; or + to set it')}</span>
+    <div class="dial-side"><b>${title}</b><span class="note dial-hint">${tr(set ? 'Drag the dial or use &minus; and +' : unsure ? 'Marked as not sure' : 'Tap &minus; or + to set it')}</span><span class="note dial-f" id="dialf-${k}" aria-hidden="true"></span>
       <span class="dial-pm"><button class="pm" data-act="reg-dial" data-k="${k}" data-d="-1" aria-label="${tr('Lower')}">${ic('minus')}</button><button class="pm" data-act="reg-dial" data-k="${k}" data-d="1" aria-label="${tr('Higher')}">${ic('plus')}</button></span>
       <button class="chip ${unsure ? 'on' : ''}" aria-pressed="${unsure}" data-act="reg-unsure" data-k="${k}">${ic('check')}${tr('Not sure / no thermostat')}</button></div></div>`;
 }
@@ -1990,6 +2062,7 @@ function paintDial(el){
   el.querySelector('.dial-fill').setAttribute('d', set && t > 0.001 ? arc(DIAL_A0, a) : '');
   const [kx, ky] = dialPt(a), knob = el.querySelector('.dial-knob'); knob.setAttribute('cx', kx.toFixed(2)); knob.setAttribute('cy', ky.toFixed(2));
   el.querySelector('.dial-num').textContent = set ? shown.toFixed(1) + '°' : '–';
+  const fEl = $('#dialf-' + k); if(fEl) fEl.textContent = set ? '= ' + Math.round(shown * 9 / 5 + 32) + ' °F' : '';   // 1.3: °F beside it
   el.querySelector('.dial-unit').textContent = tr(set ? 'SET TO' : (v === null ? 'NOT SURE' : 'NOT SET'));
   if(set){ el.setAttribute('aria-valuenow', String(shown)); el.setAttribute('aria-valuetext', tr('{v} degrees Celsius', { v: shown })); }
   else { el.removeAttribute('aria-valuenow'); el.setAttribute('aria-valuetext', tr(v === null ? 'Not sure' : 'Not set')); }
@@ -2053,24 +2126,28 @@ function unitSwitch(kind, cur, a, b){
 }
 const REGS = {
   you: () => {
-    const r = REG, join = r.mode === 'join' && S.screen !== 'homeedit';
-    const inp = (id, key, lab, attrs) => `<div class="field" id="f-${id}"><label for="${id}">${tr(lab)}</label><input class="in" id="${id}" data-reg="${key}" value="${esc(r[key])}" ${attrs} aria-describedby="err-${id}"><p class="err" id="err-${id}" hidden></p></div>`;
+    const r = REG, join = r.mode === 'join' && S.screen !== 'homeedit', pns = r.pns || [];
+    const off = k => pns.includes(k) ? ' disabled' : '';
+    /* 1.3: "Prefer not to say" for the year of birth, the height and the weight */
+    const pnsChip = k => `<button type="button" class="chip pns ${pns.includes(k) ? 'on' : ''}" aria-pressed="${pns.includes(k)}" data-act="reg-pns" data-v="${k}">${ic('check')}${tr('Prefer not to say')}</button>`;
+    const inp = (id, key, lab, attrs, extra='') => `<div class="field" id="f-${id}"><label for="${id}">${tr(lab)}</label><input class="in" id="${id}" data-reg="${key}" value="${esc(r[key])}" ${attrs} aria-describedby="err-${id}">${extra}<p class="err" id="err-${id}" hidden></p></div>`;
     const sfx = (id, key, lab, s, attrs) => `<span class="in-sfx"><input class="in" id="${id}" data-reg="${key}" value="${esc(r[key])}" ${attrs} aria-label="${tr(lab)}"><span aria-hidden="true">${s}</span></span>`;
     const height = r.hu === 'ftin'
-      ? `<div class="field" id="f-r_ft"><span class="lab-row"><label for="r_ft">${tr('Height')}</label>${unitSwitch('h', r.hu, ['cm','cm'], ['ftin','ft, in'])}</span><span class="pair">${sfx('r_ft','ft','Height, feet','ft','inputmode="numeric" maxlength="1" placeholder="5"')}${sfx('r_in','inch','Height, inches','in','inputmode="numeric" maxlength="2" placeholder="8"')}</span><p class="err" id="err-r_ft" hidden></p></div>`
-      : `<div class="field" id="f-r_cm"><span class="lab-row"><label for="r_cm">${tr('Height')}</label>${unitSwitch('h', r.hu, ['cm','cm'], ['ftin','ft, in'])}</span>${sfx('r_cm','cm','Height in centimetres','cm','inputmode="decimal" maxlength="5" placeholder="172"')}<p class="err" id="err-r_cm" hidden></p></div>`;
+      ? `<div class="field" id="f-r_ft"><span class="lab-row"><label for="r_ft">${tr('Height')}</label>${unitSwitch('h', r.hu, ['cm','cm'], ['ftin','ft, in'])}</span><span class="pair">${sfx('r_ft','ft','Height, feet','ft','inputmode="numeric" maxlength="1" placeholder="5"' + off('height'))}${sfx('r_in','inch','Height, inches','in','inputmode="numeric" maxlength="2" placeholder="8"' + off('height'))}</span>${pnsChip('height')}<p class="err" id="err-r_ft" hidden></p></div>`
+      : `<div class="field" id="f-r_cm"><span class="lab-row"><label for="r_cm">${tr('Height')}</label>${unitSwitch('h', r.hu, ['cm','cm'], ['ftin','ft, in'])}</span>${sfx('r_cm','cm','Height in centimetres','cm','inputmode="decimal" maxlength="5" placeholder="172"' + off('height'))}${pnsChip('height')}<p class="err" id="err-r_cm" hidden></p></div>`;
     const weight = r.wu === 'stlb'
-      ? `<div class="field" id="f-r_st"><span class="lab-row"><label for="r_st">${tr('Weight')}</label>${unitSwitch('w', r.wu, ['kg','kg'], ['stlb','st, lb'])}</span><span class="pair">${sfx('r_st','st','Weight, stone','st','inputmode="numeric" maxlength="2" placeholder="11"')}${sfx('r_lb','lb','Weight, pounds','lb','inputmode="numeric" maxlength="2" placeholder="6"')}</span><p class="err" id="err-r_st" hidden></p></div>`
-      : `<div class="field" id="f-r_kg"><span class="lab-row"><label for="r_kg">${tr('Weight')}</label>${unitSwitch('w', r.wu, ['kg','kg'], ['stlb','st, lb'])}</span>${sfx('r_kg','kg','Weight in kilograms','kg','inputmode="decimal" maxlength="5" placeholder="70"')}<p class="err" id="err-r_kg" hidden></p></div>`;
+      ? `<div class="field" id="f-r_st"><span class="lab-row"><label for="r_st">${tr('Weight')}</label>${unitSwitch('w', r.wu, ['kg','kg'], ['stlb','st, lb'])}</span><span class="pair">${sfx('r_st','st','Weight, stone','st','inputmode="numeric" maxlength="2" placeholder="11"' + off('weight'))}${sfx('r_lb','lb','Weight, pounds','lb','inputmode="numeric" maxlength="2" placeholder="6"' + off('weight'))}</span>${pnsChip('weight')}<p class="err" id="err-r_st" hidden></p></div>`
+      : `<div class="field" id="f-r_kg"><span class="lab-row"><label for="r_kg">${tr('Weight')}</label>${unitSwitch('w', r.wu, ['kg','kg'], ['stlb','st, lb'])}</span>${sfx('r_kg','kg','Weight in kilograms','kg','inputmode="decimal" maxlength="5" placeholder="70"' + off('weight'))}${pnsChip('weight')}<p class="err" id="err-r_kg" hidden></p></div>`;
     return `<div class="form" id="regForm">
       ${inp('r_name', 'name', 'Full name', 'autocomplete="name" autocapitalize="words"')}
       ${join ? inp('r_email', 'email', 'Email', 'type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false"') : ''}
       <div class="row2">
         <div class="field" id="f-r_gender"><label for="r_gender">${tr('Gender')}</label><select class="in" id="r_gender" data-reg="gender" aria-describedby="err-r_gender"><option value="">${tr('Choose')}</option>${GENDERS.map(g => `<option value="${g.id}"${r.gender===g.id?' selected':''}>${g.n}</option>`).join('')}</select><p class="err" id="err-r_gender" hidden></p></div>
-        ${inp('r_year', 'birth_year', 'Year of birth', `inputmode="numeric" maxlength="4" placeholder="${tr('e.g. 1985')}" autocomplete="bday-year"`)}
+        ${inp('r_year', 'birth_year', 'Year of birth', `inputmode="numeric" maxlength="4" placeholder="${tr('e.g. 1985')}" autocomplete="bday-year"${off('birth_year')}`, pnsChip('birth_year'))}
       </div>
       <div class="row2">${height}${weight}</div>
-      ${fieldBlock('sens', 'Which sounds most like you?', '', pick1('sens', SENSITIVITY, o => pic(o.ic, o.cls||''), 3, 'Which sounds most like you', 'sm'))}
+      ${fieldBlock('feel_cold', 'Compared with most people, how easily do you feel cold?', '', pick1('home.feel_cold', FEEL, o => art('feel_cold:' + o.id), 3, 'How easily you feel cold', 'sm'))}
+      ${fieldBlock('feel_warm', 'Compared with most people, how easily do you feel too warm?', '', pick1('home.feel_warm', FEEL, o => art('feel_warm:' + o.id), 3, 'How easily you feel too warm', 'sm'))}
       <p class="note">${tr('Used only to understand comfort differences between people. Your check-ins are stored under a participant code, not your name. The research team sees your name and email next to that code, to run the study and contact you.')}</p>
     </div>`;
   },
@@ -2078,18 +2155,19 @@ const REGS = {
     const h = REG.home;
     return `<div class="form">
       <div class="field" id="f-r_pc"><label for="r_pc">${tr('The first half of your postcode')}</label><input class="in pcode" id="r_pc" data-reg="home.postcode_area" value="${esc(h.postcode_area||'')}" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="5" placeholder="${tr('e.g. SA1')}" aria-describedby="hint-pc err-r_pc"><p class="note" id="hint-pc">${ic('cloud','inl')} ${tr('Only the first half (like SA2 or CF10), never the full postcode: it matches your check-ins to the local weather.')}</p><p class="err" id="err-r_pc" hidden></p></div>
-      ${fieldBlock('home_type', 'What type of home do you live in?', 'Pick the closest match.', pick1('home.home_type', HOME_TYPES, o => art('home_type:' + o.id), 3, 'Home type'))}
+      ${fieldBlock('main_road', 'Is your home on or near a main road?', '', pick1('home.main_road', MAIN_ROAD, o => art('road:' + o.id), 2, 'Main road'))}
+      ${fieldBlock('home_type', 'What type of home do you live in?', 'Pick the closest match.', pick1('home.home_type', HOME_TYPES, o => art('home_type:' + o.id), 3, 'Home type') + (h.home_type === 'other' ? noteIn('home_type_other', 'What type of home?') : ''))}
       ${h.home_type === 'flat' ? fieldBlock('flat_position', 'Which floor is your flat on?', 'The floor you live on. A maisonette: its lowest floor.', pick1('home.flat_position', FLAT_POS, o => art('flat_position:' + o.id), 4, 'Which floor', 'sm')) : ''}
-      ${fieldBlock('tenure', 'Do you own or rent your home?', '', pick1('home.tenure', TENURE, o => art('tenure:' + o.id), 2, 'Tenure', 'line'))}
     </div>`;
   },
   size: () => {
-    const h = REG.home, v = h.floor_area_m2;
+    const h = REG.home, v = h.floor_area_m2, ft = REG.au === 'ft2';
+    const shown = !blank(REG.areaTxt) ? REG.areaTxt : typeof v === 'number' ? String(ft ? Math.round(v / SQFT) : v) : '';
     return `<div class="form">
-      ${fieldBlock('year', 'When was it built?', 'A good guess is fine.', pick1('home.year_built', YEAR_BUILT, o => art('year_built:' + o.id), 3, 'Year built'))}
-      ${fieldBlock('floors', 'How many floors does your home have?', h.home_type === 'flat' ? 'Inside your flat, not the whole building.' : 'Count a loft or cellar only if it is lived in.', pick1('home.floors', FLOORS, o => art('floors:' + o.id), 4, 'Floors', 'sm'))}
-      ${fieldBlock('bedrooms', 'How many bedrooms?', '', `<div class="numrow" role="radiogroup" aria-label="${tr('Bedrooms')}">${BEDROOMS.map(o => `<button class="num-b ${h.bedrooms===o.id?'on':''}" role="radio" aria-checked="${h.bedrooms===o.id}" data-act="reg-pick" data-k="home.bedrooms" data-v="${o.id}">${o.n}</button>`).join('')}</div>`)}
-      ${fieldBlock('area', 'What is the floor area?', 'In square metres. Your Energy Performance Certificate (EPC) shows it as &ldquo;Total floor area&rdquo;.', `<div class="area-row"><span class="in-sfx"><input class="in" id="r_area" data-area="1" inputmode="decimal" maxlength="5" placeholder="${tr('e.g. 85')}" value="${typeof v === 'number' ? v : esc(REG.areaTxt || '')}" aria-label="${tr('Floor area in square metres')}"><span aria-hidden="true">m²</span></span><button class="chip ${v === null ? 'on' : ''}" aria-pressed="${v === null}" data-act="reg-unsure" data-k="floor_area_m2">${ic('check')}${tr('Not sure')}</button></div>`)}
+      ${fieldBlock('year', 'Roughly when was your home built?', 'A good guess is fine.', pick1('home.year_built', YEAR_BUILT, o => art('year_built:' + o.id), 3, 'Year built'))}
+      ${fieldBlock('floors', 'How many floors does your home have?', h.home_type === 'flat' ? 'Inside your flat, not the whole building.' : 'Count a loft or cellar only if it is lived in.', pick1('home.floors', FLOORS, o => art('floors:' + o.id), 3, 'Floors', 'sm'))}
+      ${fieldBlock('bedrooms', 'How many bedrooms does your home have?', '', `<div class="numrow" role="radiogroup" aria-label="${tr('Bedrooms')}">${BEDROOMS.filter(o => !o.old).map(o => `<button class="num-b ${h.bedrooms===o.id?'on':''}" role="radio" aria-checked="${h.bedrooms===o.id}" data-act="reg-pick" data-k="home.bedrooms" data-v="${o.id}">${o.n}</button>`).join('')}</div>`)}
+      ${fieldBlock('area', 'What is the total floor area of your home?', 'Your Energy Performance Certificate (EPC) shows it as &ldquo;Total floor area&rdquo;.', `<div class="area-row"><span class="in-sfx"><input class="in" id="r_area" data-area="1" inputmode="decimal" maxlength="5" placeholder="${tr(ft ? 'e.g. 900' : 'e.g. 85')}" value="${esc(shown)}" aria-label="${tr(ft ? 'Floor area in square feet' : 'Floor area in square metres')}"><span aria-hidden="true">${ft ? 'ft²' : 'm²'}</span></span>${unitSwitch('a', REG.au, ['m2','m²'], ['ft2','sq ft'])}<button class="chip ${v === null ? 'on' : ''}" aria-pressed="${v === null}" data-act="reg-unsure" data-k="floor_area_m2">${ic('check')}${tr('Not sure')}</button></div>`)}
       ${fieldBlock('epc', 'What is its energy rating (EPC)?', 'The letter on the Energy Performance Certificate, from A (best) to G. You can look it up on GOV.UK: &ldquo;Find an energy certificate&rdquo;.', `<div class="ptiles c4" role="radiogroup" aria-label="${tr('EPC rating')}">${EPC.map(o => regTile('home.epc', o, h.epc === o.id, o.id === 'unsure' ? '' : epcArt(o.id), o.id === 'unsure' ? 'sm txt span2' : 'sm epc')).join('')}</div>`)}
     </div>`;
   },
@@ -2097,57 +2175,86 @@ const REGS = {
     const h = REG.home;
     const row = (k, icon, lab, hint) => `<div class="stepper-row"><span class="sr-ic">${ic(icon)}</span><span class="sr-t"><b>${tr(lab)}</b>${hint ? `<span class="note">${tr(hint)}</span>` : ''}</span>${stepper('home.'+k, h[k], STEP_LIMITS[k][0], STEP_LIMITS[k][1], lab)}</div>`;
     return `<div class="form">
-      ${fieldBlock('people', 'Who lives here?', 'Including you.', `<div class="rows-card">${people()}${row('adults', 'user', 'Adults', '')}${row('children', 'child', 'Children', 'Under 18. Tap &minus; for none')}${row('pets', 'paw', 'Pets', 'Tap &minus; for none')}</div>`)}
-      ${fieldBlock('bedroom_share', 'Do you share your bedroom with anyone?', 'Count everyone else who sleeps in the same room.', pick1('home.bedroom_share', BED_SHARE, o => art('share:' + o.id), 4, 'Bedroom shared with', 'sm'))}
+      ${fieldBlock('people', 'How many people usually live in your home, including you?', '', `<div class="rows-card">${people()}${row('adults', 'user', 'Adults', '18 and over')}${row('children', 'child', 'Children', 'Under 18. Tap &minus; for none')}${row('pets', 'paw', 'Pets', 'Living indoors. Tap &minus; for none')}</div>`)}
+      ${fieldBlock('bedroom_share', 'How many other people usually sleep in the same bedroom as you?', '', pick1('home.bedroom_share', BED_SHARE, o => art('share:' + o.id), 4, 'Bedroom shared with', 'sm'))}
+      ${fieldBlock('changes', 'Do you expect any changes at home during the study (the next 4 weeks)?', 'For example, someone moving in or out, time away, visitors staying or building work.', pick1('home.changes', YES_NO, o => art('changes:' + o.id), 2, 'Changes during the study') + (h.changes === 'yes' ? noteIn('changes_note', 'What will change?') : ''))}
+      ${h.pets > 0 ? fieldBlock('pet_door', 'Do you regularly open an outside door for your pets, for example for toilet breaks?', '', pick1('home.pet_door', YES_NO, o => art('pet_door:' + o.id), 2, 'Outside door for pets')) : ''}
+      ${fieldBlock('drying', 'Do you dry clothes indoors?', '', pick1('home.drying', YES_NO, o => art('drying:' + o.id), 2, 'Drying clothes indoors') + (h.drying === 'yes' ? noteIn('drying_room', 'Which room?') : ''))}
+      ${fieldBlock('tariff', 'What kind of energy tariff do you have?', '', pick1('home.tariff', TARIFF, o => art(o.art), 2, 'Energy tariff'))}
     </div>`;
   },
-  heat: () => `<div class="form">
-      ${fieldBlock('main_heating', 'What is your main heating?', 'The one that heats most of your home.', pick1('home.main_heating', MAIN_HEATING, o => art('heat:' + o.id), 2, 'Main heating'))}
-      ${fieldBlock('other_heaters', 'Do you also use any of these?', 'Tap all that you use.', pickN('home.other_heaters', OTHER_HEATERS, o => art('other:' + o.id), 3, 'Other heaters'))}
-      ${fieldBlock('heating_pattern', 'How is your heating usually used?', '', pick1('home.heating_pattern', HEAT_PATTERN, o => artx('pattern:' + o.id, o.ic), 1, 'How the heating is used', 'line'))}
-    </div>`,
+  heat: () => {
+    const h = REG.home;
+    const t = (k, lab) => `<input class="in" type="time" id="r_${k}" data-reg="home.${k}" value="${esc(h[k] || '')}" aria-label="${tr(lab)}">`;
+    const chip = (v, en) => `<button class="chip ${h.heating_times === v ? 'on' : ''}" aria-pressed="${h.heating_times === v}" data-act="reg-pick" data-k="home.heating_times" data-v="${v}">${ic('check')}${tr(en)}</button>`;
+    return `<div class="form">
+      ${fieldBlock('main_heating', 'What is the main way your home is heated?', 'The one that heats most of your home.', pick1('home.main_heating', MAIN_HEATING, o => art('heat:' + o.id), 2, 'Main heating'))}
+      ${fieldBlock('heating_pattern', 'How do you usually use your heating in winter?', '', pick1('home.heating_pattern', HEAT_PATTERN, o => artx('pattern:' + o.id, o.ic), 1, 'How the heating is used', 'line'))}
+      ${fieldBlock('htimes', 'At what times does your heating usually come on?', 'The usual times, from when it comes on to when it goes off.', `<div class="htimes"><b>${tr('Weekdays')}</b>${t('heating_wd_start', 'Weekdays, from')}<span>${tr('to')}</span>${t('heating_wd_end', 'Weekdays, to')}<b>${tr('Weekends')}</b>${t('heating_we_start', 'Weekends, from')}<span>${tr('to')}</span>${t('heating_we_end', 'Weekends, to')}</div><div class="cmp-actions">${chip('varies', 'It varies')}${chip('unsure', 'Not sure')}</div>`)}
+    </div>`;
+  },
   controls: () => `<div class="form">
       ${fieldBlock('controls', 'Which heating controls do you have?', 'Tap all that you have.', pickN('home.controls', CONTROLS, o => art('controls:' + o.id), 3, 'Heating controls'))}
-      ${fieldBlock('setpoint', 'What temperature is it usually set to?', 'The setting, when someone is at home.', dialHtml('setpoint_c', 'Usual setting'))}
+      ${fieldBlock('setpoint', 'When someone is at home, what temperature is your thermostat usually set to?', '', dialHtml('setpoint_c', 'Usual setting'))}
+      ${fieldBlock('other_heaters', 'Do you use anything else to keep warm?', 'Tap all that you use.', pickN('home.other_heaters', OTHER_HEATERS, o => art('other:' + o.id), 3, 'Other ways to keep warm') + ((REG.home.other_heaters || []).includes('other') ? noteIn('other_heaters_other', 'What else do you use?') : ''))}
     </div>`,
   /* These matter a lot for the study: large pictures (two to a row), and a "How to tell" note under each question. */
   fabric: () => `<div class="form">
-      ${fieldBlock('wall_insulation', 'Are your walls insulated?', 'The outside walls. A good guess is fine.', pick1('home.wall_insulation', WALL_INS, o => art('wall:' + o.id), 2, 'Wall insulation', 'lg'),
+      ${fieldBlock('wall_insulation', 'Are your outside walls insulated?', 'A good guess is fine.', pick1('home.wall_insulation', WALL_INS, o => art('wall:' + o.id), 2, 'Wall insulation', 'lg'),
         'Look at the outside brickwork. If every brick shows its long side, the walls are probably cavity walls (most homes built after about 1930). If some bricks show their short ends, they are probably solid walls. A regular pattern of small filled holes in the mortar means the cavity has been filled.')}
-      ${fieldBlock('loft', 'Is the loft insulated?', '', pick1('home.loft', LOFT, o => art('loft:' + o.id), 2, 'Loft insulation', 'lg'),
-        'In the loft, a thick soft layer (yellow, grey or white) between and over the wooden beams is insulation; about 27&nbsp;cm is the recommended depth.')}
-      ${fieldBlock('glazing', 'What kind of windows?', '', pick1('home.glazing', GLAZING, o => art('glazing:' + o.id), 2, 'Glazing', 'lg'),
+      ${fieldBlock('glazing', 'What kind of windows does your home have?', '', pick1('home.glazing', GLAZING, o => art('glazing:' + o.id), 2, 'Glazing', 'lg') + noteIn('glazing_notes', 'Notes (optional)', 'e.g. single glazing in the bathroom'),
         'Look at the edge of the glass: two sheets with a gap between them is double glazing, three is triple.')}
-      ${fieldBlock('windows_open', 'Can the windows be opened?', '', pick1('home.windows_open', WINDOWS_OPEN, o => art('windows_open:' + o.id), 2, 'Windows open', 'lg'))}
-      ${fieldBlock('damp', 'Have you seen damp or mould in the last year?', 'Tap every room where you saw it.', pickN('home.damp', DAMP, o => art('damp:' + o.id), 2, 'Damp or mould', 'lg'),
-        'Black or green spots on walls, ceilings or around windows, peeling paint or wallpaper, or a musty smell.')}
     </div>`,
   bedroom: () => `<div class="form">
       ${directionHelp()}
       ${fieldBlock('bedroom_facing', 'Which way does your bedroom window face?', 'Stand at the bedroom window with your back to the room and point the top of your phone out of the window. More than one window? Use the biggest.', compass('bedroom_facing', 'Which way the bedroom window faces'))}
       ${fieldBlock('bedroom_side', 'Which side of your home is your bedroom on?', 'Stand in the middle of your home and point the top of your phone towards your bedroom.', compass('bedroom_side', 'Which side of the home the bedroom is on'))}
     </div>`,
+  /* 1.3: windows and fresh air, asked a row at a time */
+  air: () => {
+    const h = REG.home;
+    const grid = (rows, opts, label) => `<div class="gq" role="group" aria-label="${tr(label)}">${rows.map(w => `<div class="gq-row ${h[w.id] ? 'done' : ''}"><div class="gq-h">${art(w.art)}<span><b>${w.n}</b>${w.h ? `<small>${w.h}</small>` : ''}</span></div>` +
+      `<div class="gq-opts" role="radiogroup" aria-label="${w.n.replace(/<[^>]+>/g, '')}" style="--n:${opts.length}">${opts.map(o => `<button type="button" role="radio" aria-checked="${h[w.id] === o.id}" class="${h[w.id] === o.id ? 'on' : ''}" data-act="reg-pick" data-k="home.${w.id}" data-v="${o.id}">${o.n}</button>`).join('')}</div></div>`).join('')}</div>`;
+    return `<div class="form">
+      ${fieldBlock('windows', 'In winter, how often do you open a window in each of these ways?', 'Opening a window for a few minutes to let fresh air in is very different from leaving it open for a long time, so please answer each row.', grid(WINDOW_WAYS, FREQ, 'How often windows are opened'))}
+      ${fieldBlock('window_putoff', 'Does anything put you off opening your windows?', 'Tap all that apply.', pickN('home.window_putoff', PUT_OFF, o => art('putoff:' + o.id), 2, 'What puts you off opening windows') + ((h.window_putoff || []).includes('other') ? noteIn('window_putoff_other', 'What else?') : ''))}
+      ${fieldBlock('vents', 'Which of these does your home have, and do you use them?', 'For window vents, &ldquo;use&rdquo; means keeping them open.', grid(VENTS, VENT_USE, 'Fans and vents'))}
+    </div>`;
+  },
+  cool: () => {
+    const h = REG.home;
+    return `<div class="form">
+      ${fieldBlock('overheat', 'Does your home get uncomfortably warm?', '', pick1('home.overheat', FREQ, o => art('overheat:' + o.id), 3, 'How often the home gets too warm', 'sm'))}
+      ${fieldBlock('cool_down', 'What do you do to cool down when your home is too warm?', 'Tap all that apply.', pickN('home.cool_down', COOL_DOWN, o => art('cool:' + o.id), 2, 'How you cool down') + ((h.cool_down || []).includes('other') ? noteIn('cool_down_other', 'What else?') : ''))}
+    </div>`;
+  },
   check: () => {
-    const join = REG.mode === 'join';
+    const join = REG.mode === 'join', c = REG.consent || [];
+    const consent = fieldBlock('consent', 'Consent', 'Please read the participant information sheet on the study page and tick each statement you agree with.',
+      `<div class="consent" role="group" aria-label="${tr('Consent')}">${CONSENT.map(o => { const on = c.includes(o.id); return `<button type="button" class="${on ? 'on' : ''}" aria-pressed="${on}" data-act="reg-consent" data-v="${o.id}"><span class="box" aria-hidden="true">${on ? ic('check') : ''}</span><span>${o.n}</span></button>`; }).join('')}</div>` +
+      `<p class="note"><a href="${studyHref()}" target="_blank" rel="noopener">${tr('Read the participant information on the study page')}</a></p>`);
     return `<div class="form">${homeGlance(REG, REG.home, 'reg-edit', join)}
-      ${join ? `<section class="pin-card" aria-labelledby="pinH"><div class="pin-top">${ic('key')}<div><b id="pinH">${tr('Choose a 4-digit PIN')}</b><p class="note">${tr('With your email, it lets you sign in on another phone or tablet and see all your check-ins there. Please don&rsquo;t use your bank card PIN.')}</p></div></div>
+      ${join ? consent + `<section class="pin-card" aria-labelledby="pinH"><div class="pin-top">${ic('key')}<div><b id="pinH">${tr('Choose a 4-digit PIN')}</b><p class="note">${tr('With your email, it lets you sign in on another phone or tablet and see all your check-ins there. Please don&rsquo;t use your bank card PIN.')}</p></div></div>
         <div class="row2">
           <div class="field" id="f-r_pin"><label for="r_pin">${tr('PIN')}</label><input class="in pin" id="r_pin" data-reg="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" value="${esc(REG.pin || '')}" aria-describedby="err-r_pin"><p class="err" id="err-r_pin" hidden></p></div>
           <div class="field" id="f-r_pin2"><label for="r_pin2">${tr('Type it again')}</label><input class="in pin" id="r_pin2" data-reg="pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" value="${esc(REG.pin2 || '')}" aria-describedby="err-r_pin2"><p class="err" id="err-r_pin2" hidden></p></div>
-        </div></section>
-      <div class="msg">${ic('shield')}<div>${tr('Joining means you agree to take part as described on the <a href="../">study page</a>.')}</div></div>` : ''}</div>`;
+        </div></section>` : ''}</div>`;
   }
 };
+/* a short typed answer that goes with a choice ("Something else", "Yes: which room"), at most 120 characters */
+const noteIn = (k, lab, ph) => `<div class="field note-in"><label for="r_${k}">${tr(lab)}</label><input class="in" id="r_${k}" data-reg="home.${k}" maxlength="120" value="${esc(REG.home[k] || '')}"${ph ? ` placeholder="${tr(ph)}"` : ''}></div>`;
 const REG_TITLES = {
-  you: ['Tell us about you', 'Every question needs an answer. They help the study compare how different people feel.'],
-  area: ['Your area and your home', ''],
+  you: ['Tell us about you', 'These questions help us understand why people in the same room can feel warmer or cooler than each other.'],
+  area: ['Your area and your home', 'These questions describe your home, so we can understand how it warms up, keeps heat in and cools down.'],
   size: ['How old and how big is it?', ''],
-  people: ['Who lives here?', ''],
-  heat: ['How do you heat your home?', ''],
-  controls: ['Your heating controls', ''],
-  fabric: ['Walls, roof and windows', 'A good guess is fine for all of these.'],
+  fabric: ['Walls and windows', 'A good guess is fine for all of these.'],
   bedroom: ['Your bedroom', 'The directions matter a lot for the study, so take a moment to get them right.'],
-  check: ['Check and finish', 'Check everything, choose your PIN, then join. Tap Edit to change a section.']
+  people: ['About your household', 'These questions tell us who shares your home, because the number of people in a home affects how warm it feels and whose comfort the heating needs to suit.'],
+  heat: ['How do you heat your home?', 'These questions tell us what heating you have and how you use it, so we can understand how your home is kept warm day to day.'],
+  controls: ['Your heating controls', ''],
+  air: ['Windows and fresh air', 'How you let fresh air in, and what stops you.'],
+  cool: ['How you keep cool', 'These questions tell us whether your home gets too warm and how you cool down, because being comfortable means not being too hot as well as not too cold.'],
+  check: ['Check and finish', 'Check everything, tick the consent statements, choose your PIN, then join. Tap Edit to change a section.']
 };
 function regScreen(){
   const st = REG_STEPS[REG.step], last = REG.step === REG_STEPS.length - 1, s = S.screen;
@@ -2314,10 +2421,15 @@ document.addEventListener('click', async e => {
     case 'reg-later': saveReg(); welcomeNote = 'Your answers so far are saved on this phone. Tap “I’m new here” to carry on.'; go('welcome'); break;
     case 'reg-edit': REG.edit = true; regGo(stepOf(d.step)); break;
     case 'reg-unit': convertUnits(d.k, d.v); saveReg(); rerender(); break;
+    case 'reg-pns': case 'reg-consent': {                 // 1.3: "Prefer not to say" (birth_year, height, weight); the consent statements
+      const key = d.act === 'reg-pns' ? 'pns' : 'consent', arr = REG[key] = Array.isArray(REG[key]) ? REG[key] : [], i = arr.indexOf(d.v);
+      if(i >= 0) arr.splice(i, 1); else arr.push(d.v);
+      saveReg(); rerender(); break; }
     case 'reg-pick': {
       let v = d.v; if(['home.floors','home.bedroom_share','home.bedrooms'].includes(d.k)) v = Number(v);
       regSet(d.k, v);
       if(d.k === 'home.home_type' && !isFlat()) delete REG.home.flat_position;
+      if(d.k === 'home.heating_times') HEAT_TIME_KEYS.forEach(k => delete REG.home[k]);   // "It varies" / "Not sure" clear the times
       if(['home.bedroom_facing','home.bedroom_side'].includes(d.k)) delete REG.home[d.k.slice(5) + '_deg'];   // tapped by hand: the typed number no longer applies
       saveReg(); rerender();
       const f = b.closest('.rq'); if(f && f.classList.contains('bad')) fieldError(f.id.slice(2), '');
@@ -2356,7 +2468,7 @@ document.addEventListener('input', e => {
   if(t.dataset && t.dataset.area){
     const raw = t.value.trim(), n = numOf(raw);
     REG.areaTxt = raw;
-    if(raw === '' || n === null) delete REG.home.floor_area_m2; else REG.home.floor_area_m2 = Math.round(n);
+    if(raw === '' || n === null) delete REG.home.floor_area_m2; else REG.home.floor_area_m2 = Math.round(REG.au === 'ft2' ? n * SQFT : n);
     saveReg();
     const chip = $('[data-act="reg-unsure"][data-k="floor_area_m2"]'); if(chip){ chip.setAttribute('aria-pressed', 'false'); chip.classList.remove('on'); }
     if($('#f-area') && $('#f-area').classList.contains('bad')) fieldError('area', '');
@@ -2364,7 +2476,9 @@ document.addEventListener('input', e => {
   }
   if(t.dataset && t.dataset.reg){
     let v = t.value; if(t.dataset.reg === 'home.postcode_area'){ v = v.toUpperCase(); if(t.value !== v){ const p = t.selectionStart; t.value = v; try{ t.setSelectionRange(p, p); }catch(err){} } }
-    regSet(t.dataset.reg, v); saveReg();
+    regSet(t.dataset.reg, v);
+    if(HEAT_TIME_KEYS.includes(t.dataset.reg.slice(5))){ REG.home.heating_times = 'set'; $$('[data-k="home.heating_times"]').forEach(c => { c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); }); }
+    saveReg();
     const id = t.id, fid = id === 'r_in' ? 'r_ft' : id === 'r_lb' ? 'r_st' : id;
     if($('#f-' + fid) && $('#f-' + fid).classList.contains('bad')) fieldError(fid, '');
     return;
@@ -2517,7 +2631,8 @@ if(DEBUG){
 /* ---------- start ---------- */
 I18N.register({ ACTS, ROOMS, TP, TA, AIR, SUN, HEAT, HEAT_FOR, WALL, ACTIONS, ACTION_BOXES, NOTES, NOTE_BOXES, HEAT_OTHER,
   GENDERS, SENSITIVITY, HOME_TYPES, FLAT_POS, TENURE, YEAR_BUILT, FLOORS, EPC, BED_SHARE, MAIN_HEATING, OTHER_HEATERS, HEAT_PATTERN,
-  CONTROLS, WALL_INS, LOFT, GLAZING, WINDOWS_OPEN, DAMP, FACING, TSV, GARMENTS, GARMENT_GROUPS, REG_STEPS, TA_OLD, HEAT_FOR_OLD, QNAME });
+  CONTROLS, WALL_INS, LOFT, GLAZING, WINDOWS_OPEN, DAMP, FACING, TSV, GARMENTS, GARMENT_GROUPS, REG_STEPS, TA_OLD, HEAT_FOR_OLD, QNAME,
+  FEEL, MAIN_ROAD, YES_NO, TARIFF, FREQ, WINDOW_WAYS, PUT_OFF, VENTS, VENT_USE, COOL_DOWN, CONSENT });
 I18N.set(I18N.initial(!!PARTICIPANT));                     // ?lang= (the study page) only for someone not signed in, and only for what they see
 load();
 migrateHours();
