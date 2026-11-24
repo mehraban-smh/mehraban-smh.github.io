@@ -580,12 +580,17 @@ var APP_NAME = 'HomePulse';
 
     <div class="qgroups">
       <div class="qgroup">
-        <h3><span lang="en">First, are you at home?</span><span lang="cy">Yn gyntaf, ydych chi gartref?</span></h3>
+        <h3><span lang="en">First, where are you?</span><span lang="cy">Yn gyntaf, ble rydych chi?</span></h3>
         <ol class="qs">
           <li class="q wide gate"><div>
-            <h4><span lang="en">Are you at home right now?</span><span lang="cy">Ydych chi gartref ar hyn o bryd?</span></h4>
-            <p class="opts"><span lang="en">&ldquo;Yes, for over an hour&rdquo;, &ldquo;Yes, I just got in&rdquo; or &ldquo;No, I&rsquo;m out&rdquo;. If you are out, the app pauses your reminders for 1, 3 or 5 hours, until 19:00, or until you are back.</span><span lang="cy">&ldquo;Ydw, ers dros awr&rdquo;, &ldquo;Ydw, newydd gyrraedd&rdquo; neu &ldquo;Nac ydw, dw i allan&rdquo;. Os ydych chi allan, bydd yr ap yn oedi’ch nodiadau atgoffa am 1, 3 neu 5 awr, tan 19:00, neu nes byddwch chi’n ôl.</span></p>
-            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">The study is about how your home feels, so check-ins only happen when you are in it. Someone who has just walked up the hill from the bus stop feels very different from someone who has been sitting by the fire all evening.</span><span lang="cy">Mae’r astudiaeth yn ymwneud â sut mae’ch cartref yn teimlo, felly dim ond pan fyddwch chi ynddo y byddwch chi’n cofnodi. Mae rhywun sydd newydd gerdded i fyny’r rhiw o’r safle bws yn teimlo’n wahanol iawn i rywun sydd wedi bod yn eistedd wrth y tân ers oriau.</span></p>
+            <h4><span lang="en">Where are you right now?</span><span lang="cy">Ble rydych chi ar hyn o bryd?</span></h4>
+            <p class="opts"><span lang="en">The living room, the bedroom, the kitchen, the bathroom, somewhere else at home, or &ldquo;I&rsquo;m not at home&rdquo;. If you are out, the app asks when to remind you: in 1, 3 or 5 hours, when you open the app again, or not today.</span><span lang="cy">Yr ystafell fyw, yr ystafell wely, y gegin, yr ystafell ymolchi, rhywle arall gartref, neu &ldquo;Dydw i ddim gartref&rdquo;. Os ydych chi allan, bydd yr ap yn gofyn pryd i’ch atgoffa: ymhen 1, 3 neu 5 awr, pan fyddwch chi’n agor yr ap eto, neu ddim heddiw.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">The study is about how your home feels, so check-ins only happen when you are in it. The sensors are in your living room and, in some homes, your bedroom, so we need to know whether you are next to one of them or in another room, such as a colder kitchen.</span><span lang="cy">Mae’r astudiaeth yn ymwneud â sut mae’ch cartref yn teimlo, felly dim ond pan fyddwch chi ynddo y byddwch chi’n cofnodi. Mae’r synwyryddion yn eich ystafell fyw ac, mewn rhai cartrefi, yn eich ystafell wely, felly mae angen i ni wybod a ydych chi wrth ymyl un ohonyn nhw neu mewn ystafell arall, fel cegin oerach.</span></p>
+          </div></li>
+          <li class="q wide"><div>
+            <h4><span lang="en">How long have you been in this room?</span><span lang="cy">Ers faint rydych chi yn yr ystafell hon?</span></h4>
+            <p class="opts"><span lang="en">Less than 15 minutes, 15 minutes to an hour, or more than an hour.</span><span lang="cy">Llai na 15 munud, 15 munud i awr, neu fwy nag awr.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Someone who has just walked in from a colder room, or up the hill from the bus stop, feels very different from someone who has been sitting by the fire all evening.</span><span lang="cy">Mae rhywun sydd newydd gerdded i mewn o ystafell oerach, neu i fyny’r rhiw o’r safle bws, yn teimlo’n wahanol iawn i rywun sydd wedi bod yn eistedd wrth y tân ers oriau.</span></p>
           </div></li>
         </ol>
       </div>
@@ -594,7 +599,7 @@ var APP_NAME = 'HomePulse';
         <h3><span lang="en">How you feel</span><span lang="cy">Sut rydych chi’n teimlo</span></h3>
         <ol class="qs">
           <li class="q wide"><div>
-            <h4><span lang="en">How do you feel right now?</span><span lang="cy">Sut rydych chi’n teimlo ar hyn o bryd?</span></h4>
+            <h4><span lang="en">How warm or cool do you feel right now?</span><span lang="cy">Pa mor gynnes neu oer rydych chi’n teimlo ar hyn o bryd?</span><small><span lang="en">Think about your body as a whole.</span><span lang="cy">Meddyliwch am eich corff cyfan.</span></small></h4>
             <p class="opts"><span lang="en">Seven steps from Cold to Hot, each with its own face in the app:</span><span lang="cy">Saith cam o Oer i Boeth, pob un â’i wyneb ei hun yn yr ap:</span></p>
             <ul class="scale" aria-label="The seven answers, from cold to hot" data-a-en="The seven answers, from cold to hot" data-a-cy="Y saith ateb, o oer i boeth">
               <li><svg aria-hidden="true"><use href="#f-3"/></svg><span><span lang="en">Cold</span><span lang="cy">Oer</span> <span class="n">&minus;3</span></span></li>
@@ -608,7 +613,7 @@ var APP_NAME = 'HomePulse';
             <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">This is the heart of the study. The same room can feel fine to one person and chilly to the next, and that difference is exactly what a heating system that knows its people could learn.</span><span lang="cy">Dyma galon yr astudiaeth. Gall yr un ystafell deimlo’n iawn i un person ac yn oer i’r nesaf, a dyna’n union y gwahaniaeth y gallai system wresogi sy’n adnabod ei phobl ei ddysgu.</span></p>
           </div></li>
           <li class="q"><div>
-            <h4><span lang="en">Would you like to be&hellip;</span><span lang="cy">Hoffech chi fod&hellip;</span></h4>
+            <h4><span lang="en">Right now, would you prefer to feel&hellip;</span><span lang="cy">Ar hyn o bryd, a fyddai’n well gennych chi deimlo&hellip;</span></h4>
             <p class="opts"><span lang="en">Much cooler, a bit cooler, no change, a bit warmer, or much warmer.</span><span lang="cy">Llawer oerach, ychydig yn oerach, dim newid, ychydig yn gynhesach, neu lawer cynhesach.</span></p>
             <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Feeling slightly cool is not the same as wanting to be warmer. Plenty of people are happy a little on the cool side.</span><span lang="cy">Dydy teimlo ychydig yn oeraidd ddim yr un peth â bod eisiau bod yn gynhesach. Mae digon o bobl yn hapus o fod ychydig ar yr ochr oer.</span></p>
           </div></li>
@@ -629,14 +634,9 @@ var APP_NAME = 'HomePulse';
             <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Clothes are insulation. A jumper, or a blanket on the sofa, changes how warm you feel at the same room temperature, and adding a layer is often what people do before they reach for the thermostat.</span><span lang="cy">Mae dillad yn inswleiddio. Mae siwmper, neu flanced ar y soffa, yn newid pa mor gynnes rydych chi’n teimlo ar yr un tymheredd ystafell, ac mae rhoi haen arall amdanoch yn aml yn rhywbeth mae pobl yn ei wneud cyn troi at y thermostat.</span></p>
           </div></li>
           <li class="q"><div>
-            <h4><span lang="en">What have you been doing for the last 15 minutes?</span><span lang="cy">Beth rydych chi wedi bod yn ei wneud dros y 15 munud diwethaf?</span></h4>
+            <h4><span lang="en">What have you mostly been doing in the last 15 minutes?</span><span lang="cy">Beth rydych chi wedi bod yn ei wneud yn bennaf yn y 15 munud diwethaf?</span></h4>
             <p class="opts"><span lang="en">Sleeping, lying down, sitting relaxed, desk work, standing, cooking or housework, walking about, or exercising.</span><span lang="cy">Cysgu, gorwedd, eistedd yn hamddenol, gwaith desg, sefyll, coginio neu waith tŷ, cerdded o gwmpas, neu wneud ymarfer corff.</span></p>
             <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Moving about warms you up. Fifteen minutes of hoovering can make a cool room feel just right.</span><span lang="cy">Mae symud o gwmpas yn eich cynhesu. Gall chwarter awr o hwfro wneud i ystafell oeraidd deimlo’n berffaith.</span></p>
-          </div></li>
-          <li class="q wide"><div>
-            <h4><span lang="en">Which room are you in?</span><span lang="cy">Ym mha ystafell rydych chi?</span></h4>
-            <p class="opts"><span lang="en">The living room or a bedroom, the kitchen, a home office, the bathroom, or somewhere else.</span><span lang="cy">Yr ystafell fyw neu ystafell wely, y gegin, swyddfa gartref, yr ystafell ymolchi, neu rywle arall.</span></p>
-            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">The sensors are in your living room and, in some homes, your bedroom, so we need to know whether you are next to one of them or in another room, such as a colder kitchen.</span><span lang="cy">Mae’r synwyryddion yn eich ystafell fyw ac, mewn rhai cartrefi, yn eich ystafell wely, felly mae angen i ni wybod a ydych chi wrth ymyl un ohonyn nhw neu mewn ystafell arall, fel cegin oerach.</span></p>
           </div></li>
         </ol>
       </div>
@@ -645,22 +645,22 @@ var APP_NAME = 'HomePulse';
         <h3><span lang="en">Your room and your heating</span><span lang="cy">Eich ystafell a’ch gwres</span></h3>
         <ol class="qs">
           <li class="q"><div>
-            <h4><span lang="en">Can you feel air moving around you?</span><span lang="cy">Allwch chi deimlo aer yn symud o’ch cwmpas?</span></h4>
-            <p class="opts"><span lang="en">&ldquo;No, the air feels still&rdquo;, &ldquo;Yes, a little&rdquo; or &ldquo;Yes, clearly&rdquo;.</span><span lang="cy">&ldquo;Na, mae’r aer yn teimlo’n llonydd&rdquo;, &ldquo;Gallaf, ychydig&rdquo; neu &ldquo;Gallaf, yn glir&rdquo;.</span></p>
+            <h4><span lang="en">Can you feel air moving on your skin right now?</span><span lang="cy">Allwch chi deimlo aer yn symud ar eich croen ar hyn o bryd?</span></h4>
+            <p class="opts"><span lang="en">No, &ldquo;Yes, a little&rdquo; or &ldquo;Yes, clearly&rdquo;.</span><span lang="cy">Na allaf, &ldquo;Gallaf, ychydig&rdquo; neu &ldquo;Gallaf, yn glir&rdquo;.</span></p>
             <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Draughts from old windows, doors and floorboards make a room feel colder than the thermometer says.</span><span lang="cy">Mae drafftiau o hen ffenestri, drysau ac estyll llawr yn gwneud i ystafell deimlo’n oerach nag y mae’r thermomedr yn ei ddweud.</span></p>
           </div></li>
           <li class="q"><div>
-            <h4><span lang="en">Is the sun shining on you?</span><span lang="cy">Ydy’r haul yn tywynnu arnoch chi?</span></h4>
-            <p class="opts"><span lang="en">Yes, no, or it&rsquo;s dark.</span><span lang="cy">Ydy, nac ydy, neu mae’n dywyll.</span></p>
+            <h4><span lang="en">Is direct sunlight falling on you right now?</span><span lang="cy">Ydy golau haul uniongyrchol yn disgyn arnoch chi ar hyn o bryd?</span></h4>
+            <p class="opts"><span lang="en">No or yes.</span><span lang="cy">Nac ydy neu ydy.</span></p>
             <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Sun through a window can warm you even when the air is cool, which is why a south-facing room can feel so different from a north-facing one.</span><span lang="cy">Gall haul drwy ffenestr eich cynhesu hyd yn oed pan fydd yr aer yn oeraidd, a dyna pam y gall ystafell sy’n wynebu’r de deimlo mor wahanol i un sy’n wynebu’r gogledd.</span></p>
           </div></li>
           <li class="q"><div>
-            <h4><span lang="en">Is your heating on right now?</span><span lang="cy">Ydy’ch gwres ymlaen ar hyn o bryd?</span></h4>
-            <p class="opts"><span lang="en">Yes, no, or not sure. If it is on, the app also asks how long it has been on: &ldquo;It&rsquo;s always on (the thermostat switches it on and off)&rdquo;, or anything from &ldquo;30 minutes to an hour&rdquo; to &ldquo;more than 4 hours&rdquo;.</span><span lang="cy">Ydy, nac ydy, neu ddim yn siŵr. Os yw’r gwres ymlaen, bydd yr ap hefyd yn gofyn ers faint mae ymlaen: ei fod ymlaen drwy’r amser (a’r thermostat yn ei droi ymlaen ac i ffwrdd), neu unrhyw beth o hanner awr i fwy na 4 awr.</span></p>
-            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">It shows how heating is really used at home. Older homes with thick stone or brick walls can take a long time to warm up, so how long the heating has been on matters as much as whether it is on. Some homes leave it on all the time and let the thermostat do the switching, and that is useful to know too.</span><span lang="cy">Mae’n dangos sut mae gwres yn cael ei ddefnyddio go iawn yn y cartref. Gall hen dai â waliau trwchus o gerrig neu frics gymryd amser hir i gynhesu, felly mae’r amser mae’r gwres wedi bod ymlaen yr un mor bwysig â’r ffaith ei fod ymlaen. Mae rhai cartrefi’n gadael y gwres ymlaen drwy’r amser ac yn gadael i’r thermostat ei droi ymlaen ac i ffwrdd, ac mae hynny’n ddefnyddiol i’w wybod hefyd.</span></p>
+            <h4><span lang="en">As far as you can tell, is the heating in this room giving out heat right now?</span><span lang="cy">Hyd y gwyddoch chi, ydy’r gwres yn yr ystafell hon yn rhoi gwres allan ar hyn o bryd?</span></h4>
+            <p class="opts"><span lang="en">&ldquo;Yes, it&rsquo;s on&rdquo;, &ldquo;No, it&rsquo;s off&rdquo; or &ldquo;Not sure&rdquo;.</span><span lang="cy">&ldquo;Ydy, mae ymlaen&rdquo;, &ldquo;Nac ydy, mae i ffwrdd&rdquo; neu &ldquo;Ddim yn siŵr&rdquo;.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">It shows how heating is really used at home, room by room, and together with the sensors it shows how quickly each room warms up once the heating comes on.</span><span lang="cy">Mae’n dangos sut mae gwres yn cael ei ddefnyddio go iawn yn y cartref, ystafell wrth ystafell, a gyda’r synwyryddion mae’n dangos pa mor gyflym mae pob ystafell yn cynhesu pan ddaw’r gwres ymlaen.</span></p>
           </div></li>
           <li class="q"><div>
-            <h4><span lang="en">Touch the nearest outside wall with the back of your hand. How does it feel?</span><span lang="cy">Cyffyrddwch â’r wal allanol agosaf â chefn eich llaw. Sut mae’n teimlo?</span><small><span lang="en">An outside wall has the outdoors on the other side.</span><span lang="cy">Wal allanol yw wal sydd â’r awyr agored yr ochr arall iddi.</span></small></h4>
+            <h4><span lang="en">If you can, please touch the nearest outside wall with the back of your hand. How does it feel?</span><span lang="cy">Os gallwch chi, cyffyrddwch â’r wal allanol agosaf â chefn eich llaw. Sut mae’n teimlo?</span><small><span lang="en">An outside wall has the outdoors on the other side.</span><span lang="cy">Wal allanol yw wal sydd â’r awyr agored yr ochr arall iddi.</span></small></h4>
             <p class="opts"><span lang="en">&ldquo;I can&rsquo;t reach one&rdquo;, or cold, cool, neither cold nor warm, warm, or hot.</span><span lang="cy">&ldquo;Alla i ddim cyrraedd un&rdquo;, neu oer, oeraidd, ddim yn oer nac yn gynnes, cynnes, neu boeth.</span></p>
             <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Cold walls draw heat from your body even when the air is warm. Many homes in South Wales have solid stone or brick walls with no cavity to fill, and a cold wall can explain why a room feels chilly when the thermostat says it should not.</span><span lang="cy">Mae waliau oer yn tynnu gwres o’ch corff hyd yn oed pan fydd yr aer yn gynnes. Mae gan lawer o gartrefi yn Ne Cymru waliau solet o gerrig neu frics heb geudod i’w lenwi, a gall wal oer esbonio pam mae ystafell yn teimlo’n oer pan fydd y thermostat yn dweud na ddylai.</span></p>
           </div></li>
@@ -677,8 +677,8 @@ var APP_NAME = 'HomePulse';
           </div></li>
           <li class="q"><div>
             <h4><span lang="en">In the last 30 minutes, did you have or feel any of these?</span><span lang="cy">Yn y 30 munud diwethaf, gawsoch chi neu deimloch chi unrhyw un o’r rhain?</span></h4>
-            <p class="opts"><span lang="en">A hot or cold drink, something to eat, or feeling unwell. Or none of these.</span><span lang="cy">Diod boeth neu oer, rhywbeth i’w fwyta, neu deimlo’n anhwylus. Neu ddim un o’r rhain.</span></p>
-            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">A cup of tea warms you for a while, and feeling unwell can make you feel the cold more.</span><span lang="cy">Mae paned yn eich cynhesu am dipyn, a gall teimlo’n anhwylus wneud i chi deimlo’r oerfel yn fwy.</span></p>
+            <p class="opts"><span lang="en">A hot or cold drink, something to eat, feeling hungry, tired or unwell. Or none of these.</span><span lang="cy">Diod boeth neu oer, rhywbeth i’w fwyta, teimlo eisiau bwyd, wedi blino neu’n anhwylus. Neu ddim un o’r rhain.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">A cup of tea warms you for a while, and feeling tired or unwell can make you feel the cold more.</span><span lang="cy">Mae paned yn eich cynhesu am dipyn, a gall teimlo wedi blino neu’n anhwylus wneud i chi deimlo’r oerfel yn fwy.</span></p>
           </div></li>
         </ol>
       </div>

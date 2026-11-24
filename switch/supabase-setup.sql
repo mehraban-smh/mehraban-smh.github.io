@@ -625,7 +625,8 @@ create table if not exists public.comfort_votes (
   local_time     text,                          -- the same moment on the participant's clock, e.g. 2026-09-08 18:42
   tz_offset_min  integer,
   prompt         text,                          -- scheduled | self
-  at_home        text,                          -- long (over an hour) | recent (just got in)
+  at_home        text,                          -- until 1.3: long (over an hour) | recent (just got in)
+  room_time      text,                          -- 1.4, how long in this room: lt15 | 15_60 | gt60
   tsv            smallint check (tsv between -3 and 3),   -- ASHRAE thermal sensation vote
   preference     text,                          -- cooler | same | warmer
   clo            numeric(4,2),                  -- summed garment insulation
@@ -656,6 +657,7 @@ alter table public.comfort_votes add column if not exists local_time text;
 alter table public.comfort_votes add column if not exists tz_offset_min integer;
 alter table public.comfort_votes add column if not exists prompt text;
 alter table public.comfort_votes add column if not exists at_home text;
+alter table public.comfort_votes add column if not exists room_time text;   -- 1.4
 alter table public.comfort_votes add column if not exists preference text;
 alter table public.comfort_votes add column if not exists clo numeric(4,2);
 alter table public.comfort_votes add column if not exists garments text[];
@@ -769,7 +771,7 @@ begin
   if coalesce(v_id, '') = '' or length(v_id) > 64 or v_ts is null or v_tsv is null
      or v_ts < timestamptz '2026-01-01' or v_ts > now() + interval '1 day' then return 'invalid'; end if;
   v_on := public.sw_pick(j, 'heating_on', array['on', 'off', 'unsure']);
-  insert into public.comfort_votes (client_id, participant, ts, local_time, tz_offset_min, prompt, at_home, tsv, preference, acceptability,
+  insert into public.comfort_votes (client_id, participant, ts, local_time, tz_offset_min, prompt, at_home, room_time, tsv, preference, acceptability,
                                     clo, garments, met, activity, room, air, sun, heating_on, heating_src, heating_for, stat_temp_c, wall,
                                     actions, notes, same_as_last, seconds, app_version)
   values (
@@ -778,6 +780,7 @@ begin
     public.sw_num(j, 'tz_offset_min', -840, 840, 0)::integer,
     public.sw_pick(j, 'prompt', array['self', 'scheduled']),
     public.sw_pick(j, 'at_home', array['long', 'recent']),
+    public.sw_pick(j, 'room_time', array['lt15', '15_60', 'gt60']),   -- 1.4
     v_tsv::smallint,
     public.sw_pick(j, 'preference', array['much_cooler', 'cooler', 'same', 'warmer', 'much_warmer']),   -- much_*: 1.3
     public.sw_pick(j, 'acceptability', array['acceptable', 'unacceptable', 'clearly_acc', 'just_acc', 'just_unacc', 'clearly_unacc']),
@@ -818,7 +821,7 @@ grant execute on function public.submit_checkin(text, jsonb) to anon, authentica
 -- each request, so the app reads it page by page (?limit=1000&offset=...).
 drop function if exists public.my_checkins(text);
 create or replace function public.my_checkins(p_key text)
-returns table(client_id text, ts timestamptz, local_time text, tz_offset_min integer, prompt text, at_home text,
+returns table(client_id text, ts timestamptz, local_time text, tz_offset_min integer, prompt text, at_home text, room_time text,
               tsv smallint, preference text, acceptability text, clo numeric, garments text[], met numeric, activity text,
               room text, air text, sun text, heating_on text, heating_src text[], heating_for text, stat_temp_c numeric,
               wall text, actions text[], notes text[], same_as_last boolean, seconds integer, app_version text, created_at timestamptz)
@@ -827,7 +830,7 @@ language plpgsql security definer set search_path = public as $$
 declare v_code text := public.sw_code_of(p_key);
 begin
   if v_code is null then raise exception 'This device is not signed in' using errcode = '28000'; end if;
-  return query select v.client_id, v.ts, v.local_time, v.tz_offset_min, v.prompt, v.at_home, v.tsv, v.preference, v.acceptability,
+  return query select v.client_id, v.ts, v.local_time, v.tz_offset_min, v.prompt, v.at_home, v.room_time, v.tsv, v.preference, v.acceptability,
                       v.clo, v.garments, v.met, v.activity, v.room, v.air, v.sun, v.heating_on, v.heating_src, v.heating_for,
                       v.stat_temp_c, v.wall, v.actions, v.notes, v.same_as_last, v.seconds, v.app_version, v.created_at
                  from public.comfort_votes v where v.participant = v_code order by v.ts desc, v.client_id desc limit 10000;

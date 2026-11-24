@@ -160,9 +160,11 @@ more easily than to most people, `warm` when only the warmth does, otherwise `av
 
 ## The check-in
 
-A check-in starts with "Are you at home right now?". "Yes, for over an hour" and "Yes, I just got in" go on to the
-questions (`at_home` `long` or `recent`); "No, I'm out" pauses reminders for one, three or five hours, until 19:00
-(before 19:00 only), or until they are back (12 hours at most).
+From 1.4 (the agreed Check-ins doc) a check-in starts with "Where are you right now?": a room (`room`) goes on to "How long
+have you been in this room?" (`room_time`) and the questions; "I'm not at home" asks "When should we remind you to do this
+check-in?": in one, three or five hours, when they open the app again (12 hours at most), or not today (until their
+reminder hours start tomorrow). Until 1.3 it started with "Are you at home right now?" (`at_home` `long` or `recent`), and
+asked the room sixth and, with the heating on, how long it had been on (`heating_for`); 1.4 asks neither of those.
 
 Every check-in asks the same questions in the same order, all starting unanswered (there is no "still the same"
 shortcut since 1.0; `same_as_last` is always false). Since 1.3 (the questions agreed after the November 2026 review)
@@ -171,24 +173,25 @@ last-30-minutes questions are shorter:
 
 | Step | Column | Answers |
 |---|---|---|
-| How do you feel right now? | `tsv` | −3 cold … +3 hot |
+| Where are you right now? (1.4; "Which room are you in?", asked sixth, until 1.3) | `room` | `living`, `bedroom`, `kitchen`, `bathroom`, `other` (somewhere else at home); `office` until 1.3 |
+| How long have you been in this room? (1.4) | `room_time` | `lt15`, `15_60`, `gt60` |
+| How warm or cool do you feel right now? | `tsv` | −3 cold … +3 hot |
 | Would you like to be… | `preference` | `much_cooler` (1.3), `cooler`, `same`, `warmer`, `much_warmer` (1.3); from 1.3 `cooler` and `warmer` read "A bit cooler" and "A bit warmer" |
 | Is the temperature here acceptable to you right now? ("Are these conditions acceptable to you?" before 1.3) | `acceptability` | `acceptable`, `unacceptable` (older rows: the four-point ids) |
 | How warmly are you dressed right now? (1.3) | `garments`, `clo` | one outfit: `outfit_vlight` (0.35), `outfit_light` (0.55), `outfit_medium` (0.75), `outfit_warm` (1.00); clo is the outfit's |
 | What are you wearing? (before 1.3) | `garments`, `clo` | `tshirt`, `long`, `jumper`, `hoodie`, `shorts`, `trousers`, `joggers`, `skirt`, `pyjamas` (0.57), `coat_light` (0.25), `coat_winter` (0.60), `socks`, `slippers`, `blanket`, `duvet`; clo summed (ASHRAE 55 / ISO 7730) |
 | What have you been doing for the last 15 minutes? | `activity`, `met` | `sleep`, `lying`, `sit`, `desk`, `stand`, `house`, `walk`, `exercise` |
-| Which room are you in? | `room` | `living`, `bedroom`, `kitchen`, `office`, `bathroom`, `other` |
 | Can you feel air moving around you? | `air` | `still`, `slight`, `draughty` |
-| Is the sun shining on you? | `sun` | `yes`, `no`, `dark` |
+| Is direct sunlight falling on you right now? | `sun` | `no`, `yes` (`dark` until 1.3) |
 | Is your heating on right now? (1.0) | `heating_on` | `on`, `off`, `unsure` |
 | Which heating is on? (1.0–1.1 only, when on and the home had more than one system; empty from 1.2) | `heating_src` | the home's `main_heating` / `other_heaters` ids, `other` |
-| How long has it been on? (1.0, only when on) | `heating_for` | `always` (the thermostat switches it on and off; added 1.1), `30_60`, `1_2h`, `2_4h`, `gt4h`, `unsure` (`lt30` in 1.0 check-ins only) |
+| How long has it been on? (1.0 to 1.3 only, when on; empty from 1.4) | `heating_for` | `always` (the thermostat switches it on and off; added 1.1), `30_60`, `1_2h`, `2_4h`, `gt4h`, `unsure` (`lt30` in 1.0 check-ins only) |
 | Touch the nearest outside wall… how does it feel? (1.0) | `wall` | `no_reach` (listed first), `cold`, `cool`, `neutral`, `warm`, `hot` (1.3) |
 
 The thermostat reading ("What does your thermostat show?", `stat_temp_c`) was asked in 1.0 only; from 1.1 the column stays
 empty.
 | In the last 30 minutes, did you do any of these? | `actions` | `win_open`, `win_close`, `door_open`, `door_close`, `heat_up`, `heat_down`, `layer_on`, `layer_off`, `blanket`, `fan`, `curtains`, `moved` (opened/closed and up/down exclude each other). From 1.3 only `win_open`, `win_close`, `heat_up`, `heat_down`, `layer_on` ("more clothes or a blanket"), `layer_off` ("some clothes"), `fan` and `curtains` ("closed the curtains or blinds") are offered |
-| In the last 30 minutes, did you have or feel any of these? | `notes` | `hot_drink`, `cold_drink`, `ate`, `hungry`, `tired`, `unwell` (`hungry` and `tired` not offered from 1.3) |
+| In the last 30 minutes, did you have or feel any of these? | `notes` | `hot_drink`, `cold_drink`, `ate`, `hungry`, `tired`, `unwell` (`hungry` and `tired` not offered in 1.3 only) |
 
 Fields of steps that were not asked are null. A review page lets any answer be changed; after "Save check-in" a
 toast offers Undo for 6 seconds, then the check-in is sent, or waits in the queue when offline. Check-ins reach the

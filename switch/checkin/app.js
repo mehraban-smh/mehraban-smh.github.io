@@ -226,9 +226,9 @@ function waitSheet(open, opener){
 /* The questions of FLOW_ALL every time, all starting unanswered (clothing offers "Same as last time"). */
 function beginQuestions(){
   S.same = false;
-  S.a = { home:S.a.home };
+  S.a = { room:S.a.room };
   refreshFlow();
-  S.i = 0; go('q');
+  S.i = Math.max(0, S.flow.indexOf('room_time')); go('q');   // the room was the first screen
 }
 /* The steps asked depend on the answers so far (the heating) and on the home profile (the thermostat). */
 /* The current step is found again by its id when the list changes (an answer, or the profile arriving mid-way). */
@@ -681,8 +681,8 @@ function detailRows(l){
     tp && li(pic(tp.ic, tp.cls||''), tp.id==='same' ? tr('Happy with the temperature') : tr(`Would like to be <b>${I18N.en(tp, 'n').toLowerCase()}</b>`)),
     l.ta && li(pic(taOk?'up':'down', taOk?'good':'bad'), taWord(l.ta)),
     (l.garments||[]).length ? li(pic('tshirt'), `${garmentNames(l.garments)} &middot; ${(l.clo||0).toFixed(2)} clo`) : '',
-    act && li(pic(act.ic), act.n), room && li(pic(room.ic), room.n),
-    air && li(pic(air.ic), air.k), sun && li(pic(sun.ic), sun.n),
+    act && li(pic(act.ic), act.n), room && li(pic(room.ic), room.n + (l.room_time ? ' &middot; ' + (label(ROOM_TIME, l.room_time) || '').toLowerCase() : '')),
+    air && li(pic(air.ic), air.k), sun && li(pic(sun.ic), sun.k || sun.n),
     heat && li(pic(heat.ic, heat.cls||''), heat.k + (l.heat === 'on' && (l.heat_src||[]).length ? ': ' + heatSrcWord(l.heat_src) : '') + (hf ? ` &middot; ${hf.toLowerCase()}` : '')),
     typeof l.stat === 'number' && li(pic('stat'), tr('Thermostat showed {x}', { x: statWord(l.stat) })),
     wall && li(pic(wall.ic, wall.cls||''), wall.id === 'no_reach' ? tr('Could not reach an outside wall') : tr('Outside wall felt ' + I18N.en(wall, 'n').toLowerCase())),
@@ -707,8 +707,9 @@ function answerTiles(a){
   h += tile('clo', `<span class="at-fig" aria-hidden="true">${avatar(a.clo||[])}</span>`, 'Wearing', a.clo && a.clo.length ? `${garmentNames(a.clo)}<small>${cloOf(a.clo).toFixed(2)} clo</small>` : open, 'wide');
   h += tile('act', tic(act ? act.ic : 'walk'), 'Doing', act ? act.n : open);
   h += tile('room', tic(room ? room.ic : 'door'), 'Room', room ? room.n : open);
+  h += tile('room_time', tic('clock'), 'In this room', a.room_time ? label(ROOM_TIME, a.room_time) : open);
   h += tile('air', tic(air ? air.ic : 'still'), 'Air', air ? air.k : open);
-  h += tile('sun', tic(sun ? sun.ic : 'sun'), 'Sun', sun ? sun.n : open);
+  h += tile('sun', tic(sun ? sun.ic : 'sun'), 'Sun', sun ? sun.k || sun.n : open);
   h += tile('heat', tic(heat ? heat.ic : 'flame', heat && heat.cls || ''), 'Heating', heat ? heat.n : open, a.heat === 'on' ? '' : 'wide');
   if(a.heat === 'on') h += tile('heat_for', `<span class="at-ic">${a.heat_for ? artx('heat_for:' + a.heat_for, 'clock') : ic('clock')}</span>`, 'On for', a.heat_for ? heatForWord(a.heat_for) : open);
   h += tile('wall', tic(wall ? wall.ic : 'wall', wall && wall.cls || ''), 'Outside wall', wall ? wall.n : open, 'wide');
@@ -954,24 +955,21 @@ const SCREENS = {
     return head(tr('My home'), tr('Your home profile'), tr('As you described it. Tap Edit to change a section.')) + homeGlance(regFromProfile(meProfile(), h), h, 'home-edit', false) +
       `<div class="msg">${ic('info')}<div>${tr('Moved home? Please email {team} as well, so the research team knows.', { team: TEAM })}</div></div>`;
   },
-  /* "Yes, for over an hour" and "Yes, I just got in" both lead to the check-in (at_home long or recent) */
-  athome: () => qhead(tr('Before we start'), tr('Are you at home right now?'), tr('Then a few quick questions about how you feel.')) +
-    `<div class="rows fill">
-      <button class="row" data-act="home" data-v="long">${ic('home')}<div><b>${tr('Yes, for over an hour')}</b><span>${tr('Let&rsquo;s do the check-in')}</span></div>${ic('chev','go')}</button>
-      <button class="row" data-act="home" data-v="recent">${ic('clock')}<div><b>${tr('Yes, I just got in')}</b><span>${tr('Let&rsquo;s do the check-in')}</span></div>${ic('chev','go')}</button>
-      <button class="row" data-act="home" data-v="out">${ic('out')}<div><b>${tr('No, I&rsquo;m out')}</b><span>${tr('Pause reminders for a while')}</span></div>${ic('chev','go')}</button>
-    </div>`,
+  /* 1.4: "Where are you right now?": a room starts the check-in (at room_time); "I'm not at home" asks when to remind them.
+   * Until 1.3 this screen asked "Are you at home right now?" (at_home long, recent or out). */
+  athome: () => qhead(tr('Before we start'), tr('Where are you right now?'), tr('Then a few quick questions about how you feel.')) + roomTiles('where') +
+    `<div class="rows"><button class="row" data-act="where" data-v="out">${ic('out')}<div><b>${tr('I&rsquo;m not at home')}</b><span>${tr('Pause reminders for a while')}</span></div>${ic('chev','go')}</button></div>`,
   /* each pause with the time it ends on the phone's clock */
   away: () => {
     const opt = (v, icon, lab, sub) => `<button class="row" data-act="pause" data-v="${v}">${ic(icon)}<div><b>${tr(lab)}</b><span>${sub}</span></div>${ic('chev','go')}</button>`;
     const until = min => tr('Until {until}', { until: untilWord(new Date(Date.now() + min*60000)) });
-    return qhead(tr('Out and about'), tr('When should we check again?'), tr('This phone stays quiet until then.')) +
+    return qhead(tr('Out and about'), tr('When should we remind you to do this check-in?'), tr('This phone stays quiet until then.')) +
       `<div class="rows fill">
         ${opt(60, 'clock', 'In an hour', until(60))}
         ${opt(180, 'clock', 'In three hours', until(180))}
         ${opt(300, 'clock', 'In five hours', until(300))}
-        ${new Date().getHours() < 19 ? opt('evening', 'moon', 'This evening', tr('Until 19:00')) : ''}
-        ${opt('manual', 'pin', 'I&rsquo;ll tell you when I&rsquo;m back', tr('Or in {h} hours at the latest', { h: MANUAL_PAUSE_H }))}
+        ${opt('manual', 'pin', 'When I open the app again', tr('Or in {h} hours at the latest', { h: MANUAL_PAUSE_H }))}
+        ${opt('today', 'moon', 'Not today', tr('Until {until}', { until: untilWord(tomorrowStart()) }))}
       </div>`;
   },
   q: () => Q[S.flow[S.i]](),
@@ -1091,20 +1089,26 @@ function toggle(q, v){
   S.a[q] = arr.length || q==='clo' || q==='heat_src' ? arr : undefined;
   rerender();
 }
-/* "Yes, for over an hour" and "Yes, I just got in" both lead to the check-in; the answer is stored with it. */
-function onHome(v){
-  S.a.home = v;
-  if(v==='long' || v==='recent'){
-    store.paused=null; store.pausedWhy=''; save();
-    schedChange({ paused_until:null, settled_at:null });
-    beginQuestions();
-  } else { go('away'); }
+/* 1.4: a room on the first screen starts the check-in (and ends any pause); "I'm not at home" asks when to remind them. */
+function onWhere(v){
+  if(v === 'out'){ go('away'); return; }
+  S.a.room = v;
+  store.paused=null; store.pausedWhy=''; save();
+  schedChange({ paused_until:null, settled_at:null });
+  beginQuestions();
+}
+/* "Not today": the start of tomorrow's reminder hours (weekday or weekend) */
+function tomorrowStart(){
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  const h = hours(), we = d.getDay() === 0 || d.getDay() === 6, [hh, mm] = String((we ? h.weekend_start : h.weekday_start) || '07:00').split(':');
+  d.setHours(+hh || 7, +mm || 0, 0, 0); return d;
 }
 /* "No, I'm out": no reminders until the chosen time. "I'll tell you when I'm back" is open-ended in the
  * app's words, but reminders still resume after MANUAL_PAUSE_H hours, so someone who forgets to say they are
  * home is not lost to the study; the status card says when. */
 function setPause(v){
   if(v==='manual'){ store.paused = new Date(Date.now()+MANUAL_PAUSE_H*3600000).toISOString(); store.pausedWhy='manual'; }
+  else if(v==='today'){ store.paused = tomorrowStart().toISOString(); store.pausedWhy='away'; }
   else if(v==='evening'){ const d=new Date(); if(d.getHours()>=19){ rerender(); return; } d.setHours(19,0,0,0); store.paused=d.toISOString(); store.pausedWhy='away'; }   // from a screen left open past 19:00: show the current options instead
   else { store.paused = new Date(Date.now()+Number(v)*60000).toISOString(); store.pausedWhy='away'; }
   save();
@@ -1117,9 +1121,9 @@ function setPause(v){
 let DONE = null;                                            // what the done screen shows from the game: points before and after, new badges, the race place
 function submit(){
   const a = S.a, on = a.heat === 'on';
-  const row = { id:'v'+Date.now()+Math.random().toString(36).slice(2,6), p:PARTICIPANT, ts:new Date().toISOString(), type:S.mode, home:a.home||'long',
+  const row = { id:'v'+Date.now()+Math.random().toString(36).slice(2,6), p:PARTICIPANT, ts:new Date().toISOString(), type:S.mode, home:null, room_time:a.room_time ?? null,   // 1.4: no at_home; how long in this room
     tsv:a.tsv, tp:a.tp, ta:a.ta, garments:a.clo||[], clo:cloOf(a.clo||[]), act:a.act, met:byId(ACTS,a.act)?.met, room:a.room,
-    air:a.air, sun:a.sun, heat:a.heat ?? null, heat_src: null, heat_for: on ? (a.heat_for ?? null) : null,   // which heating is no longer asked
+    air:a.air, sun:a.sun, heat:a.heat ?? null, heat_src: null, heat_for: null,   // which heating, and for how long (until 1.3), are no longer asked
     stat: null, wall:a.wall ?? null,                                    // the thermostat reading is no longer asked
     actions:a.actions, notes:a.notes, same:false, secs:Math.max(1, Math.round((Date.now()-S.t0)/1000)) };
   const before = votes();
@@ -1308,7 +1312,7 @@ function fromServer(r){
   const v = SWITCH.fromRecord(r);
   ['tsv','clo','met','stat','secs'].forEach(k => { if(v[k] === null) delete v[k]; });
   ['actions','notes'].forEach(k => { if(Array.isArray(v[k])) v[k] = v[k].filter(x => x !== 'none'); });   // "none" is the database's way of saying []
-  return Object.assign(v, { p:PARTICIPANT, ts:new Date(r.ts).toISOString(), type:v.type || 'self', home:v.home || 'long', synced:true });
+  return Object.assign(v, { p:PARTICIPANT, ts:new Date(r.ts).toISOString(), type:v.type || 'self', home:v.home || (v.room_time ? null : 'long'), synced:true });
 }
 async function pullHistory(force){
   if(!SWITCH.live || !PARTICIPANT || !SWITCH.key()) return;
@@ -2207,7 +2211,7 @@ const REGS = {
     </div>`,
   bedroom: () => `<div class="form">
       ${directionHelp()}
-      ${fieldBlock('bedroom_facing', 'Which way does your bedroom window face?', 'Stand at the bedroom window with your back to the room and point the top of your phone out of the window. More than one window? Use the biggest.', compass('bedroom_facing', 'Which way the bedroom window faces'))}
+      ${fieldBlock('bedroom_facing', 'Which direction does your bedroom window face?', 'Stand at the bedroom window with your back to the room and point the top of your phone out of the window. More than one window? Use the biggest.', compass('bedroom_facing', 'Which way the bedroom window faces'))}
       ${fieldBlock('bedroom_side', 'Which side of your home is your bedroom on?', 'Stand in the middle of your home and point the top of your phone towards your bedroom.', compass('bedroom_side', 'Which side of the home the bedroom is on'))}
     </div>`,
   /* 1.3: windows and fresh air, asked a row at a time */
@@ -2298,7 +2302,7 @@ function showDetail(id, opener){
   const d = new Date(v.ts);
   const meta = [
     `<span>${ic(v.type==='scheduled' ? 'bell' : 'user')}${tr(v.type==='scheduled' ? 'From a reminder' : 'You started it')}</span>`,
-    `<span>${ic(v.home==='recent' ? 'clock' : 'home')}${tr(v.home==='recent' ? 'Just got in' : 'Home over an hour')}</span>`,
+    v.room_time ? `<span>${ic('clock')}${label(ROOM_TIME, v.room_time) || ''}</span>` : v.home && v.home !== 'out' ? `<span>${ic(v.home==='recent' ? 'clock' : 'home')}${tr(v.home==='recent' ? 'Just got in' : 'Home over an hour')}</span>` : '',
     v.secs ? `<span>${ic('clock')}${tr('Took {secs}', { secs: secsWord(v.secs) })}</span>` : '',
     v.same ? `<span>${ic('refresh')}${tr('Same as the time before')}</span>` : '',
     v.example ? `<span>${ic('info')}${tr('Example data')}</span>` : ''
@@ -2358,6 +2362,7 @@ document.addEventListener('click', async e => {
     case 'home': onHome(d.v); break;
     case 'pause': setPause(d.v); break;
     case 'nothome': go('away'); break;
+    case 'where': onWhere(d.v); break;
     case 'pick': pick(d.q, d.v); break;
     case 'toggle': toggle(d.q, d.v); break;
     case 'none': S.a[d.q] = []; rerender(); break;
@@ -2603,7 +2608,7 @@ function confetti(){
 }
 
 /* ---------- debug panel (?debug=1) ---------- */
-const COLS = ['participant','ts','local_time','prompt','at_home','tsv','preference','acceptability','clo','garments','met','activity','room','air','sun','heating_on','heating_src','heating_for','stat_temp_c','wall','actions','notes','same_as_last','seconds','app_version'];
+const COLS = ['participant','ts','local_time','prompt','at_home','room_time','tsv','preference','acceptability','clo','garments','met','activity','room','air','sun','heating_on','heating_src','heating_for','stat_temp_c','wall','actions','notes','same_as_last','seconds','app_version'];
 const cell = x => x===undefined||x===null ? '' : Array.isArray(x) ? x.join('|') : String(x);
 const debugRows = () => store.votes.slice().sort((a,b)=>a.ts<b.ts?1:-1).map(v => Object.assign(SWITCH.toRecord(v, v.p || PARTICIPANT), { _ex: !!v.example }));
 function renderTable(){
@@ -2629,7 +2634,7 @@ if(DEBUG){
 }
 
 /* ---------- start ---------- */
-I18N.register({ ACTS, ROOMS, TP, TA, AIR, SUN, HEAT, HEAT_FOR, WALL, ACTIONS, ACTION_BOXES, NOTES, NOTE_BOXES, HEAT_OTHER,
+I18N.register({ ROOM_TIME, ACTS, ROOMS, TP, TA, AIR, SUN, HEAT, HEAT_FOR, WALL, ACTIONS, ACTION_BOXES, NOTES, NOTE_BOXES, HEAT_OTHER,
   GENDERS, SENSITIVITY, HOME_TYPES, FLAT_POS, TENURE, YEAR_BUILT, FLOORS, EPC, BED_SHARE, MAIN_HEATING, OTHER_HEATERS, HEAT_PATTERN,
   CONTROLS, WALL_INS, LOFT, GLAZING, WINDOWS_OPEN, DAMP, FACING, TSV, GARMENTS, GARMENT_GROUPS, REG_STEPS, TA_OLD, HEAT_FOR_OLD, QNAME,
   FEEL, MAIN_ROAD, YES_NO, TARIFF, FREQ, WINDOW_WAYS, PUT_OFF, VENTS, VENT_USE, COOL_DOWN, CONSENT });

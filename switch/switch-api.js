@@ -11,7 +11,7 @@
  *   setParticipant(code)              remembers the code (upper-cased)
  *   validCode(code)                   true for P01, P99, P100 ...
  *   toRecord(row, participant)        a check-in row (phone shape) -> the database row: exactly client_id,
- *                                     participant, ts, local_time, tz_offset_min, prompt, at_home, tsv,
+ *                                     participant, ts, local_time, tz_offset_min, prompt, at_home, room_time, tsv,
  *                                     preference, acceptability, clo, garments, met, activity, room, air, sun,
  *                                     heating_on, heating_src, heating_for, stat_temp_c, wall, actions, notes,
  *                                     same_as_last, seconds, app_version. Reads the phone's answer keys (id,
@@ -213,6 +213,7 @@
         tz_offset_min: -d.getTimezoneOffset(),
         prompt: nul(pick(row, 'type', 'prompt')),
         at_home: nul(pick(row, 'home', 'at_home')),
+        room_time: nul(row.room_time),
         tsv: nul(row.tsv),
         preference: nul(pick(row, 'tp', 'preference')),
         acceptability: nul(pick(row, 'ta', 'acceptability')),
@@ -238,7 +239,7 @@
     fromRecord(r) {
       const num = v => v === null || v === undefined || v === '' ? null : +v;
       return {
-        id: r.client_id, ts: r.ts, type: r.prompt || 'self', home: r.at_home || null,
+        id: r.client_id, ts: r.ts, type: r.prompt || 'self', home: r.at_home || null, room_time: r.room_time || null,
         tsv: num(r.tsv), tp: r.preference || null, ta: r.acceptability || null,
         clo: num(r.clo), garments: r.garments || [], act: r.activity || null, met: num(r.met), room: r.room || null,
         air: r.air || null, sun: r.sun || null,

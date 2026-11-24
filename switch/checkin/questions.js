@@ -20,8 +20,11 @@ const ACTS = [
 /* The living room and the bedroom come first, as two large tiles: most check-ins are made in one of them. */
 const ROOMS = [
   {id:'living',n:'Living room',ic:'sofa',main:true},{id:'bedroom',n:'Bedroom',ic:'bed',main:true},{id:'kitchen',n:'Kitchen',ic:'pan'},
-  {id:'office',n:'Home office',ic:'laptop'},{id:'bathroom',n:'Bathroom',ic:'bath'},{id:'other',n:'Elsewhere',ic:'door'}
+  {id:'office',n:'Home office',ic:'laptop',old:true},{id:'bathroom',n:'Bathroom',ic:'bath'},{id:'other',n:'Somewhere else at home',ic:'door'}
 ];
+/* 1.4: the check-in starts with "Where are you right now?" (a room, or "I'm not at home"), then how long they have been in it.
+ * The home office is no longer offered (older check-ins keep it); "other" read "Elsewhere" until 1.3. */
+const ROOM_TIME = [{id:'lt15',n:'Less than 15 minutes'},{id:'15_60',n:'15 minutes to an hour'},{id:'gt60',n:'More than an hour'}];
 /* Five points from 1.3: "cooler" and "warmer" (plain Cooler / Warmer before 1.3) read "A bit cooler" and "A bit warmer",
  * with "Much cooler" and "Much warmer" around them; all five fold back into ASHRAE's three points. */
 const TP  = [
@@ -37,11 +40,12 @@ const TA  = [
 const TA_OLD = {clearly_acc:'Clearly acceptable', just_acc:'Just acceptable', just_unacc:'Just unacceptable', clearly_unacc:'Clearly unacceptable'};
 /* Air movement in everyday words; n and s are what the question shows, k the short form in summaries. */
 const AIR  = [
-  {id:'still',   n:'No, the air feels still', s:'I can&rsquo;t feel any air moving',            k:'Still air',          ic:'still'},
+  {id:'still',   n:'No',                      s:'I can&rsquo;t feel any air moving',            k:'Still air',          ic:'still'},
   {id:'slight',  n:'Yes, a little',           s:'I can just feel a gentle flow of air',        k:'A little air moving', ic:'slight'},
   {id:'draughty',n:'Yes, clearly',            s:'I can clearly feel air moving, or a draught', k:'Draughty',            ic:'draught'}
 ];
-const SUN  = [{id:'yes',n:'Sun on me',s:'Direct sunlight where I am',ic:'sun'},{id:'no',n:'No direct sun',s:'Daylight, but not on me',ic:'cloud'},{id:'dark',n:"It's dark",s:'Evening, or curtains drawn',ic:'moon'}];
+/* 1.4: No / Yes, as in the doc (k: the words in summaries); "It's dark" until 1.3 */
+const SUN  = [{id:'no',n:'No',k:'No direct sun',s:'Or it&rsquo;s dark',ic:'cloud'},{id:'yes',n:'Yes',k:'Sun on me',s:'Direct sunlight where I am',ic:'sun'},{id:'dark',n:"It's dark",s:'Evening, or curtains drawn',ic:'moon',old:true}];
 /* the heating, right now (new in 1.0) */
 const HEAT = [
   {id:'on',     n:'Yes, it&rsquo;s on',  k:'Heating on',  ic:'flame',    cls:'hot'},
@@ -96,18 +100,19 @@ const NOTES = [
   {id:'ate',n:'Ate something',q:'I ate something',ic:'fork'}, {id:'hungry',n:'Felt hungry',q:'I felt hungry',ic:'apple'},
   {id:'tired',n:'Felt tired',q:'I felt tired',ic:'zzz'}, {id:'unwell',n:'Felt unwell',q:'I felt unwell',ic:'unwell'}
 ];
-/* From 1.3 "Felt hungry" and "Felt tired" are no longer asked (kept in NOTES for older check-ins). */
-const NOTE_BOXES = [{n:'Drinks', ic:'mug', ids:['hot_drink','cold_drink']}];
-const NOTE_SOLO = ['ate','unwell'];
+/* "Felt hungry" and "Felt tired" were left out in 1.3 only; asked again from 1.4 */
+const NOTE_BOXES = [{n:'Drinks', ic:'mug', ids:['hot_drink','cold_drink']}, {n:'Food', ic:'fork', ids:['ate','hungry']}];
+const NOTE_SOLO = ['tired','unwell'];
 
-/* Every check-in asks these, in this order, all unanswered at the start: 12 questions, 13 when the heating is on (how
- * long it has been on, heat_for). Which heating is on (heat_src, 1.0 and 1.1) and the thermostat reading (1.0) are no
- * longer asked: heating_src and stat_temp_c are sent as null; older check-ins still show theirs. */
-const FLOW_ALL = ['tsv','tp','ta','clo','act','room','air','sun','heat','heat_for','wall','actions','notes'];
+/* Every check-in asks these, in this order (1.4, the agreed Check-ins doc): where they are and for how long, then 11
+ * questions. The room is answered on the first screen, so the questions open at room_time. How long the heating has
+ * been on (heat_for, 1.0 to 1.3), which heating is on (heat_src, 1.0 and 1.1) and the thermostat reading (1.0) are no
+ * longer asked: heating_for, heating_src and stat_temp_c are sent as null; older check-ins still show theirs. */
+const FLOW_ALL = ['room','room_time','tsv','tp','ta','clo','act','air','sun','heat','wall','actions','notes'];
 function flowFor(a){
   return FLOW_ALL.filter(q => q==='heat_for' ? a.heat==='on' : true);
 }
-const QNAME = { tsv:'how you feel', tp:'your preference', ta:'acceptability', clo:'clothing', act:'activity', room:'room', air:'air movement', sun:'sunlight',
+const QNAME = { room_time:'time in this room', tsv:'how you feel', tp:'your preference', ta:'acceptability', clo:'clothing', act:'activity', room:'room', air:'air movement', sun:'sunlight',
   heat:'the heating', heat_for:'how long it has been on', wall:'the wall', actions:'what you did', notes:'what you had or felt' };
 const byId = (list,id) => list.find(x=>x.id===id);
 const tsvWord = v => (TSV.find(t=>t.v===v)||{}).w || '';
@@ -141,6 +146,10 @@ const answerBox = (q, list, box, on) => `<fieldset class="abox"><legend>${ic(box
 const gbox = (grp, ids) => { const n = grp.ids.filter(id => ids.includes(id)).length;
   return `<fieldset class="abox gbox"><legend>${ic(grp.ic)}${grp.n}${n ? `<span class="cnt">${n}</span>` : ''}</legend><div class="gtiles c${grp.ids.length}">${grp.ids.map(id => { const g = byId(GARMENTS, id);
     return `<button class="gt ${ids.includes(g.id)?'on':''}" aria-pressed="${ids.includes(g.id)}" data-act="toggle" data-q="clo" data-v="${g.id}">${pic(g.ic)}<b>${g.s || g.n}</b><small>${g.est?'&asymp;':''}${g.clo.toFixed(2)}</small></button>`; }).join('')}</div></fieldset>`; };
+/* the rooms (1.4: no home office): two large tiles, then three smaller ones; act 'pick' in the questions, 'where' on the first screen */
+const roomTiles = act => { const t = (o, cls) => tile('room', o, S.a.room===o.id, '', cls).replace('data-act="pick"', `data-act="${act}"`);
+  return `<div class="room fill" role="radiogroup" aria-label="${tr('Room')}"><div class="tiles c2 big">${ROOMS.filter(o => o.main && !o.old).map(o => t(o, 'big')).join('')}</div>
+    <div class="tiles c3 small">${ROOMS.filter(o => !o.main && !o.old).map(o => t(o, 'wide')).join('')}</div></div>`; };
 const qhead = (eyebrow, h, p='') => `<div class="q"><div class="eyebrow">${eyebrow}</div><h1 tabindex="-1">${h}</h1>${p?`<p>${p}</p>`:''}</div>`;
 const nextBtn = (ok, label) => `<div class="actions"><button class="btn primary" data-act="next" ${ok?'':'disabled'}>${label || tr('Next')} ${ic('chev')}</button></div>`;
 
@@ -148,12 +157,11 @@ const nextBtn = (ok, label) => `<div class="actions"><button class="btn primary"
 const Q = {
   tsv: () => {
     const v = S.a.tsv;
-    return qhead(tr('Right now'), tr('How do you feel right now?'), tr('Your thermal sensation, all over.')) +
-      `<div class="scale fill" role="radiogroup" aria-label="${tr('How do you feel right now?')}">${TSV.map(t=>scaleRow('tsv', t.v, face(t.v), t.w, signed(t.v), tsvColour(t.v), v===t.v)).join('')}</div>` +
-      (S.edit ? '' : `<p class="skip">${tr('Not home right now?')} <button class="btn-link" data-act="nothome">${tr('Skip this one')}</button></p>`);
+    return qhead(tr('Right now'), tr('How warm or cool do you feel right now?'), tr('Think about your body as a whole.')) +
+      `<div class="scale fill" role="radiogroup" aria-label="${tr('How warm or cool do you feel right now?')}">${TSV.map(t=>scaleRow('tsv', t.v, face(t.v), t.w, signed(t.v), tsvColour(t.v), v===t.v)).join('')}</div>`;
   },
-  tp: () => qhead(tr('Preference'), tr('Would you like to be&hellip;')) +
-    `<div class="rows fill" role="radiogroup" aria-label="${tr('Would you like to be')}">${TP.map(o=>tallRow('tp',o,S.a.tp===o.id)).join('')}</div>`,
+  tp: () => qhead(tr('Preference'), tr('Right now, would you prefer to feel&hellip;')) +
+    `<div class="rows fill" role="radiogroup" aria-label="${tr('Right now, would you prefer to feel')}">${TP.map(o=>tallRow('tp',o,S.a.tp===o.id)).join('')}</div>`,
   /* two tall rows (like the preference screen), tinted green and red */
   ta: () => qhead(tr('Acceptability'), tr('Is the temperature here acceptable to you right now?'), tr('Whether or not you feel too warm or too cold.')) +
     `<div class="rows fill" role="radiogroup" aria-label="${tr('Acceptability')}">${TA.map(o=>tallRow('ta',o,S.a.ta===o.id)).join('')}</div>`,
@@ -164,20 +172,21 @@ const Q = {
       `<div class="rows fill" role="radiogroup" aria-label="${tr('Clothing')}">${OUTFITS.map(id => { const g = byId(GARMENTS, id), on = cur === id;
         return `<button class="row tall outfit ${on?'on':''}" role="radio" aria-checked="${on}" data-act="pick" data-q="clo" data-v="${id}"><span class="orb">${avatar([id])}</span><div><b>${g.n}</b><span>${g.s}</span></div><small>${g.clo.toFixed(2)} clo</small></button>`; }).join('')}</div>`;
   },
-  act: () => qhead(tr('Activity'), tr('What have you been doing for the last 15 minutes?')) +
+  act: () => qhead(tr('Activity'), tr('What have you mostly been doing in the last 15 minutes?')) +
     `<div class="tiles c2 fill" role="radiogroup" aria-label="${tr('Activity')}">${ACTS.map(o=>tile('act',o,S.a.act===o.id,`<small>${o.met.toFixed(1)} met</small>`)).join('')}</div>`,
-  room: () => qhead(tr('Location'), tr('Which room are you in?'), tr('The study&rsquo;s sensors are in your living room and, in some homes, your bedroom, so this matters.')) +
-    `<div class="room fill" role="radiogroup" aria-label="${tr('Room')}"><div class="tiles c2 big">${ROOMS.filter(o => o.main).map(o=>tile('room',o,S.a.room===o.id,'','big')).join('')}</div>
-      <div class="tiles c2 small">${ROOMS.filter(o => !o.main).map(o=>tile('room',o,S.a.room===o.id,'','wide')).join('')}</div></div>`,
-  air: () => qhead(tr('Air movement'), tr('Can you feel air moving around you?'), tr('Like air from a window, a door, a vent or a fan. Not how warm or cool it is, only whether the air moves.')) +
+  /* the room again (Back from the next question, or Edit on the review); the first screen asks it with "I'm not at home" */
+  room: () => qhead(tr('Location'), tr('Where are you right now?'), tr('The study&rsquo;s sensors are in your living room and, in some homes, your bedroom, so this matters.')) + roomTiles('pick'),
+  room_time: () => qhead(tr('Location'), tr('How long have you been in this room?')) +
+    `<div class="rows fill" role="radiogroup" aria-label="${tr('How long have you been in this room?')}">${ROOM_TIME.map(o => `<button class="row tall ${S.a.room_time===o.id?'on':''}" role="radio" aria-checked="${S.a.room_time===o.id}" data-act="pick" data-q="room_time" data-v="${o.id}"><span class="orb">${artx('room_time:' + o.id, 'clock')}</span><div><b>${o.n}</b></div></button>`).join('')}</div>`,
+  air: () => qhead(tr('Air movement'), tr('Can you feel air moving on your skin right now?'), tr('Like air from a window, a door, a vent or a fan. Not how warm or cool it is, only whether the air moves.')) +
     `<div class="rows fill" role="radiogroup" aria-label="${tr('Air movement')}">${AIR.map(o=>tallRow('air',o,S.a.air===o.id)).join('')}</div>`,
-  sun: () => qhead(tr('Sunlight'), tr('Is the sun shining on you?')) +
-    `<div class="rows fill" role="radiogroup" aria-label="${tr('Sunlight')}">${SUN.map(o=>tallRow('sun',o,S.a.sun===o.id)).join('')}</div>`,
-  heat: () => qhead(tr('Heating'), tr('Is your heating on right now?'), tr('Any heating in your home: the central heating or a heater.')) +
-    `<div class="rows fill" role="radiogroup" aria-label="${tr('Is your heating on right now?')}">${HEAT.map(o=>tallRow('heat',o,S.a.heat===o.id)).join('')}</div>`,
+  sun: () => qhead(tr('Sunlight'), tr('Is direct sunlight falling on you right now?')) +
+    `<div class="rows fill" role="radiogroup" aria-label="${tr('Sunlight')}">${SUN.filter(o => !o.old).map(o=>tallRow('sun',o,S.a.sun===o.id)).join('')}</div>`,
+  heat: () => qhead(tr('Heating'), tr('As far as you can tell, is the heating in this room giving out heat right now?'), tr('For example, a warm radiator or a heater that is on.')) +
+    `<div class="rows fill" role="radiogroup" aria-label="${tr('Heating')}">${HEAT.map(o=>tallRow('heat',o,S.a.heat===o.id)).join('')}</div>`,
   heat_for: () => qhead(tr('Heating'), tr('How long has it been on?'), tr('Since it last came on.')) +
     `<div class="tiles c2 fill" role="radiogroup" aria-label="${tr('How long has the heating been on')}">${HEAT_FOR.map(o => `<button class="tile hf ${S.a.heat_for===o.id?'on':''}" role="radio" aria-checked="${S.a.heat_for===o.id}" data-act="pick" data-q="heat_for" data-v="${o.id}">${artx(o.art, o.fb)}<span class="tt"><b>${o.n}</b>${o.h ? `<small>${o.h}</small>` : ''}</span></button>`).join('')}</div>`,
-  wall: () => qhead(tr('Outside wall'), tr('Touch the nearest outside wall with the back of your hand. How does it feel?'), tr('An outside wall has the outdoors on the other side.')) +
+  wall: () => qhead(tr('Outside wall'), tr('If you can, please touch the nearest outside wall with the back of your hand. How does it feel?'), tr('An outside wall has the outdoors on the other side.')) +
     `<div class="rows fill" role="radiogroup" aria-label="${tr('How the outside wall feels')}">${WALL.map(o=>tallRow('wall',o,S.a.wall===o.id)).join('')}</div>`,
   actions: () => {
     const ids = S.a.actions, on = id => !!(ids && ids.includes(id));
