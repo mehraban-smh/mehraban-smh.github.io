@@ -47,7 +47,7 @@
   const TABLE_COLS = ['participant', 'local_time', 'prompt', 'at_home', 'room_time', 'tsv', 'preference', 'acceptability', 'clo', 'garments', 'met', 'activity', 'room', 'air', 'sun', 'heating_on', 'heating_src', 'heating_for', 'stat_temp_c', 'wall', 'actions', 'notes', 'same_as_last', 'seconds', 'app_version', 'ts', 'tz_offset_min', 'created_at', 'client_id', 'id'];
   const PCOLS = ['code', 'alias', 'alias_colour', 'lang', 'approved', 'gender', 'age_band', 'height_band', 'weight_band', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity', 'created_at', 'updated_at', 'notified_at'];
   const PNUM = new Set(['birth_year', 'height_cm', 'weight_kg', 'alias_colour']);
-  const PRIVATE_COLS = new Set(['name', 'email']);   // kept from before 1.5 in the database, never shown or downloaded
+  const PRIVATE_COLS = new Set(['name', 'email']);   // never downloaded; the email (1.6.1) shows only on the participant's own page
   const HOME_KEYS = ['postcode_area', 'home_type', 'flat_position', 'tenure', 'year_built', 'floors', 'bedrooms', 'floor_area_m2', 'epc', 'adults', 'children', 'pets', 'bedroom_share',
     'main_heating', 'other_heaters', 'heating_pattern', 'payment', 'controls', 'stat_display', 'setpoint_c', 'bedroom_trv', 'wall_insulation', 'loft', 'glazing', 'windows_open', 'damp',
     'bedroom_facing', 'bedroom_facing_deg', 'bedroom_side', 'bedroom_side_deg',
@@ -669,11 +669,13 @@
   /* ---------------------------------------------------------------- sidebar */
   function sideHtml() {
     return `<div id="sideCards">${sideCards()}</div>
-      <div class="search">${icon('search')}<label class="sr" for="psearch">Search by participant ID or alias</label><input id="psearch" type="search" placeholder="Search ID or alias" autocomplete="off" value="${esc(st.q)}" data-fk="search"></div>
+      <div class="search">${icon('search')}<label class="sr" for="psearch">Search by participant ID, alias or email</label><input id="psearch" type="search" placeholder="Search ID, alias or email" autocomplete="off" value="${esc(st.q)}" data-fk="search"></div>
       <div id="pfilter"></div>
       <h2>Participants</h2>
       <ul class="plist" id="plist"></ul>`;
   }
+  /* 1.6.1: the participants' emails (and any a 1.6.0 phone put in the separate list), each once, sorted */
+  const allMails = () => [...new Set([...st.people.map(p => p.email), ...(st.contacts || [])].filter(Boolean).map(m => String(m).toLowerCase()))].sort();
   function sideCards() {
     if (st.local) return `<div class="enrol"><b style="color:var(--ink)">Local mode</b><span>Only the check-ins kept in this browser are shown. Nothing is read from the study database.</span></div>`;
     const stale = dbStale();
@@ -682,16 +684,16 @@
     const homes = st.people.filter(p => (stale || p.approved) && homeOf(p) && Object.keys(homeOf(p)).length).length;
     const tot = Math.max(1, approved + wait);
     const week = st.people.filter(p => { const t = Date.parse(p.created_at); return isFinite(t) && Date.now() - t < 7 * MS_DAY; }).length;
-    const per = studyPeriod();
+    const per = studyPeriod(), mails = allMails();
     return `<div class="enrol" role="group" aria-label="Enrolment">
       <div class="big"><b>${fmtN(approved)}</b><span>approved${wait ? ` · <span class="status-wait">${fmtN(wait)} waiting</span>` : ''}</span></div>
       <div class="ebar" aria-hidden="true"><i class="on" style="width:${(100 * approved / tot).toFixed(1)}%"></i>${wait ? `<i class="wt" style="width:${(100 * wait / tot).toFixed(1)}%"></i>` : ''}</div>
       <span>${plural(week, 'sign-up')} in the last 7 days · home profiles ${fmtN(homes)} of ${fmtN(approved)}</span>
       ${per ? `<span>${icon('cal')} ${esc(per)}</span>` : ''}
     </div>
-    ${Array.isArray(st.contacts) ? `<div class="enrol" role="group" aria-label="Contact emails"><b style="color:var(--ink)">Contact emails: ${fmtN(st.contacts.length)}</b>
-      <span>A separate list, never linked to a participant ID or to any answers. For contacting participants about the study and sharing the results.</span>
-      ${st.contacts.length ? `<button class="btn ghost sm" type="button" data-act="copy-contacts">Copy all emails</button>` : ''}</div>` : ''}`;
+    ${mails.length ? `<div class="enrol" role="group" aria-label="Contact emails"><b style="color:var(--ink)">Contact emails: ${fmtN(mails.length)}</b>
+      <span>Only for contacting participants about the study and sharing the results. Each participant&rsquo;s email is on their page; search finds a participant by email.</span>
+      <button class="btn ghost sm" type="button" data-act="copy-contacts">Copy all emails</button></div>` : ''}`;
   }
   function filterCounts(sp) {
     const act = new Set(); st.R.forEach(x => { if (inSpan(x, sp)) act.add(x.code); });
@@ -712,7 +714,7 @@
       if (st.pf === 'quiet' && !isQuiet(e)) return false;
       if (!q) return true;
       const p = e.p || {};
-      return [e.code, p.alias].some(v => String(v || '').toLowerCase().includes(q));
+      return [e.code, p.alias, p.email].some(v => String(v || '').toLowerCase().includes(q));   // 1.6.1: an email finds its participant
     });
     const all = `<li><button class="p" type="button" data-act="sel" data-code="ALL" data-fk="p-ALL"${st.sel === 'ALL' ? ' aria-current="true"' : ''}><b>All participants</b><span class="cnt">${fmtN(st.R.length)}</span><small>${plural(st.entries.length, 'code')} · every check-in</small></button></li>`;
     $('#plist').innerHTML = all + (list.length ? list.map(rowHtml).join('') : `<li class="none">${q ? 'Nobody matches “' + esc(st.q) + '”.' : st.pf === 'waiting' ? 'Nobody is waiting for approval.' : st.pf === 'quiet' ? 'Nobody has gone quiet.' : 'Nobody here yet.'}</li>`);
@@ -1307,6 +1309,7 @@
     const colour = num(p.alias_colour) !== null ? RUNNER[num(p.alias_colour) % RUNNER.length] : null;
     const facts = [
       f('Participant ID', `<code>${esc(code)}</code>`),
+      f('Email', p.email ? `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>` : 'Not given'),
       f('Bay Race alias', p.alias ? (colour ? `<span class="dot" style="background:${colour}"></span>` : '') + esc(p.alias) : ''),
       f('Status', status), f('Registered', esc(fmtStamp(p.created_at))), f('Profile updated', esc(fmtStamp(p.updated_at)), true), f('Team notified', p.notified_at ? esc(fmtStamp(p.notified_at)) : 'Not yet', true),
       f('PIN and devices', esc(pinWords(code))), f('Reminders', esc(reminderWords(code))),
@@ -1463,8 +1466,8 @@
     if (act === 'refresh') { if (st.local) openLocal(); else { b.disabled = true; loadData(true); } return; }
     if (act === 'retry') { loadData(); return; }
     if (act === 'copy-contacts') {            // 1.6: for the Bcc line of an email
-      const all = (st.contacts || []).join('; ');
-      (navigator.clipboard ? navigator.clipboard.writeText(all) : Promise.reject()).then(() => { b.textContent = 'Copied ' + plural((st.contacts || []).length, 'email'); },
+      const list = allMails(), all = list.join('; ');
+      (navigator.clipboard ? navigator.clipboard.writeText(all) : Promise.reject()).then(() => { b.textContent = 'Copied ' + plural(list.length, 'email'); },
         () => { window.prompt('Copy the emails:', all); });
       return;
     }

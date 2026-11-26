@@ -73,7 +73,8 @@ const secsWord = s => !s ? '' : s < 90 ? trn(s, '{n} second', '{n} seconds') : t
  * join draft's name and email) is removed. */
 let PARTICIPANT = LS.get('switch_participant') || '';
 LS.del('switch_name');
-[REG_KEY, ME_KEY].forEach(k => { const d = readJSON(k); if(d && ('name' in d || 'email' in d)){ delete d.name; delete d.email; LS.set(k, JSON.stringify(d)); } });
+[REG_KEY, ME_KEY].forEach(k => { const d = readJSON(k); const drop = k === REG_KEY ? ['name', 'email'] : ['name'];   // 1.6.1: the profile keeps the email
+  if(d && drop.some(x => x in d)){ drop.forEach(x => delete d[x]); LS.set(k, JSON.stringify(d)); } });
 let welcomeNote = '';                                       // one-line notice on the welcome screen (see forgetIdentity)
 function greeting(){
   const h = new Date().getHours();
@@ -838,6 +839,7 @@ function homeSections(r, h){
     : h.heating_times === 'varies' ? tr('It varies') : h.heating_times === 'unsure' ? tr('Not sure') : null;
   const grid = (rows, opts) => rows.map(w => [art(w.art), (w.__en && w.__en.n) || w.n, label(opts, h[w.id]) || null]);   // the English name: glanceItem translates it
   const you = []
+    .concat(r.mode === 'join' ? [] : [[ic('mail'), 'Email', f.email || null]])            // 1.6.1: on the last step when joining
     .concat([[ic('users'), 'Sex', label(GENDERS, f.gender) || null], [ic('calendar'), 'Age', label(AGE_BANDS, f.age_band) || null],
       [ic('ruler'), 'Height', label(HEIGHT_BANDS, f.height_band) || null], [ic('scale'), 'Weight', label(WEIGHT_BANDS, f.weight_band) || null],
       [art('feel_cold:' + (h.feel_cold || 'same')), 'Feels the cold', label(FEEL, h.feel_cold) || null], [art('feel_warm:' + (h.feel_warm || 'same')), 'Feels too warm', label(FEEL, h.feel_warm) || null]]);
@@ -1327,7 +1329,7 @@ function keyLost(){
 function cacheProfile(prof){
   if(!prof || typeof prof !== 'object') return false;
   let changed = false;
-  const me = { code:prof.code, gender:prof.gender, age_band:prof.age_band, height_band:prof.height_band, weight_band:prof.weight_band, birth_year:prof.birth_year, height_cm:prof.height_cm, weight_kg:prof.weight_kg,
+  const me = { code:prof.code, email:prof.email, gender:prof.gender, age_band:prof.age_band, height_band:prof.height_band, weight_band:prof.weight_band, birth_year:prof.birth_year, height_cm:prof.height_cm, weight_kg:prof.weight_kg,
     sensitivity:prof.sensitivity, alias:prof.alias, alias_colour:prof.alias_colour };
   if(LS.get(ME_KEY) !== JSON.stringify(me)){ LS.set(ME_KEY, JSON.stringify(me)); changed = true; }
   if(prof.home && typeof prof.home === 'object' && Object.keys(prof.home).length && LS.get(HOME_KEY) !== JSON.stringify(prof.home)){ LS.set(HOME_KEY, JSON.stringify(prof.home)); changed = true; }
@@ -1811,6 +1813,7 @@ function regFromProfile(me, h){
   r.age_band = me.age_band || (old.includes('birth_year') ? 'prefer_not' : bandOf('age', me.birth_year));
   r.height_band = me.height_band || (old.includes('height') ? 'prefer_not' : bandOf('height', me.height_cm));
   r.weight_band = me.weight_band || (old.includes('weight') ? 'prefer_not' : bandOf('weight', me.weight_kg));
+  r.contact = me.email || '';                               // 1.6.1
   ['main_heating', 'wall_insulation'].forEach(k => { if(typeof r.home[k] === 'string') r.home[k] = [r.home[k]]; });   // one answer until 1.4   // "Prefer not to say" (1.3): birth_year, height, weight
   return r;
 }
@@ -1841,7 +1844,7 @@ function regFieldsOf(r){
   const fc = home.feel_cold, fw = home.feel_warm;
   const sensitivity = fc || fw ? (fc === 'more' && fw !== 'more' ? 'cold' : fw === 'more' && fc !== 'more' ? 'warm' : 'average') : (r.sens || null);
   return { gender: r.gender || null, age_band: r.age_band || null, height_band: r.height_band || null, weight_band: r.weight_band || null,
-    sensitivity, home };                                    // 1.6: ranges, never the exact numbers
+    email: (r.contact || '').trim().toLowerCase() || null, sensitivity, home };                                    // 1.6: ranges, never the exact numbers
 }
 const regFields = () => regFieldsOf(REG);
 /* switching units converts what has been typed so far */
@@ -1872,6 +1875,7 @@ function regProblem(step, r){
   const has = k => H[k] !== undefined && H[k] !== null && H[k] !== '', some = k => Array.isArray(H[k]) && H[k].length > 0, picked = (k, v) => some(k) && H[k].includes(v);
   if(id === 'you'){
     if(!r.gender) return ['r_gender', tr('Please choose one. &ldquo;Prefer not to say&rdquo; is fine.')];
+    if(mode !== 'join' && !blank(r.contact) && (!EMAIL_RE.test(r.contact.trim()) || r.contact.trim().length > 254)) return ['r_contact', tr('Please enter your email address, like name@example.com.')];
     if(!r.age_band) return ['r_age', tr('Please choose your age range. &ldquo;Prefer not to say&rdquo; is fine.')];
     if(!r.height_band) return ['r_height', tr('Please choose your height range. &ldquo;Prefer not to say&rdquo; is fine.')];
     if(!r.weight_band) return ['r_weight', tr('Please choose your weight range. &ldquo;Prefer not to say&rdquo; is fine.')];
@@ -1973,8 +1977,8 @@ const busy = (b, on) => { if(!b) return; b.disabled = on; b.classList.toggle('bu
 /* Joining (1.5: no name or email): the database gives the new participant ID, shown on the waiting screen and in a
  * toast so it can be written down. The join token (REG.jid, kept with the draft) makes a second tap after a lost
  * answer sign in to the participant the first one made, rather than make another. */
-/* 1.6: the email for the separate contact list, in a request of its own that carries nothing else (no participant ID,
- * no device key), kept on the phone only until it has gone */
+/* 1.6.0 sent the email to a separate contact list on its own; from 1.6.1 it goes with joining (and My home). This only
+ * sends one that a 1.6.0 phone had not sent yet. */
 const CONTACT_OUT_KEY = 'switch_contact_out';
 function sendContact(mail){ if(!mail || !SWITCH.live) return; LS.set(CONTACT_OUT_KEY, JSON.stringify({ mail, lang: LANG })); quiet(flushContact()); }
 async function flushContact(){
@@ -1999,16 +2003,15 @@ async function regJoin(){
       if(r.status === 'wrong') return fieldError('r_pin', `${tr('This phone has joined already, with a different PIN. Please type the PIN you chose then.')} ${trn(r.tries_left, '{n} try left before a pause.', '{n} tries left before a pause.')}`);
       if(r.status === 'locked') return fieldError('r_pin', pinOutcome(r));
       return fieldError('join', tr('Could not join. Check the connection and try again.')); }
-    const mail = (REG.contact || '').trim();
     await signedIn(r);
     languageAfterSignIn(r);
     finishJoin(f);
-    sendContact(mail);
     afterIdentity(r.approved);
     showToast({ title:tr('Your participant ID is {code}', { code: esc(r.code) }), sub:tr('Please write it down: you need it, with your PIN, to sign in on another phone.'), kind:'info', ms:15000 });
   }catch(e){ busy(b, false); fieldError('join', friendly(e.message, 'Could not join. Check the connection and try again.')); }
 }
-const profileFieldsOf = f => ({ gender:f.gender, age_band:f.age_band, height_band:f.height_band, weight_band:f.weight_band, sensitivity:f.sensitivity });
+/* the email only when there is one, so an older copy of the profile on a phone never clears it */
+const profileFieldsOf = f => Object.assign({ gender:f.gender, age_band:f.age_band, height_band:f.height_band, weight_band:f.weight_band, sensitivity:f.sensitivity }, f.email ? { email:f.email } : {});
 function finishJoin(f){
   if(f){
     LS.set(HOME_KEY, JSON.stringify(f.home));
@@ -2161,13 +2164,15 @@ const REGS = {
     const r = REG;
     /* 1.6: age, height and weight as ranges to choose from (each with "Prefer not to say"), never the exact numbers */
     const sel = (id, key, lab, list) => `<div class="field" id="f-${id}"><label for="${id}">${tr(lab)}</label><select class="in" id="${id}" data-reg="${key}" aria-describedby="err-${id}"><option value="">${tr('Choose')}</option>${list.filter(o => !o.old || o.id === r[key]).map(o => `<option value="${o.id}"${r[key] === o.id ? ' selected' : ''}>${o.n}</option>`).join('')}</select><p class="err" id="err-${id}" hidden></p></div>`;
+    const mail = r.mode === 'join' ? '' : `<div class="field" id="f-r_contact"><label for="r_contact">${tr('Email')}</label><input class="in" id="r_contact" data-reg="contact" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" maxlength="254" value="${esc(r.contact || '')}" aria-describedby="err-r_contact"><p class="err" id="err-r_contact" hidden></p></div>`;
     return `<div class="form" id="regForm">
+      ${mail}
       <div class="row2">${sel('r_gender', 'gender', 'Sex', GENDERS)}${sel('r_age', 'age_band', 'Age', AGE_BANDS)}</div>
       ${sel('r_height', 'height_band', 'Height', HEIGHT_BANDS)}
       ${sel('r_weight', 'weight_band', 'Weight', WEIGHT_BANDS)}
       ${fieldBlock('feel_cold', 'Compared with most people, how easily do you feel cold?', '', pick1('home.feel_cold', FEEL, o => art('feel_cold:' + o.id), 3, 'How easily you feel cold', 'sm'))}
       ${fieldBlock('feel_warm', 'Compared with most people, how easily do you feel too warm?', '', pick1('home.feel_warm', FEEL, o => art('feel_warm:' + o.id), 3, 'How easily you feel too warm', 'sm'))}
-      <p class="note">${tr('Used only to understand comfort differences between people. Everything you tell the study is stored under a participant ID, which you get when you join, never with your name or email.')}</p>
+      <p class="note">${tr('Used only to understand comfort differences between people. Everything you tell the study is stored under a participant ID, which you get when you join, never with your name.')}</p>
     </div>`;
   },
   area: () => {
@@ -2254,8 +2259,8 @@ const REGS = {
     const consent = fieldBlock('consent', 'Consent', 'Please read the participant information sheet on the study page and tick each statement you agree with.',
       `<div class="consent" role="group" aria-label="${tr('Consent')}">${CONSENT.map(o => { const on = c.includes(o.id); return `<button type="button" class="${on ? 'on' : ''}" aria-pressed="${on}" data-act="reg-consent" data-v="${o.id}"><span class="box" aria-hidden="true">${on ? ic('check') : ''}</span><span>${o.n}</span></button>`; }).join('')}</div>` +
       `<p class="note"><a href="${studyHref()}" target="_blank" rel="noopener">${tr('Read the participant information on the study page')}</a></p>`);
-    /* 1.6: the email, right before joining. It goes to a separate list that never holds the participant ID */
-    const contact = `<section class="pin-card contact-card" id="contact-card" aria-labelledby="ctH"><div class="pin-top">${ic('mail')}<div><b id="ctH">${tr('Your email address')}</b><p class="note">${tr('Kept separately from your answers: it is never stored with your participant ID. The research team uses it only to contact you about the study and to share the results with you.')}</p></div></div>
+    /* 1.6: the email, right before joining (1.6.1: kept with the participant, used only to contact them about the study) */
+    const contact = `<section class="pin-card contact-card" id="contact-card" aria-labelledby="ctH"><div class="pin-top">${ic('mail')}<div><b id="ctH">${tr('Your email address')}</b><p class="note">${tr('The research team uses it only to contact you about the study and to share the results with you. It is never part of the analysis and is never shared.')}</p></div></div>
         <div class="field" id="f-r_contact"><label for="r_contact">${tr('Email')}</label><input class="in" id="r_contact" data-reg="contact" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" maxlength="254" value="${esc(REG.contact || '')}" aria-describedby="err-r_contact"><p class="err" id="err-r_contact" hidden></p></div></section>`;
     return `<div class="form">${homeGlance(REG, REG.home, 'reg-edit')}
       ${join ? consent + contact + `<section class="pin-card" aria-labelledby="pinH"><div class="pin-top">${ic('key')}<div><b id="pinH">${tr('Choose a 4-digit PIN')}</b><p class="note">${tr('When you join, you get a 4-digit participant ID. With that ID, this PIN lets you sign in on another phone or tablet and see all your check-ins there. Please don&rsquo;t use your bank card PIN.')}</p></div></div>
