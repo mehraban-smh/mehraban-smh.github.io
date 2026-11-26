@@ -1,13 +1,13 @@
 /* HomePulse (SWITCH home comfort study) - check-in app service worker (scope /switch/checkin/).
  * Shows the hourly reminder when a push arrives and opens the app when it is tapped. On Android the
- * notification also has a "Not home" button, which pauses reminders for two hours without opening the
+ * notification also has a "Later" button ("Not home" until 1.4), which pauses reminders for two hours without opening the
  * app (the app shows the pause next time it is opened). iPhone shows the notification without buttons.
  * It also keeps a copy of the app's own files, network first, so the app still opens without a connection
  * (check-ins made offline wait in the app's queue). Network-first caching as in the sister study's worker. */
 importScripts('../config.js');
 const CFG = self.SWITCH_CONFIG || {};
 const APP = CFG.appName || 'HomePulse';
-const CACHE = 'switch-checkin-v20';
+const CACHE = 'switch-checkin-v21';
 const BASE = new URL('../', self.registration.scope).pathname;   // /switch/
 
 self.addEventListener('install', () => self.skipWaiting());
@@ -41,9 +41,9 @@ self.addEventListener('fetch', e => {
  * cache. The action ids never change: 'open' and 'away'. */
 const TEXTS = {
   en: { title: `${APP}: how does your home feel?`, body: 'A quick comfort check-in, under a minute.',
-        actions: [{ action: 'open', title: "I'm home" }, { action: 'away', title: 'Not home' }] },
+        actions: [{ action: 'open', title: 'Check in now' }, { action: 'away', title: 'Later' }] },
   cy: { title: `${APP}: sut mae'ch cartref yn teimlo?`, body: "Cofnodwch sut rydych chi'n teimlo — llai na munud.",
-        actions: [{ action: 'open', title: 'Rydw i gartref' }, { action: 'away', title: 'Dydw i ddim gartref' }] }
+        actions: [{ action: 'open', title: 'Cofnodi nawr' }, { action: 'away', title: 'Nes ymlaen' }] }
 };
 async function phoneLang() {
   try { const c = await caches.open('switch-prefs'), r = await c.match('lang'); return r && (await r.text()) === 'cy' ? 'cy' : 'en'; }

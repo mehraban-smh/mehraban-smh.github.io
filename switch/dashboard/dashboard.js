@@ -10,6 +10,9 @@
  * Days and hours are UK time (config.js timeZone, Europe/London) from the server-checked `ts`, the same rule
  * the points use, so a phone with a wrong clock or a crafted local_time cannot move a check-in to another day.
  *
+ * Participants are shown by their participant ID (the code: 4827 from 1.5, P01 ... before). Since 1.5 nobody gives a
+ * name or an email; what earlier participants gave stays in the database but is shown nowhere here, nor downloaded.
+ *
  * Browser storage (keys start "switch_"): sessionStorage switch_token, switch_email, switch_token_exp (the
  * research login, this tab only); localStorage switch_dash_range, switch_dash_hm (display choices only).
  */
@@ -42,18 +45,20 @@
   const NUM_COLS = new Set(['tsv', 'clo', 'met', 'seconds', 'tz_offset_min', 'stat_temp_c', 'comfort_score']);
   // the on-screen table: question order, legacy columns left out
   const TABLE_COLS = ['participant', 'local_time', 'prompt', 'at_home', 'room_time', 'tsv', 'preference', 'acceptability', 'clo', 'garments', 'met', 'activity', 'room', 'air', 'sun', 'heating_on', 'heating_src', 'heating_for', 'stat_temp_c', 'wall', 'actions', 'notes', 'same_as_last', 'seconds', 'app_version', 'ts', 'tz_offset_min', 'created_at', 'client_id', 'id'];
-  const PCOLS = ['code', 'name', 'email', 'alias', 'alias_colour', 'lang', 'approved', 'gender', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity', 'created_at', 'updated_at', 'notified_at'];
+  const PCOLS = ['code', 'alias', 'alias_colour', 'lang', 'approved', 'gender', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity', 'created_at', 'updated_at', 'notified_at'];
   const PNUM = new Set(['birth_year', 'height_cm', 'weight_kg', 'alias_colour']);
+  const PRIVATE_COLS = new Set(['name', 'email']);   // kept from before 1.5 in the database, never shown or downloaded
   const HOME_KEYS = ['postcode_area', 'home_type', 'flat_position', 'tenure', 'year_built', 'floors', 'bedrooms', 'floor_area_m2', 'epc', 'adults', 'children', 'pets', 'bedroom_share',
     'main_heating', 'other_heaters', 'heating_pattern', 'payment', 'controls', 'stat_display', 'setpoint_c', 'bedroom_trv', 'wall_insulation', 'loft', 'glazing', 'windows_open', 'damp',
     'bedroom_facing', 'bedroom_facing_deg', 'bedroom_side', 'bedroom_side_deg',
     // 1.3: the Home Visit Questionnaire v2
     'feel_cold', 'feel_warm', 'prefer_not', 'main_road', 'home_type_other', 'glazing_notes', 'changes', 'changes_note', 'pet_door', 'drying', 'drying_room', 'tariff',
     'heating_times', 'heating_wd_start', 'heating_wd_end', 'heating_we_start', 'heating_we_end', 'other_heaters_other', 'window_short', 'window_long', 'window_night',
-    'window_putoff', 'window_putoff_other', 'vent_kitchen', 'vent_bathroom', 'vent_trickle', 'vent_whole_house', 'overheat', 'cool_down', 'cool_down_other', 'consent', 'consent_at'];
+    'window_putoff', 'window_putoff_other', 'vent_kitchen', 'vent_bathroom', 'vent_trickle', 'vent_whole_house', 'overheat', 'cool_down', 'cool_down_other', 'consent', 'consent_at', 'control_warmth', 'control_air'];
   const HOME_NUM = new Set(['floors', 'bedrooms', 'floor_area_m2', 'adults', 'children', 'pets', 'bedroom_share', 'setpoint_c', 'bedroom_facing_deg', 'bedroom_side_deg']);
 
   /* ---------------------------------------------------------------- words for stored values (spec 3 and 4) */
+  const CONTROL5 = { 1: '1 No control at all', 2: '2 A little', 3: '3 Some', 4: '4 A lot', 5: '5 Complete control' };
   const FREQ = { often: 'Often', sometimes: 'Sometimes', rarely: 'Rarely or never' };
   const VENT = { use: 'Has it and uses it', rarely: 'Has it, rarely uses it', no: 'Doesn’t have it', unsure: 'Not sure' };
   const FACING = { N: 'North', NE: 'North-east', E: 'East', SE: 'South-east', S: 'South', SW: 'South-west', W: 'West', NW: 'North-west', unsure: 'Not sure' };
@@ -65,17 +70,17 @@
     preference: { much_cooler: 'Much cooler', cooler: 'Cooler', same: 'No change', warmer: 'Warmer', much_warmer: 'Much warmer' },   // much_*: from 1.3 (cooler / warmer read "a bit" there)
     acceptability: { acceptable: 'Acceptable', unacceptable: 'Not acceptable', clearly_acc: 'Clearly acceptable (older scale)', just_acc: 'Just acceptable (older scale)', just_unacc: 'Just unacceptable (older scale)', clearly_unacc: 'Clearly unacceptable (older scale)' },
     garments: { tshirt: 'T-shirt', long: 'Long sleeves', jumper: 'Thick jumper', hoodie: 'Hoodie or fleece', shorts: 'Shorts', trousers: 'Jeans or trousers', joggers: 'Joggers', skirt: 'Skirt or dress', pyjamas: 'Pyjamas', coat_light: 'Light jacket or summer coat', coat_winter: 'Winter coat', socks: 'Socks', slippers: 'Slippers', blanket: 'Blanket', duvet: 'Duvet',
-      outfit_vlight: 'Very light outfit (0.35 clo)', outfit_light: 'Light outfit (0.55 clo)', outfit_medium: 'Medium outfit (0.75 clo)', outfit_warm: 'Warm outfit (1.00 clo)' },
+      outfit_vlight: 'Very light outfit (0.35 clo)', outfit_light: 'Light outfit (0.55 clo)', outfit_medium: 'Medium outfit (0.75 clo)', outfit_warm: 'Warm outfit (0.90 clo; 1.00 until 1.4)', outfit_vwarm: 'Very warm outfit (1.20 clo)' },
     activity: { sleep: 'Sleeping', lying: 'Lying down', sit: 'Sitting relaxed', desk: 'Desk work', stand: 'Standing', house: 'Cooking or housework', walk: 'Walking about', exercise: 'Exercising' },
     room: { living: 'Living room', bedroom: 'Bedroom', kitchen: 'Kitchen', office: 'Home office (until 1.3)', bathroom: 'Bathroom', other: 'Somewhere else at home' },
     air: { still: 'Still', slight: 'A little air movement', draughty: 'Clearly draughty', drafty: 'Clearly draughty' },
-    sun: { yes: 'Sun on me', no: 'No direct sun', dark: 'It’s dark (until 1.3)' },
+    sun: { 1: '1 No sun', 2: '2 A little sun', 3: '3 Some sun', 4: '4 A lot of sun', 5: '5 Bright direct sun', yes: 'Sun on me (1.4)', no: 'No direct sun (1.4)', dark: 'It’s dark (until 1.3)' },
     heating_on: { on: 'On', off: 'Off', unsure: 'Not sure' },
     heating_for: { lt30: 'Less than 30 minutes (no longer offered)', '30_60': '30 minutes to an hour', '1_2h': '1 to 2 hours', '2_4h': '2 to 4 hours', gt4h: 'More than 4 hours', always: 'Always on (the thermostat switches it on and off)', unsure: 'Not sure' },
     wall: { cold: 'Cold', cool: 'Cool', neutral: 'Neither cold nor warm', warm: 'Warm', hot: 'Hot', no_reach: 'Can’t reach one' },
     actions: { win_open: 'Opened a window', win_close: 'Closed a window', door_open: 'Opened a door', door_close: 'Closed a door', heat_up: 'Turned the heating up', heat_down: 'Turned the heating down or off', layer_on: 'Put on a layer or more clothes', layer_off: 'Took off a layer or some clothes', blanket: 'Got a blanket', fan: 'Turned a fan on', curtains: 'Drew or closed the curtains or blinds', moved: 'Moved to another room', none: 'None of these' },
     notes: { hot_drink: 'Hot drink', cold_drink: 'Cold drink', ate: 'Ate something', hungry: 'Felt hungry', tired: 'Felt tired', unwell: 'Felt unwell', none: 'None of these' },
-    gender: { woman: 'Woman', man: 'Man', non_binary: 'Non-binary', self_describe: 'Another identity', prefer_not: 'Prefer not to say' },
+    gender: { female: 'Female', male: 'Male', woman: 'Woman', man: 'Man', non_binary: 'Non-binary', self_describe: 'Another identity', prefer_not: 'Prefer not to say' },
     sensitivity: { cold: 'Feels the cold easily', average: 'About average', warm: 'Feels the heat easily' },
     lang: { en: 'English', cy: 'Cymraeg (Welsh)' },
     age: { a18: '18–24', a25: '25–34', a35: '35–44', a45: '45–54', a55: '55–64', a65: '65–74', a75: '75 or older' },
@@ -92,9 +97,9 @@
     pets: { 0: 'No pets', 1: '1 pet', 2: '2 pets', 3: '3 pets', 4: '4 pets', 5: '5 pets', 6: '6 pets', 7: '7 pets', 8: '8 or more pets' },
     bedroom_share: { 0: 'Just me', 1: 'With 1 other person', 2: 'With 2 others', 3: 'With 3 or more others' },
     main_heating: { gas_combi: 'Gas combi boiler (no tank)', gas_tank: 'Gas boiler with a hot water tank', oil: 'Oil boiler', lpg: 'LPG boiler', ashp: 'Air source heat pump', gshp: 'Ground source heat pump', storage: 'Electric storage heaters', electric: 'Electric radiators or panel heaters', communal: 'Communal or district heating', solid: 'Solid fuel (wood, coal or another)', none: 'No central heating', unsure: 'Not sure',
-      gas: 'Gas boiler', oil_lpg: 'Oil or LPG boiler', heat_pump: 'Heat pump (air or ground source)', infrared: 'Infrared heating panels' },
+      gas: 'Gas boiler', wood_burner: 'Wood burner or stove', oil_lpg: 'Oil or LPG boiler', heat_pump: 'Heat pump (air or ground source)', infrared: 'Infrared heating panels' },
     other_heaters: { plugin: 'Plug-in electric heater', gas_fire: 'Gas fire', electric_fire: 'Electric fire', stove: 'Wood burner or multi-fuel stove', open_fire: 'Open fire', electric_blanket: 'Electric blanket', none: 'None of these',
-      fire: 'Fire or stove', hot_water_bottle: 'Hot water bottle', blankets: 'Extra blankets or throws', curtains: 'Closing curtains or blinds', other: 'Something else' },
+      fire: 'Fire (gas or electric from 1.5)', wood_burner: 'Wood burner or stove', hot_water_bottle: 'Hot water bottle', blankets: 'Extra blankets or throws', curtains: 'Closing curtains or blinds', other: 'Something else' },
     heating_pattern: { timer: 'On a timer at set times', when_needed: 'Switched on when needed', most_day: 'On most of the day', always_on: 'Always on (the thermostat switches it on and off)', rarely: 'Rarely used', unsure: 'Not sure', not_me: 'Someone else controls it' },
     payment: { prepay: 'Prepayment meter', bill: 'Bill or Direct Debit', in_rent: 'Included in the rent', unsure: 'Not sure', prefer_not: 'Prefer not to say' },
     controls: { room_stat: 'Wall thermostat', smart: 'Smart thermostat', programmer: 'Timer or programmer', trvs: 'Radiator dials (TRVs)', none: 'None of these', unsure: 'Not sure' },
@@ -108,6 +113,7 @@
     damp: { bedroom: 'Bedroom', living: 'Living room', kitchen: 'Kitchen', bathroom: 'Bathroom', elsewhere: 'Elsewhere', none: 'No damp or mould', unsure: 'Not sure' },
     bedroom_facing: FACING, bedroom_side: FACING,
     // 1.3
+    control_warmth: CONTROL5, control_air: CONTROL5,
     feel_cold: { more: 'More easily than most', same: 'About the same', less: 'Less easily' },
     feel_warm: { more: 'More easily than most', same: 'About the same', less: 'Less easily' },
     main_road: { on: 'On a main road', near: 'Near a main road', no: 'No', unsure: 'Not sure' },
@@ -550,7 +556,7 @@
     if (!el) { el = document.createElement('span'); el.className = 'err'; el.setAttribute('role', 'alert'); host.appendChild(el); }
     el.textContent = msg;
   }
-  const who = code => { const p = person(code); return p && p.name ? p.name + ' (' + code + ')' : code; };
+  const who = code => 'participant ' + code;
   async function approve(code, btn) {
     if (st.local) return;
     if (!(await writeAction(btn, code, 'approve', () => S.approve(session.token, code)))) return;
@@ -568,19 +574,19 @@
   }
   async function resetPin(code, btn) {
     if (st.local) return;
-    if (!confirm(`Reset the PIN of ${who(code)}?\n\nOnly do this when they have asked for it. The next time they sign in with their email, the PIN they type becomes their new PIN. The devices they already use keep working.`)) return;
-    let had = true;
-    if (!(await writeAction(btn, code, 'reset the PIN of', async () => { had = await S.resetPin(session.token, code); return true; }))) return;
-    if (had === false) toast('No PIN to reset for ' + code, 'They have not set a PIN yet; they choose one at their next sign-in.');
-    else toast('PIN reset for ' + code, 'Ask them to sign in with their email and choose a new PIN.');
+    if (!confirm(`Reset the PIN of ${who(code)}?\n\nOnly do this when they have asked for it, and you can give them the reset code straight away (in person or on the phone). You get a 6-digit reset code: with their participant ID and that code they choose a new PIN. It works for 7 days. The devices they already use keep working.`)) return;
+    let reset = null;
+    if (!(await writeAction(btn, code, 'reset the PIN of', async () => { reset = await S.resetPin(session.token, code); return !!reset; }))) return;
+    alert(`Reset code for ${code}: ${reset}\n\nTell them this code now: it is shown only once. In the app they choose "I have registered before", enter their participant ID ${code} and a new PIN, then this code when the app asks for it.\n\nIt works once, for 7 days. Reset PIN again gives a new code.`);
+    toast('PIN reset for ' + code, 'Reset code ' + reset + ', valid for 7 days.');
     await loadData(true); focusTitle();
   }
   async function signOutDevices(code, btn) {
     if (st.local) return;
-    if (!confirm(`Sign ${who(code)} out on all their devices?\n\nEach phone or tablet then asks for their email and PIN before it shows anything. Check-ins already sent are kept.`)) return;
+    if (!confirm(`Sign ${who(code)} out on all their devices?\n\nEach phone or tablet then asks for their participant ID and PIN before it shows anything. Check-ins already sent are kept.`)) return;
     let n = 0;
     if (!(await writeAction(btn, code, 'sign out', async () => { n = await S.signOutDevices(session.token, code); return true; }))) return;
-    toast(code + ' signed out', (Number(n) ? plural(Number(n), 'device') + ' will ask' : 'No device was signed in. Any new device asks') + ' for the email and PIN.');
+    toast(code + ' signed out', (Number(n) ? plural(Number(n), 'device') + ' will ask' : 'No device was signed in. Any new device asks') + ' for the participant ID and PIN.');
     await loadData(true); focusTitle();
   }
   function focusTitle() { const t = $('#mainTitle'); if (t) t.focus({ preventScroll: true }); }
@@ -657,7 +663,7 @@
   /* ---------------------------------------------------------------- sidebar */
   function sideHtml() {
     return `<div id="sideCards">${sideCards()}</div>
-      <div class="search">${icon('search')}<label class="sr" for="psearch">Search by code, name, alias or email</label><input id="psearch" type="search" placeholder="Search code, name, alias" autocomplete="off" value="${esc(st.q)}" data-fk="search"></div>
+      <div class="search">${icon('search')}<label class="sr" for="psearch">Search by participant ID or alias</label><input id="psearch" type="search" placeholder="Search ID or alias" autocomplete="off" value="${esc(st.q)}" data-fk="search"></div>
       <div id="pfilter"></div>
       <h2>Participants</h2>
       <ul class="plist" id="plist"></ul>`;
@@ -697,7 +703,7 @@
       if (st.pf === 'quiet' && !isQuiet(e)) return false;
       if (!q) return true;
       const p = e.p || {};
-      return [e.code, p.name, p.email, p.alias].some(v => String(v || '').toLowerCase().includes(q));
+      return [e.code, p.alias].some(v => String(v || '').toLowerCase().includes(q));
     });
     const all = `<li><button class="p" type="button" data-act="sel" data-code="ALL" data-fk="p-ALL"${st.sel === 'ALL' ? ' aria-current="true"' : ''}><b>All participants</b><span class="cnt">${fmtN(st.R.length)}</span><small>${plural(st.entries.length, 'code')} · every check-in</small></button></li>`;
     $('#plist').innerHTML = all + (list.length ? list.map(rowHtml).join('') : `<li class="none">${q ? 'Nobody matches “' + esc(st.q) + '”.' : st.pf === 'waiting' ? 'Nobody is waiting for approval.' : st.pf === 'quiet' ? 'Nobody has gone quiet.' : 'Nobody here yet.'}</li>`);
@@ -713,7 +719,7 @@
     if (p && p.lang === 'cy') flags.push('<i class="flag hid" title="Uses the app in Welsh">Cymraeg</i>');
     const sub = [p && p.alias ? p.alias : '', e.last ? 'last ' + ago(e.last.t) : 'no check-ins yet'].filter(Boolean).join(' · ');
     return `<li><button class="p" type="button" data-act="sel" data-code="${esc(e.code)}" data-fk="p-${esc(e.code)}"${st.sel === e.code ? ' aria-current="true"' : ''}>
-      <b>${esc(e.code)}${p && p.name ? ' · ' + esc(p.name) : ''}</b><span class="cnt">${fmtN(e.rows.length)}</span><small>${esc(sub)}</small>${flags.length ? `<span class="flags">${flags.join('')}</span>` : ''}</button></li>`;
+      <b>${esc(e.code)}</b><span class="cnt">${fmtN(e.rows.length)}</span><small>${esc(sub)}</small>${flags.length ? `<span class="flags">${flags.join('')}</span>` : ''}</button></li>`;
   }
 
   /* ---------------------------------------------------------------- main column */
@@ -729,7 +735,7 @@
     if (st.warn.length) notes.push(`<div class="notice warn"><div><b>Some details could not be loaded:</b> ${esc(st.warn.join('; '))}. Everything else on the page is complete; Refresh to try again.</div></div>`);
     if (session.expired() && !st.local) notes.push(`<div class="notice bad" role="alert" id="expNote"><div><b>Your sign-in has expired.</b> What is on screen stays (and the downloads still work), but refreshing or changing anything needs a new sign-in.</div><button class="btn sm" type="button" data-act="relogin">Sign in again</button></div>`);
     if (odd) notes.push(`<div class="notice"><div>${plural(odd, 'check-in')} ${odd === 1 ? 'has' : 'have'} a date before ${esc(dnFull(SANE_DN))} or in the future (a phone clock far off). ${odd === 1 ? 'It is' : 'They are'} left out of the tiles and charts but ${odd === 1 ? 'is' : 'are'} in the table's “All time” view and the downloads.</div></div>`);
-    const title = sel === 'ALL' ? 'Study overview' : (p && p.name ? `${esc(p.name)} <span class="code">· ${esc(sel)}</span>` : esc(sel));
+    const title = sel === 'ALL' ? 'Study overview' : 'Participant ' + esc(sel);
     const subBits = sel === 'ALL'
       ? [plural(st.entries.filter(enrolled).length, 'participant') + (st.local ? '' : ' approved'), plural(V.length, 'check-in') + ' in ' + rangeWords()]
       : [p && p.alias ? 'Bay Race alias ' + p.alias : (p ? 'No alias yet' : 'No profile stored'), plural(V.length, 'check-in') + ' in ' + rangeWords()];
@@ -867,7 +873,7 @@
     if (!pend.length) return '';
     return `<section class="pending" aria-labelledby="apprTitle"><div class="phead"><b id="apprTitle">${plural(pend.length, 'person', 'people')} waiting for approval</b><span>New sign-ups cannot check in or get reminders until you approve them. Approve the people you expect and remove anyone you do not recognise.</span></div>
       ${pend.map(p => { const t = Date.parse(p.created_at); const hp = homePills(p); return `<div class="prow" data-errhost><code>${esc(p.code)}</code>
-        <div class="pwho"><button type="button" data-act="sel" data-code="${esc(String(p.code).toUpperCase())}">${esc(p.name || p.code)}</button><span>${esc(p.email || '')} · signed up ${esc(isFinite(t) ? ago(t) + ' (' + fmtStamp(p.created_at) + ')' : '')}</span>${hp ? `<div class="pills">${hp}</div>` : `<div class="pills"><span class="pill">Home profile not filled in</span></div>`}</div>
+        <div class="pwho"><button type="button" data-act="sel" data-code="${esc(String(p.code).toUpperCase())}">Participant ID ${esc(p.code)}</button><span>Signed up ${esc(isFinite(t) ? ago(t) + ' (' + fmtStamp(p.created_at) + ')' : '')}</span>${hp ? `<div class="pills">${hp}</div>` : `<div class="pills"><span class="pill">Home profile not filled in</span></div>`}</div>
         <div class="pbtns"><button class="btn sm" type="button" data-act="approve" data-code="${esc(p.code)}">Approve</button><button class="btn ghost sm danger" type="button" data-act="remove" data-code="${esc(p.code)}">Remove</button></div></div>`; }).join('')}</section>`;
   }
 
@@ -1178,11 +1184,11 @@
     if (!rows) body = `<p class="tnote">${st.pointsErr ? 'The points could not be loaded: ' + esc(st.pointsErr) + '. Refresh to try again.' : 'No points yet.'}</p>`;
     else if (!rows.length) body = '<p class="tnote">Nobody is approved yet.</p>';
     else {
-      body = `<div class="tablewrap" style="max-height:440px"><table class="ptable"><thead><tr><th scope="col">Rank</th><th scope="col">Code</th><th scope="col">Name</th><th scope="col">Alias</th><th scope="col">Language</th><th scope="col" class="n">Check-ins</th><th scope="col" class="n">Counted</th><th scope="col" class="n">Goal days</th><th scope="col" class="n">Full weeks</th><th scope="col" class="n">Points</th>${target ? '<th scope="col">Of target</th>' : ''}</tr></thead><tbody>
+      body = `<div class="tablewrap" style="max-height:440px"><table class="ptable"><thead><tr><th scope="col">Rank</th><th scope="col">Participant ID</th><th scope="col">Alias</th><th scope="col">Language</th><th scope="col" class="n">Check-ins</th><th scope="col" class="n">Counted</th><th scope="col" class="n">Goal days</th><th scope="col" class="n">Full weeks</th><th scope="col" class="n">Points</th>${target ? '<th scope="col">Of target</th>' : ''}</tr></thead><tbody>
         ${rows.map(r => { const p = person(r.code); const c = p && num(p.alias_colour) !== null ? RUNNER[num(p.alias_colour) % RUNNER.length] : null; const ratio = target ? Math.min(1, r.points / target) : 0;
-          return `<tr><td class="rank">${r.points && r.rank <= 3 ? `<span class="medal m${r.rank}" aria-label="${ordinal(r.rank)}">${r.rank}</span>` : esc(ordinal(r.rank))}</td><td><button class="lnkcode" type="button" data-act="sel" data-code="${esc(r.code)}" style="color:var(--accent);font-family:var(--mono);font-weight:600">${esc(r.code)}</button></td><td style="font-family:var(--sans)">${esc(p ? p.name : '')}</td><td style="font-family:var(--sans)">${c ? `<span class="dot" style="background:${c}"></span>` : ''}${esc(r.alias || (p && p.alias) || '–')}</td><td style="font-family:var(--sans)">${esc(langWord(p && p.lang))}</td><td class="n">${fmtN(num(r.checkins) || 0)}</td><td class="n">${fmtN(num(r.counted) || 0)}</td><td class="n">${fmtN(num(r.goal_days) || 0)}</td><td class="n">${fmtN(num(r.full_weeks) || 0)}</td><td class="n"><b>${fmtN(r.points)}</b></td>${target ? `<td class="prog"${tipA(pct(r.points, target) + ' of ' + fmtN(target))}><div class="meter"><i style="width:${(100 * ratio).toFixed(1)}%;background:${r.points >= target ? 'var(--teal)' : 'var(--accent)'}"></i></div></td>` : ''}</tr>`; }).join('')}
+          return `<tr><td class="rank">${r.points && r.rank <= 3 ? `<span class="medal m${r.rank}" aria-label="${ordinal(r.rank)}">${r.rank}</span>` : esc(ordinal(r.rank))}</td><td><button class="lnkcode" type="button" data-act="sel" data-code="${esc(r.code)}" style="color:var(--accent);font-family:var(--mono);font-weight:600">${esc(r.code)}</button></td><td style="font-family:var(--sans)">${c ? `<span class="dot" style="background:${c}"></span>` : ''}${esc(r.alias || (p && p.alias) || '–')}</td><td style="font-family:var(--sans)">${esc(langWord(p && p.lang))}</td><td class="n">${fmtN(num(r.checkins) || 0)}</td><td class="n">${fmtN(num(r.counted) || 0)}</td><td class="n">${fmtN(num(r.goal_days) || 0)}</td><td class="n">${fmtN(num(r.full_weeks) || 0)}</td><td class="n"><b>${fmtN(r.points)}</b></td>${target ? `<td class="prog"${tipA(pct(r.points, target) + ' of ' + fmtN(target))}><div class="meter"><i style="width:${(100 * ratio).toFixed(1)}%;background:${r.points >= target ? 'var(--teal)' : 'var(--accent)'}"></i></div></td>` : ''}</tr>`; }).join('')}
         </tbody></table></div>
-        <p class="fnote">${PTS.checkin} points a counted check-in (at least ${Number(cfg.checkinGapMin) || 45} minutes after the one before, up to ${PTS.dailyCap} a day), +${PTS.goalDay} for each day with ${GOAL} or more (a goal day), +${PTS.fullWeek} for a Monday–Sunday week of goal days, counted in the period that holds its Sunday. Every approved participant is in the race and the rank; participants see aliases only, never codes or names.</p>`;
+        <p class="fnote">${PTS.checkin} points a counted check-in (at least ${Number(cfg.checkinGapMin) || 45} minutes after the one before, up to ${PTS.dailyCap} a day), +${PTS.goalDay} for each day with ${GOAL} or more (a goal day), +${PTS.fullWeek} for a Monday–Sunday week of goal days, counted in the period that holds its Sunday. Every approved participant is in the race and the rank; participants see aliases only, never participant IDs.</p>`;
     }
     return `<section class="charts" style="grid-template-columns:minmax(0,1fr)">${fig('pts', 'Points and the Bay Race', sub, body, { wide: true, btns })}</section>`;
   }
@@ -1193,16 +1199,16 @@
   const setBand = v => { const r = Math.round(v); return r <= 17 ? 'le17' : r >= 24 ? 'ge24' : String(r); };
   // [key, title, kind]: kind p = participant column, multi = several answers, area / setp = binned numbers
   const HOME_GROUPS = [
-    ['The people', [['gender', 'Gender', 'p'], ['feel_cold', 'Feels the cold'], ['feel_warm', 'Feels too warm'], ['sensitivity', 'Thermal sensitivity (from the two above since 1.3)', 'p'], ['age', 'Age', 'age'], ['lang', 'App language', 'p']]],
+    ['The people', [['gender', 'Sex (gender until 1.4)', 'p'], ['feel_cold', 'Feels the cold'], ['feel_warm', 'Feels too warm'], ['sensitivity', 'Thermal sensitivity (from the two above since 1.3)', 'p'], ['age', 'Age', 'age'], ['lang', 'App language', 'p']]],
     ['Area and home', [['postcode_area', 'Postcode area', 'free'], ['main_road', 'On or near a main road'], ['home_type', 'Home type'], ['flat_position', 'Flat position (flats only)'], ['tenure', 'Tenure']]],
     ['Age and size', [['year_built', 'Year built'], ['floors', 'Floors'], ['bedrooms', 'Bedrooms'], ['floor_area_m2', 'Floor area', 'area'], ['epc', 'EPC rating']]],
     ['Who lives here', [['adults', 'Adults'], ['children', 'Children'], ['pets', 'Pets'], ['bedroom_share', 'Sharing the bedroom'], ['changes', 'Expects changes during the study'],
       ['pet_door', 'Opens an outside door for pets'], ['drying', 'Dries clothes indoors'], ['tariff', 'Energy tariff']]],
-    ['Heating', [['main_heating', 'Main heating'], ['heating_pattern', 'How the heating is used'], ['heating_times', 'Heating times'], ['other_heaters', 'Other ways to keep warm', 'multi'], ['payment', 'How the heating is paid for']]],
+    ['Heating', [['main_heating', 'Heating (several from 1.5)', 'multi'], ['heating_pattern', 'How the heating is used'], ['heating_times', 'Heating times'], ['control_warmth', 'Control over warmth (1–5)'], ['other_heaters', 'Other ways to keep warm', 'multi'], ['payment', 'How the heating is paid for']]],
     ['Heating controls', [['controls', 'Controls', 'multi'], ['stat_display', 'Thermostat screen'], ['setpoint_c', 'Usual thermostat setting', 'setp'], ['bedroom_trv', 'Dial on the bedroom radiator']]],
-    ['Walls, roof and windows', [['wall_insulation', 'Wall insulation'], ['loft', 'Loft'], ['glazing', 'Glazing'], ['windows_open', 'Windows that open'], ['damp', 'Damp or mould in the last year', 'multi']]],
+    ['Walls, roof and windows', [['wall_insulation', 'Wall insulation', 'multi'], ['loft', 'Loft'], ['glazing', 'Glazing'], ['windows_open', 'Windows that open'], ['damp', 'Damp or mould in the last year', 'multi']]],
     ['Windows and fresh air', [['window_short', 'Opens a window for a few minutes'], ['window_long', 'Opens a window for an hour or more'], ['window_night', 'Window open overnight in the bedroom'],
-      ['window_putoff', 'Put off opening windows by', 'multi'], ['vent_kitchen', 'Kitchen extractor fan'], ['vent_bathroom', 'Bathroom extractor fan'], ['vent_trickle', 'Trickle vents'], ['vent_whole_house', 'Whole-house ventilation']]],
+      ['window_putoff', 'Put off opening windows by', 'multi'], ['vent_kitchen', 'Kitchen extractor fan'], ['vent_bathroom', 'Bathroom extractor fan'], ['vent_trickle', 'Trickle vents'], ['vent_whole_house', 'Whole-house ventilation'], ['control_air', 'Control over fresh air (1–5)']]],
     ['Keeping cool', [['overheat', 'Home gets uncomfortably warm'], ['cool_down', 'Cools down by', 'multi']]],
     ['The bedroom', [['bedroom_facing', 'Bedroom window faces'], ['bedroom_side', 'Bedroom side of the home']]]
   ];
@@ -1260,7 +1266,7 @@
     const x = st.pinsBy.get(code);
     if (!x) return 'No PIN yet · no devices';
     const last = Date.parse(x.last_seen);
-    return (x.locked ? 'Locked after wrong PINs' : x.pin_set ? 'PIN set' : 'No PIN yet (set at the next sign-in)') + ' · ' + plural(num(x.devices) || 0, 'device') + (isFinite(last) ? ' · last used ' + ago(last) : '');
+    return (x.locked ? 'Locked after wrong PINs' : x.pin_set ? 'PIN set' : x.reset_pending ? 'PIN reset: they choose a new one with the reset code' : 'No PIN yet (Reset PIN gives the reset code they need)') + ' · ' + plural(num(x.devices) || 0, 'device') + (isFinite(last) ? ' · last used ' + ago(last) : '');
   }
   function reminderWords(code) {
     if (st.local) return '';
@@ -1291,16 +1297,16 @@
     const status = dbStale() ? '<i class="status-wait">Unknown until the database is updated</i>' : p.approved ? '<i class="status-ok">Approved</i>' : '<i class="status-wait">Waiting for approval</i>';
     const colour = num(p.alias_colour) !== null ? RUNNER[num(p.alias_colour) % RUNNER.length] : null;
     const facts = [
-      f('Name', esc(p.name)), f('Email', p.email ? `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>` : ''), f('Code', `<code>${esc(code)}</code>`),
+      f('Participant ID', `<code>${esc(code)}</code>`),
       f('Bay Race alias', p.alias ? (colour ? `<span class="dot" style="background:${colour}"></span>` : '') + esc(p.alias) : ''),
       f('Status', status), f('Registered', esc(fmtStamp(p.created_at))), f('Profile updated', esc(fmtStamp(p.updated_at)), true), f('Team notified', p.notified_at ? esc(fmtStamp(p.notified_at)) : 'Not yet', true),
       f('PIN and devices', esc(pinWords(code))), f('Reminders', esc(reminderWords(code))),
       f('Language', esc(langWord(p.lang))), f('Last check-in', last ? esc(ago(last.t) + ' (' + fmtStamp(last.r.ts) + ')') : 'None yet'),
-      f('Gender', esc(lab('gender', p.gender))), f('Age', age !== null ? String(age) : ''), f('Height', num(p.height_cm) !== null ? round1(num(p.height_cm)) + ' cm' : ''), f('Weight', num(p.weight_kg) !== null ? round1(num(p.weight_kg)) + ' kg' : ''),
+      f('Sex', esc(lab('gender', p.gender))), f('Age', age !== null ? String(age) : ''), f('Height', num(p.height_cm) !== null ? round1(num(p.height_cm)) + ' cm' : ''), f('Weight', num(p.weight_kg) !== null ? round1(num(p.weight_kg)) + ' kg' : ''),
       f('Thermal sensitivity', esc(lab('sensitivity', p.sensitivity)))
     ].join('');
     const actions = (st.local || dbStale()) ? '' : `<div class="pact" data-errhost>${p.approved ? '' : `<button class="btn sm" type="button" data-act="approve" data-code="${esc(code)}">Approve</button>`}<button class="btn ghost sm" type="button" data-act="pinreset" data-code="${esc(code)}">${icon('key')}Reset PIN</button><button class="btn ghost sm" type="button" data-act="devout" data-code="${esc(code)}">${icon('out')}Sign out devices</button><button class="btn ghost sm danger" type="button" data-act="remove" data-code="${esc(code)}">Remove from the study</button>
-      <span class="hint">${p.approved ? 'Reset PIN lets them choose a new PIN at their next sign-in (their devices keep working). Sign out devices makes every phone ask for the email and PIN again. Remove deletes the profile, PIN, devices and reminder phones; the check-ins already submitted are kept under the code.' : 'They cannot check in until approved. Remove anyone you do not recognise; nothing they submitted is lost.'}</span></div>`;
+      <span class="hint">${p.approved ? 'Reset PIN gives you a 6-digit reset code: with it and their participant ID they choose a new PIN (their devices keep working). Sign out devices makes every phone ask for the participant ID and PIN again. Remove deletes the profile, PIN, devices and reminder phones; the check-ins already submitted are kept under the code.' : 'They cannot check in until approved. Remove anyone you do not recognise; nothing they submitted is lost.'}</span></div>`;
     const h = homeOf(p);
     const home = h && Object.keys(h).length ? `<div class="homedl">${HOME_GROUPS.slice(1).map(([gt, keys]) => { const items = keys.map(([key, title, kind]) => { const v = homeValue(h, key, kind); return v ? `<dt>${esc(title + (RETIRED.has(key) ? RETIRED_NOTE : ''))}</dt><dd>${esc(v)}</dd>` : ''; }).join(''); return items ? `<section><h3>${esc(gt)}</h3><dl>${items}</dl></section>` : ''; }).join('')}</div>${Object.keys(h).filter(k => !HOME_KEYS.includes(k)).length ? `<p class="tnote">Other stored answers: ${esc(Object.keys(h).filter(k => !HOME_KEYS.includes(k)).map(k => k + ' = ' + (Array.isArray(h[k]) ? h[k].join('|') : typeof h[k] === 'object' ? JSON.stringify(h[k]) : h[k])).join(' · '))}</p>` : ''}`
       : '<p class="tnote">No home profile yet. The app asks for it before their next check-in.</p>';
@@ -1396,7 +1402,7 @@
     const name = n => { let s = String(n).replace(/[\\/?*[\]:]/g, '_').slice(0, 31) || 'Sheet'; let i = 2; while (used.has(s.toLowerCase())) s = String(n).slice(0, 28) + '_' + i++; used.add(s.toLowerCase()); return s; };
     const list = exportRows(), cols = colsOf(list);
     const extraP = new Set(), extraH = new Set();
-    st.people.forEach(p => { Object.keys(p).forEach(k => { if (!PCOLS.includes(k) && k !== 'home' && !DERIVED.includes(k)) extraP.add(k); }); Object.keys(homeOf(p) || {}).forEach(k => { if (!HOME_KEYS.includes(k)) extraH.add(k); }); });
+    st.people.forEach(p => { Object.keys(p).forEach(k => { if (!PCOLS.includes(k) && k !== 'home' && !DERIVED.includes(k) && !PRIVATE_COLS.has(k)) extraP.add(k); }); Object.keys(homeOf(p) || {}).forEach(k => { if (!HOME_KEYS.includes(k)) extraH.add(k); }); });
     const pHeader = [...PCOLS, ...extraP, ...DERIVED, ...HOME_KEYS, ...extraH];
     const pointsSheet = () => {
       const keys = ['week', 'month', 'all'], byCode = new Map();

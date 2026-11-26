@@ -22,6 +22,18 @@ GitHub Pages only serves files, so the check-ins need a small database. The page
 filled in, both apps run in **local mode**: check-ins stay in the participant's browser, and the dashboard shows only
 the browser it is opened in.
 
+## Upgrading the live study to 1.5: participant ID and PIN, no name or email (once)
+
+1. Supabase → **SQL Editor → New query** → paste the whole of `supabase-setup.sql` → **Run**. It keeps every
+   participant, check-in and phone: `participants.email` and `name` only become optional (what earlier participants
+   gave stays in the table, but the app and the dashboard no longer show it), every code already used is recorded in
+   `participant_ids`, and joining, signing in and Reset PIN switch to participant IDs. It also accepts the new 1.5
+   check-in answers (sunlight from 1 to 5, the fifth outfit), which a 1.5 phone would otherwise have refused.
+   Running it again also succeeds.
+2. Straight away, push the 1.5 pages to `main`. In between, joining and signing in on a phone still on 1.4 fail with
+   "Joining is not switched on yet"; phones already signed in keep working throughout.
+3. Participants who joined before keep their P code as their participant ID (P07) and sign in with it and their PIN.
+
 ## Upgrading the live study from 0.4.0 to HomePulse 1.0 (once)
 
 1. Optional safety copy: on the old dashboard, **Download Excel**.
@@ -35,7 +47,7 @@ the browser it is opened in.
 4. Straight away, push the HomePulse 1.0 pages to `main` (Pages deploys in about two minutes). In between, a phone still
    on 0.4.0 has its check-ins refused: they stay on the phone, and 1.0 sends them once the participant has signed in.
 5. Close by hand any old open issue titled "N new participant(s) waiting for approval" (without "HomePulse:").
-6. Tell the participants to open the app: "One more step" (their email and a new 4-digit PIN), then "Tell us about
+6. Tell the participants to open the app: "One more step" (in 1.0 their email and a new 4-digit PIN), then "Tell us about
    your home".
 
 ## One-time setup (a new project; about 15 minutes)
@@ -53,8 +65,8 @@ the browser it is opened in.
    confirm user").
 5. **Settings → API Keys**: copy the **Publishable key** (`sb_publishable_...`) into `supabaseAnonKey` in
    `config.js`, and the **Project URL** from **Settings → Data API** into `supabaseUrl`. Commit and push. The
-   publishable key is meant to be public; the functions from step 2 limit it to joining and signing in (email and
-   PIN), checking approval and, with a signed-in device's key, sending that participant's check-ins, reading their
+   publishable key is meant to be public; the functions from step 2 limit it to joining and signing in (participant
+   ID and PIN), checking approval and, with a signed-in device's key, sending that participant's check-ins, reading their
    own check-ins, profile, points and the anonymous Bay Race, and registering a phone for reminders. It cannot read
    or write any table directly. A phone's reminder row can be changed only through its own push endpoint, which only
    that phone knows.
@@ -66,30 +78,40 @@ and `?start=signin`). On an iPhone in Safari the app first asks for the Home Scr
 get reminders and it keeps its own storage.
 
 Joining asks for the participant's details and their home (nine short steps, see "The home profile") and a 4-digit
-PIN, and calls `register_participant`, which stores the profile in `participants`, assigns the next code (`P01`,
-`P02`, ... `P99`, `P100`, ...), gives the participant a random anonymous alias for the Bay Race (Welsh wildlife:
-"Puffin", "Red Kite", ...; never derived from the code) and gives the device a key. Only the code travels with the
-check-ins; the dashboard joins it back to the name. Every question needs an answer ("Not sure" counts); the draft is
-kept on the phone (never the PIN), so "Later" carries on where it stopped.
+PIN, never a name or an email (since 1.5), and calls `register_participant`, which stores the profile in
+`participants`, gives the participant a random 4-digit **participant ID** (`4827`: 1000 to 9999, never one given out
+before, also not one of a participant removed since; every ID ever issued is kept in `participant_ids`), a random
+anonymous alias for the Bay Race (Welsh wildlife: "Puffin", "Red Kite", ...; never derived from the ID) and gives the
+device a key. Participants who joined before 1.5 keep their code (`P01`, `P02`, ... `P99`, `P100`, ...) as their ID.
+The ID is the participant's only identity in the study: the check-ins are filed under it, the waiting screen after
+joining shows it in large digits (and a toast repeats it) so they can write it down, Settings shows it as
+"Participant ID", and the researcher writes it on the paper questionnaire. Every question needs an answer ("Not
+sure" counts); the draft is kept on the phone (never the PIN), so "Later" carries on where it stopped. The draft also
+holds a join token, so tapping Join again after a lost answer signs in to the participant the first tap made instead
+of making a second one.
 
-On another phone or tablet, or in the iPhone home-screen copy, the participant signs in with their email and PIN;
-every device then shows the same check-ins, points and badges. Only hashes of the PIN and of the device keys are
-stored. Five wrong tries lock signing in for 15 minutes; five more after that, an hour; then 24 hours (only a
-successful sign-in resets this). PINs that are easy to guess (four equal digits, 1234, 4321, 0123, 9876, 1212,
-2580) are refused whenever a PIN is set. On the dashboard, **Reset PIN** clears a forgotten PIN and **Sign out
-devices** stops all of a participant's device keys (a lost phone).
+On another phone or tablet, or in the iPhone home-screen copy, the participant signs in with their participant ID and
+PIN; every device then shows the same check-ins, points and badges. (On a phone's number pad an old code can be typed
+without its P: 7 or 07 means P07.) Only hashes of the PIN and of the device keys are stored. Five wrong tries lock
+signing in for 15 minutes; five more after that, an hour; then 24 hours (only a successful sign-in resets this).
+PINs that are easy to guess (four equal digits, 1234, 4321, 0123, 9876, 1212, 2580) are refused whenever a PIN is
+set. On the dashboard, **Reset PIN** clears a forgotten PIN and **Sign out devices** stops all of a participant's
+device keys (a lost phone). Participants ask for a reset by email, at s.mehraban2@swansea.ac.uk (the study contact
+in the app and on the study page).
 
-Choosing a first PIN needs the participant code as well as the email, so knowing someone's email is not enough to
-take over their account. This applies to participants who joined before HomePulse 1.0 (they had no PIN) and to anyone
-whose PIN the team has reset. On the phone they used with 0.4.0, the app sends the code it already holds ("One
-more step": email and a new PIN). On a new device it asks for the code: it is shown at the bottom of Today on any
-signed-in device, and the team can tell them (after a Reset PIN, tell the participant their code). A wrong code
-counts as a wrong try. Then "Tell us about your home" (the same steps, with what is already known filled in).
-Nobody can check in before their profile is complete. Settings → My home shows the profile and edits it section by
-section.
+Reset PIN shows the researcher a 6-digit **reset code**, once (only its hash is stored). Give it to the participant in
+person or on the phone: in the app they choose "I have registered before", enter their participant ID and a new PIN,
+and the app then asks for the reset code. It works for 7 days and only until a PIN is chosen with it; Reset PIN again
+gives a new one. A wrong or expired code counts as a wrong try. The ID alone is never enough to choose a PIN. The same
+applies to anyone who joined before HomePulse 1.0 and never chose a PIN. After a first PIN, "Tell us about your home"
+(the same steps, with what is already known filled in) if the profile is not complete. Nobody can check in before
+their profile is complete. Settings → My home shows the profile and edits it section by section.
 
-Signing in never reveals whether an email is registered without a PIN attempt. If you suspect misuse, sign the
-participant out on all devices and reset their PIN while you are in touch with them.
+Signing in never reveals whether an ID is registered without a PIN attempt, but IDs are short: anyone can try them,
+and "We could not find that participant ID" tells them which do not exist. What protects an account is the PIN and the
+lock after five wrong tries (per participant: roughly 20 guesses in the first hours, then 5 a day, out of about 9,990
+PINs). If you suspect misuse (a participant locked out who did not try, or "Locked after wrong PINs" on the
+dashboard), sign the participant out on all devices and reset their PIN while you are in touch with them.
 
 ### Approval
 
@@ -99,12 +121,14 @@ The link is public, so a registration has to be approved before it counts:
    reminder sign-up until then, and the app shows a waiting screen that checks every minute.
 2. Within the hour the reminders workflow (`switch/push/notify.js`) opens one **issue in this repository** titled
    "HomePulse: 1 new participant waiting for approval" (or "HomePulse: 3 new participants ..."), assigned to you, so GitHub
-   emails you. It contains only the codes, the registration times and the dashboard link (the repository is
+   emails you. It contains only the participant IDs, the registration times and the dashboard link (the repository is
    public). The issue closes itself once everyone it lists has been approved or removed. Only issues starting
    "HomePulse:" opened by the workflow itself are ever read or closed.
-3. Open the **dashboard**: everyone waiting is listed at the top with their name, email and a home summary. Click
-   **Approve** to let them in or **Remove** to delete the registration (with their PIN, device keys and phones;
-   their check-ins are kept). Anyone you do not recognise, remove.
+3. Open the **dashboard**: everyone waiting is listed at the top with their participant ID, when they signed up and a
+   home summary. Check the ID against the one the participant has (on their waiting screen, or the one you wrote on
+   their paper questionnaire), then click **Approve** to let them in or **Remove** to delete the registration (with
+   their PIN, device keys and phones; their check-ins are kept, and the ID is never given out again). Anyone you do not
+   recognise, remove.
 
 ## The home profile
 
@@ -129,7 +153,7 @@ fill it in. Only the first half of the postcode is stored: the database refuses 
 | `pet_door` | 1.3, homes with pets: `no` / `yes` (opens an outside door for them regularly) |
 | `drying`, `drying_room` | 1.3: `no` / `yes` (dries clothes indoors), and the room, as typed |
 | `tariff` | 1.3: `standard`, `prepay`, `time_of_use` (cheaper at certain times, e.g. Economy 7), `unsure` |
-| `main_heating` | from 1.3: `gas`, `oil_lpg`, `heat_pump`, `storage`, `electric`, `infrared`, `communal`, `solid`, `none`, `unsure`; older profiles also `gas_combi` (no hot water tank), `gas_tank`, `oil`, `lpg`, `ashp` (air source heat pump), `gshp`, `storage` (storage heaters), `electric` (radiators or panel heaters), `communal`, `solid`, `none`, `unsure` |
+| `main_heating` | a list from 1.5 (every kind of heating the home has; one value until 1.4), with `wood_burner` from 1.5 (`solid` is then coal or another solid fuel); from 1.3: `gas`, `oil_lpg`, `heat_pump`, `storage`, `electric`, `infrared`, `communal`, `solid`, `none`, `unsure`; older profiles also `gas_combi` (no hot water tank), `gas_tank`, `oil`, `lpg`, `ashp` (air source heat pump), `gshp`, `storage` (storage heaters), `electric` (radiators or panel heaters), `communal`, `solid`, `none`, `unsure` |
 | `other_heaters` | anything else used to keep warm, from 1.3: list of `plugin`, `fire` (fire or stove), `electric_blanket`, `hot_water_bottle`, `blankets`, `curtains` (closing them), `other` (with `other_heaters_other` as typed), or `none`; older profiles: `plugin`, `gas_fire`, `electric_fire`, `stove` (wood burner or multi-fuel), `open_fire`, `electric_blanket`, or `none` |
 | `heating_pattern` | `always_on` (the thermostat turns it on and off; added 1.1), `timer`, `when_needed`, `most_day`, `rarely`, `unsure` (1.3), `not_me` (someone else controls it; until 1.2) |
 | `heating_times` | 1.3: `set` (with `heating_wd_start`, `heating_wd_end`, `heating_we_start`, `heating_we_end` as HH:MM, weekdays and weekends), `varies` or `unsure` |
@@ -138,7 +162,8 @@ fill it in. Only the first half of the postcode is stored: the database refuses 
 | `stat_display` | no longer asked since 1.1; older profiles: `yes`, `no`, `no_stat` |
 | `setpoint_c` | usual thermostat setting in °C, or null |
 | `bedroom_trv` | no longer asked since 1.1; older profiles: `yes`, `no`, `no_radiator`, `unsure` |
-| `wall_insulation` | `cavity`, `external`, `internal`, `none`, `unsure` |
+| `wall_insulation` | a list from 1.5 (one value until 1.4): `cavity`, `external`, `internal`, or `none` / `unsure` |
+| `control_warmth`, `control_air` | 1.5, how much control they feel they have over how warm or cool the home is, and over its fresh air and air quality: 1 (no control at all) to 5 (complete control) |
 | `loft` | not asked from 1.3; older profiles: `yes`, `no`, `no_loft`, `unsure` |
 | `glazing`, `glazing_notes` | `single`, `double`, `triple`, `unsure` (`mixed` until 1.2), and from 1.3 optional notes as typed (rooms with another type) |
 | `windows_open` | not asked from 1.3; older profiles: `yes`, `some`, `no` |
@@ -154,16 +179,18 @@ fill it in. Only the first half of the postcode is stored: the database refuses 
 | `prefer_not` | 1.3, list of `birth_year`, `height`, `weight` answered "Prefer not to say" (those columns are then empty) |
 | `consent`, `consent_at` | 1.3, the five consent statements ticked when joining (`info`, `choice`, `link`, `skip`, `agree`) and when |
 
-Gender, year of birth, height (cm), weight (kg) and thermal sensitivity (`cold`, `average`, `warm`) stay in their
+Sex (in the `gender` column: `female`, `male`, `prefer_not` from 1.5; gender answers until 1.4), year of birth, height (cm), weight (kg) and thermal sensitivity (`cold`, `average`, `warm`) stay in their
 own `participants` columns. From 1.3 the sensitivity is made from `feel_cold` and `feel_warm`: `cold` when only the cold comes
 more easily than to most people, `warm` when only the warmth does, otherwise `average`. Height and weight can be typed in ft/in and st/lb; they are stored metric.
 
 ## The check-in
 
-From 1.4 (the agreed Check-ins doc) a check-in starts with "Where are you right now?": a room (`room`) goes on to "How long
-have you been in this room?" (`room_time`) and the questions; "I'm not at home" asks "When should we remind you to do this
-check-in?": in one, three or five hours, when they open the app again (12 hours at most), or not today (until their
-reminder hours start tomorrow). Until 1.3 it started with "Are you at home right now?" (`at_home` `long` or `recent`), and
+From 1.5 a check-in starts with "Are you able to do a check-in now?". "Yes, I can" goes on to "Where are you right now?"
+(a room, `room`), "How long have you been in this room?" (`room_time`) and the questions; "Not right now" asks "When would
+you be able to do it?": in one, three or five hours, when they open the app again (12 hours at most), or not today (until their
+reminder hours start tomorrow). The app never asks whether anyone is at home (1.4 started with "Where are you right now?"
+and an "I'm not at home" answer; the reminder's buttons read "I'm home" / "Not home" until 1.4, "Check in now" / "Later"
+from 1.5, with the same ids). Until 1.3 it started with "Are you at home right now?" (`at_home` `long` or `recent`), and
 asked the room sixth and, with the heating on, how long it had been on (`heating_for`); 1.4 asks neither of those.
 
 Every check-in asks the same questions in the same order, all starting unanswered (there is no "still the same"
@@ -178,11 +205,11 @@ last-30-minutes questions are shorter:
 | How warm or cool do you feel right now? | `tsv` | −3 cold … +3 hot |
 | Would you like to be… | `preference` | `much_cooler` (1.3), `cooler`, `same`, `warmer`, `much_warmer` (1.3); from 1.3 `cooler` and `warmer` read "A bit cooler" and "A bit warmer" |
 | Is the temperature here acceptable to you right now? ("Are these conditions acceptable to you?" before 1.3) | `acceptability` | `acceptable`, `unacceptable` (older rows: the four-point ids) |
-| How warmly are you dressed right now? (1.3) | `garments`, `clo` | one outfit: `outfit_vlight` (0.35), `outfit_light` (0.55), `outfit_medium` (0.75), `outfit_warm` (1.00); clo is the outfit's |
+| How warmly are you dressed right now? (1.3) | `garments`, `clo` | one outfit, five from 1.5: `outfit_vlight` (0.30), `outfit_light` (0.50), `outfit_medium` (0.70), `outfit_warm` (0.90), `outfit_vwarm` (1.20); 1.3 and 1.4 had four (0.35, 0.55, 0.75, 1.00); clo is the outfit's |
 | What are you wearing? (before 1.3) | `garments`, `clo` | `tshirt`, `long`, `jumper`, `hoodie`, `shorts`, `trousers`, `joggers`, `skirt`, `pyjamas` (0.57), `coat_light` (0.25), `coat_winter` (0.60), `socks`, `slippers`, `blanket`, `duvet`; clo summed (ASHRAE 55 / ISO 7730) |
 | What have you been doing for the last 15 minutes? | `activity`, `met` | `sleep`, `lying`, `sit`, `desk`, `stand`, `house`, `walk`, `exercise` |
 | Can you feel air moving around you? | `air` | `still`, `slight`, `draughty` |
-| Is direct sunlight falling on you right now? | `sun` | `no`, `yes` (`dark` until 1.3) |
+| How much sunlight is falling on you right now? (1.5; "Is direct sunlight falling on you right now?" in 1.4) | `sun` | `1` (none) to `5` (bright, direct sunshine); `no`, `yes` in 1.4; `dark` until 1.3 |
 | Is your heating on right now? (1.0) | `heating_on` | `on`, `off`, `unsure` |
 | Which heating is on? (1.0–1.1 only, when on and the home had more than one system; empty from 1.2) | `heating_src` | the home's `main_heating` / `other_heaters` ids, `other` |
 | How long has it been on? (1.0 to 1.3 only, when on; empty from 1.4) | `heating_for` | `always` (the thermostat switches it on and off; added 1.1), `30_60`, `1_2h`, `2_4h`, `gt4h`, `unsure` (`lt30` in 1.0 check-ins only) |
@@ -346,12 +373,14 @@ renews itself; if it cannot, the page says so and keeps what is on screen. The k
 - **Charts** (each with a Table view): thermal sensation, check-ins per day, a weekday × hour map, preference and
   acceptability, the outside wall by touch, heating on/off and which heating, the thermostat reading against how
   people feel, clothing over time, rooms and activity, and actions and notes.
-- **Points and the Bay Race**: this week, this month or all time, with codes, names, aliases, counted check-ins,
+- **Points and the Bay Race**: this week, this month or all time, with participant IDs, aliases, counted check-ins,
   goal days, full weeks, points and rank (participants only ever see aliases).
 - **Home profiles**: a tally of every home question.
-- **A participant**: profile, PIN and devices, reminders, Bay Race setting, points, the home profile, their charts
-  and every check-in, with **Reset PIN**, **Sign out devices** and **Remove** (deletes the profile, PIN, devices and
-  reminder phones; check-ins already submitted stay under the code).
+- **A participant**: participant ID, profile, PIN and devices (with "PIN reset" while a reset code is waiting to be
+  used), reminders, Bay Race setting, points, the home profile, their charts and every check-in, with **Reset PIN**
+  (shows the reset code), **Sign out devices** and **Remove** (deletes the profile, PIN, devices and reminder phones;
+  check-ins already submitted stay under the ID). Since 1.5 the dashboard shows no names or emails, also not the ones
+  participants gave before (they stay in the `participants` table).
 
 **Downloads** contain every check-in for the selection and every stored column: `participant, local_time, ts,
 prompt, at_home, tsv, preference, clo, garments, met, activity, room, acceptability, air, sun, actions, notes,
@@ -362,8 +391,8 @@ Lists are joined with `|`, and stored ids are kept (the Labels sheet translates 
 
 - **CSV**: check-ins only (no names or emails), UTF-8 with BOM; text Excel would treat as a formula starts with an
   apostrophe.
-- **Excel**: *Participants* (profile, alias, race setting, `updated_at`, `notified_at`, PIN and devices, phones,
-  points, and every home answer as its own column), *All*, *Points*, one sheet per participant, and *Labels*.
+- **Excel**: *Participants* (participant ID, profile, alias, race setting, `updated_at`, `notified_at`, PIN and
+  devices, phones, points, and every home answer as its own column; never a name or email), *All*, *Points*, one sheet per participant, and *Labels*.
   Numbers are real numbers. SheetJS 0.18.5 is loaded from cdnjs with an integrity hash; if it cannot load, use
   Download CSV.
 
