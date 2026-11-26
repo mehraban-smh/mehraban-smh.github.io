@@ -17,6 +17,7 @@ const ME_KEY = 'switch_me';                                 // the rest of my_pr
 const REG_KEY = 'switch_reg';                               // the join wizard's draft (never the PIN), removed once saved
 const PENDING_KEY = 'switch_pending';                       // switch-api.js: check-ins waiting to be sent
 const RACE_KEY = p => 'switch_race_' + p;                   // the last race payload of each period, so the Race tab opens at once and offline
+const ID_SAVED_KEY = 'switch_id_saved';                     // 1.5.2: the participant ID whose owner said it and the PIN are kept safe
 const KEY_LOST_KEY = 'switch_key_lost';                     // '1': this phone was signed out by the server (sign in again)
 const POINTS_KEY = 'switch_points';                         // my_points as last read, { at, code, p }: the database's own figures
 const BACKFILL_KEY = 'switch_backfill';                     // the code whose older check-ins on this phone have been offered to the database once
@@ -78,9 +79,21 @@ function greeting(){
   const h = new Date().getHours();
   return tr(h < 5 ? 'Good evening' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening');
 }
-/* The participant ID, big and clear, to write down (the waiting screen after joining) */
+/* The participant ID, big and clear, to write down: on the waiting screen after joining, and (1.5.2) at the top of
+ * Today until the participant has said, twice, that the ID and the PIN are kept safe ("I've written it down", then
+ * the pop-up). Signing in with the ID counts as knowing it. */
+const idSaved = () => !!PARTICIPANT && LS.get(ID_SAVED_KEY) === PARTICIPANT;
+const idCardDue = () => SWITCH.live && !!PARTICIPANT && PARTICIPANT !== LOCAL_CODE && !idSaved();
 const idCard = () => `<section class="pid-card" aria-labelledby="pidH"><span class="pid-k" id="pidH">${tr('Your participant ID')}</span><b class="pid">${esc(PARTICIPANT)}</b>
-  <p>${tr('Please write it down. You need it, with your PIN, to sign in on another phone or tablet, and the research team writes it on your paper questionnaire.')}</p></section>`;
+  <p>${tr('Please write it down. You need it, with your PIN, to sign in on another phone or tablet, and the research team writes it on your paper questionnaire.')}</p>
+  ${idSaved() ? '' : `<button class="btn primary pid-ok" data-act="id-saved">${ic('check')} ${tr('I&rsquo;ve written it down')}</button>`}</section>`;
+/* "I've written it down": one more look, so the ID and the PIN really are kept */
+function confirmIdSaved(opener){
+  openSheet(`<div class="sh-head"><div><div class="eyebrow">${tr('Your participant ID')}</div><b id="sheetTitle">${tr('Are your participant ID and PIN safe?')}</b></div><button class="x" data-act="sheet-close" aria-label="${tr('Close')}">${ic('x')}</button></div>
+    <div class="sh-body"><div class="pid-card pid-sm"><span class="pid-k">${tr('Your participant ID')}</span><b class="pid">${esc(PARTICIPANT)}</b></div>
+      <p class="sub">${tr('Please check that you have written down your participant ID and your PIN, or saved them somewhere safe. You need both to sign in on another phone or tablet, or if this phone is reset. The research team can&rsquo;t see your PIN: they can only reset it.')}</p>
+    <div class="actions"><button class="btn primary" data-act="id-saved-yes">${ic('check')} ${tr('Yes, both are safe')}</button><button class="btn link" data-act="sheet-close">${tr('Not yet')}</button></div></div>`, '[data-act="id-saved-yes"]', opener);
+}
 const homeProfile = () => readJSON(HOME_KEY);
 const meProfile = () => readJSON(ME_KEY) || {};
 /* the profile has been read (my_profile, the join wizard): it carries the code. A few fields written before
@@ -929,6 +942,7 @@ const SCREENS = {
     const notif = !['on','unconfigured'].includes(PUSH.status()) && !studyOver();
     return `<div class="hero today-hero"><div class="eyebrow">${tr(PROJECT)}</div><div class="hrow2"><h1 class="h1" tabindex="-1">${greeting()}</h1>${pts ? GAME.pointsChipHTML(pts, (racePayload('week') || {}).me) : ''}</div></div>
       ${netNote(['pull','race'])}
+      ${idCardDue() ? idCard() : ''}
       ${notif ? notifCard() : ''}
       ${cta}
       ${goalCard(list, pts)}
@@ -1261,7 +1275,7 @@ function forgetIdentity(note, device){
   if(device){ quiet(SWITCH.forgetDevice()); if(PUSH.status() === 'on') quiet(PUSH.disable()); }
   SWITCH.setKey(null);
   SS.del(LANG_TAP_KEY);
-  [LANG_SYNC_KEY,'switch_participant',APPROVED_KEY,'switch_push','switch_push_lost','switch_sched',HOME_KEY,ME_KEY,KEY_LOST_KEY,POINTS_KEY,BACKFILL_KEY,RACE_KEY('week'),RACE_KEY('last_week'),RACE_KEY('month')].forEach(k => LS.del(k));
+  [LANG_SYNC_KEY,'switch_participant',ID_SAVED_KEY,APPROVED_KEY,'switch_push','switch_push_lost','switch_sched',HOME_KEY,ME_KEY,KEY_LOST_KEY,POINTS_KEY,BACKFILL_KEY,RACE_KEY('week'),RACE_KEY('last_week'),RACE_KEY('month')].forEach(k => LS.del(k));
   PARTICIPANT = ''; welcomeNote = note || ''; DONE = null;
   go('welcome');
 }
@@ -1445,6 +1459,7 @@ async function signin(){
     if(r.status !== 'ok'){ idle(); return fieldError(r.status === 'not_found' ? 's_id' : 's_pin', pinOutcome(r)); }
     SIGNIN_CODE = false;
     await signedIn(r);
+    LS.set(ID_SAVED_KEY, r.code);                           // they have just typed it
     languageAfterSignIn(r);
     b.innerHTML = tr('Loading your check-ins&hellip;');
     await firstLoad();                                      // the profile decides what comes next; the history and the race fill Today
@@ -1472,7 +1487,7 @@ async function recheck(silent){
   if(!silent) pendMsg(tr('Checking&hellip;'));
   try{
     const st = await approvalState();
-    if(st === 'yes'){ checking = false; await refreshProfile(); go('today'); showToast({ title:tr('You&rsquo;re in!'), sub:tr('Welcome to the study') }); quiet(flushPending()); quiet(pullHistory(true)); refreshRace('week'); return; }
+    if(st === 'yes'){ checking = false; await refreshProfile(); go('today'); showToast({ title:tr('You&rsquo;re in!'), sub: idSaved() ? tr('Welcome to the study') : tr('Welcome to the study. Your participant ID is {code}.', { code: esc(PARTICIPANT) }) }); quiet(flushPending()); quiet(pullHistory(true)); refreshRace('week'); return; }
     if(st === 'gone'){ checking = false; forgetIdentity(NOT_FOUND_MSG); return; }
     if(!silent) pendMsg(tr('Not confirmed yet. Please try again a little later.'));
   }catch(e){ if(!silent) pendMsg(tr('Could not reach the study database. Try again later.')); }
@@ -2407,6 +2422,8 @@ document.addEventListener('click', async e => {
       break; }
     case 'signin': signin(); break;
     case 'recheck': recheck(false); break;
+    case 'id-saved': confirmIdSaved(b); break;
+    case 'id-saved-yes': LS.set(ID_SAVED_KEY, PARTICIPANT); closeSheet(); rerender(); showToast({ title:tr('Thank you!'), sub:tr('Your participant ID is always in Settings too.') }); break;
     case 'forget': forgetIdentity('', true); break;
     case 'signout': confirmSignOut(b); break;
     case 'signout-yes': { busy(b, true); await flushPending().catch(() => {}); if(PUSH.status() === 'on') await PUSH.disable(); await SWITCH.forgetDevice(); closeSheet(); forgetIdentity('You’re signed out on this phone.'); break; }

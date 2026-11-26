@@ -652,6 +652,14 @@ const CY = {
     'Bydd y tîm ymchwil yn cadarnhau eich lle, fel arfer o fewn diwrnod. Gallwch chi gofnodi cyn gynted ag y bydd hynny wedi’i wneud.',
   'Check again': 'Gwirio eto',
   'Your participant ID': 'Eich rhif cyfranogwr',
+  // 1.5.2: the ID card on Today and its pop-up
+  'I&rsquo;ve written it down': 'Rydw i wedi’i ysgrifennu i lawr',
+  'Are your participant ID and PIN safe?': 'Ydy’ch rhif cyfranogwr a’ch rhif PIN yn ddiogel?',
+  'Please check that you have written down your participant ID and your PIN, or saved them somewhere safe. You need both to sign in on another phone or tablet, or if this phone is reset. The research team can&rsquo;t see your PIN: they can only reset it.':
+    'Gwiriwch eich bod wedi ysgrifennu’ch rhif cyfranogwr a’ch rhif PIN i lawr, neu wedi’u cadw yn rhywle diogel. Mae angen y ddau arnoch chi i fewngofnodi ar ffôn neu lechen arall, neu os caiff y ffôn hwn ei ailosod. Dydy’r tîm ymchwil ddim yn gallu gweld eich rhif PIN: dim ond ei ailosod y gallan nhw.',
+  'Yes, both are safe': 'Ydyn, mae’r ddau’n ddiogel',
+  'Your participant ID is always in Settings too.': 'Mae’ch rhif cyfranogwr bob amser yn y Gosodiadau hefyd.',
+  'Welcome to the study. Your participant ID is {code}.': 'Croeso i’r astudiaeth. Eich rhif cyfranogwr yw {code}.',
   'Please write it down. You need it, with your PIN, to sign in on another phone or tablet, and the research team writes it on your paper questionnaire.':
     'Ysgrifennwch ef i lawr. Bydd ei angen arnoch chi, gyda’ch rhif PIN, i fewngofnodi ar ffôn neu lechen arall, ac mae’r tîm ymchwil yn ei ysgrifennu ar eich holiadur papur.',
   'Participant ID {code}': 'Rhif cyfranogwr {code}',
