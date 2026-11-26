@@ -510,6 +510,12 @@ a{color:var(--accent);font-weight:700}
 .pin-top>.ic{width:36px;height:36px;padding:7px;border-radius:12px;background:var(--card);color:var(--accent);flex:none}
 .pin-top b{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:1.1rem}
 .in.pin{letter-spacing:.5em;font-weight:800;text-align:center}
+/* the participant ID (1.5): big and clear after joining, to write down; and in Settings */
+.pid-card{width:100%;display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 16px 16px;border-radius:18px;background:var(--accent-soft);border:1.5px solid var(--accent-line);text-align:center}
+.pid-k{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.pid-card .pid{font-size:2.6rem;font-weight:800;line-height:1.1;letter-spacing:.14em;padding-left:.14em;color:var(--accent);font-variant-numeric:tabular-nums}
+.pid-card p{margin:2px 0 0;font-size:.88rem;line-height:1.4}
+.kv li.pid-row b{font-size:1.15rem;font-weight:800;letter-spacing:.08em;color:var(--accent);font-variant-numeric:tabular-nums}
 /* the review: one tile per answer */
 .review{flex:none}
 .atiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}

@@ -15,8 +15,9 @@
  * read or closed: the same repository holds other studies' approval issues, and anyone can open an issue
  * in a public repository.
  *
- * The repository is public, so the issue carries only the participant codes, the registration times
- * and the dashboard link: never the name or the email. The script does not even read those columns.
+ * The repository is public, so the issue carries only the participant IDs (the codes: 4827 from 1.5, P07
+ * before), the registration times and the dashboard link. Since 1.5 participants give no name or email; the
+ * script reads only code, approved and created_at in any case.
  *
  * Secrets / environment (set by the workflow, see switch/README.md):
  *   SUPABASE_SERVICE_ROLE_KEY  a Supabase secret key (sb_secret_...)
@@ -47,7 +48,11 @@ const DASHBOARD = 'https://mehraban.uk/switch/dashboard/';
 // Every issue title starts with this. A fixed word rather than config.js appName: it is what the next runs
 // search for, so renaming the app must not orphan the issues already open.
 const STUDY = 'HomePulse';
-const CODE = /\bP\d{2,}\b/g;   // P01 ... P99, P100, ...
+// A participant ID at the start of an issue's list line ("- 4827, registered ..."): four digits from 1.5, or
+// P01 ... P99, P100 ... from before (in issues opened before 1.5 too). Only list lines count, so a year or a time
+// elsewhere in the body is never taken for an ID.
+const CODE_LINE = /^- (\d{4}|P\d{2,}),/gm;
+const codesIn = body => [...String(body || '').matchAll(CODE_LINE)].map(m => m[1]);
 const LIMIT = 25;   // rows handled per run; anything beyond waits for the next hour
 
 function fail(msg) { console.error('ERROR: ' + msg); process.exit(1); }
@@ -74,7 +79,7 @@ const codes = list => list.map(p => p.code).join(', ');
 const title = n => `${STUDY}: ${n} new participant${n === 1 ? '' : 's'} waiting for approval`;
 const when = iso => { const d = new Date(iso || ''); return isNaN(d) ? 'unknown time' : d.toISOString().slice(0, 16).replace('T', ' ') + ' UTC'; };
 const issueBody = list => [
-  'Waiting for approval:',
+  'Waiting for approval (participant IDs):',
   '',
   ...list.map(p => `- ${p.code}, registered ${when(p.created_at)}`),
   '',
@@ -95,7 +100,7 @@ function codesAlreadyListed() {
   try {
     for (const issue of listIssues('all', 'body,createdAt', 100)) {
       const t = Date.parse(issue.createdAt) || 0;
-      for (const c of String(issue.body || '').match(CODE) || []) seen.set(c, Math.max(seen.get(c) || 0, t));
+      for (const c of codesIn(issue.body)) seen.set(c, Math.max(seen.get(c) || 0, t));
     }
   } catch (e) { /* treated as "none found": at worst one extra email */ }
   return { has: p => seen.has(p.code) && (seen.get(p.code) || 0) >= (Date.parse(p.created_at) || 0) };
@@ -116,7 +121,7 @@ async function closeSettledIssues() {
   catch (e) { console.error(`could not list the open approval issues: ${ghError(e)}`); return 0; }
   let closed = 0;
   for (const issue of issues) {
-    const listed = [...new Set(String(issue.body || '').match(CODE) || [])];
+    const listed = [...new Set(codesIn(issue.body))];
     if (!listed.length) continue;
     const r = await fetch(rest(`?select=code,approved&code=in.(${listed.join(',')})`), { headers });
     if (!r.ok) { console.error(`issue #${issue.number}: could not read ${listed.join(', ')} (${r.status})`); continue; }
@@ -133,7 +138,7 @@ async function closeSettledIssues() {
 
 async function main() {
   const now = new Date();
-  // Only the columns needed: the name and email never leave the database.
+  // Only the columns needed (participants who joined before 1.5 may still have a name and email stored: never read).
   const r = await fetch(rest('?select=code,approved,created_at&notified_at=is.null&order=code'), { headers });
   if (r.status === 401 || r.status === 403) fail(`Supabase refused the secret key (${r.status}). Check the SUPABASE_SERVICE_ROLE_KEY secret: ${await r.text()}`);
   if (r.status === 404) fail(`table participants was not found. Run supabase-setup.sql again in the SQL editor: ${await r.text()}`);

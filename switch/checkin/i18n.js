@@ -144,6 +144,7 @@ self.I18N = I18N;                                           // game.js reads it 
  * Terms (shared with the study page, switch/index.html): cofnod / cofnodion = check-in(s), cofnodi = to check in,
  * nodiadau atgoffa = reminders, hysbysiadau = notifications, Ras y Bae = the Bay Race, bathodynnau = badges,
  * pwynt / pwyntiau = points, nod dyddiol = daily goal, diwrnod nod = goal day, cod cyfranogwr = participant code,
+ * rhif cyfranogwr = participant ID (the 4-digit number of 1.5; "rhif adnabod" would read like the PIN), cod ailosod = reset code,
  * rhif PIN = PIN, sgrin gartref = Home Screen, Mewngofnodi = Sign in, Gosodiadau = Settings, Dadwneud = Undo,
  * Ddim yn siŵr = Not sure. The phone's own labels (Share, Add to Home Screen, Allow, App info ...) stay in English:
  * iPhones have no Welsh, and most Android phones show them in English. */
@@ -220,8 +221,8 @@ const CY = {
   'Copy link': 'Copïo’r ddolen', 'Copied': 'Wedi’i chopïo', 'Now copy it': 'Nawr copïwch hi',
 
   /* iPhone and iPad: the Home Screen app */
-  'Open <b>{app}</b> from your Home Screen, choose <b>I have registered before</b> and sign in with your email and the PIN you use here. Your check-ins come with you.':
-    'Agorwch <b>{app}</b> o’ch sgrin gartref, dewiswch <b>Cymraeg</b>, yna <b>Rydw i wedi cofrestru o’r blaen</b>, a mewngofnodwch gyda’ch e-bost a’r rhif PIN rydych chi’n ei ddefnyddio yma. Bydd eich cofnodion yn dod gyda chi.',
+  'Open <b>{app}</b> from your Home Screen, choose <b>I have registered before</b> and sign in with your participant ID and the PIN you use here. Your check-ins come with you.':
+    'Agorwch <b>{app}</b> o’ch sgrin gartref, dewiswch <b>Cymraeg</b>, yna <b>Rydw i wedi cofrestru o’r blaen</b>, a mewngofnodwch gyda’ch rhif cyfranogwr a’r rhif PIN rydych chi’n ei ddefnyddio yma. Bydd eich cofnodion yn dod gyda chi.',
   'Open <b>{app}</b> from your Home Screen and join there (or sign in, if you have joined before).':
     'Agorwch <b>{app}</b> o’ch sgrin gartref, dewiswch <b>Cymraeg</b> ac ymunwch yno (neu mewngofnodwch, os ydych chi wedi ymuno o’r blaen).',
   'In Safari, tap the <b>Share</b> button {share}, then <b>Add to Home Screen</b> and <b>Add</b>.':
@@ -561,7 +562,7 @@ const CY = {
   'Short check-ins while you&rsquo;re at home teach the study what comfortable means for you. Joining takes about 10 minutes and happens once.':
     'Mae cofnodion byr tra byddwch chi gartref yn dysgu’r astudiaeth beth mae cyfforddus yn ei olygu i chi. Mae ymuno’n cymryd tua 10 munud, a dim ond unwaith.',
   'I&rsquo;m new here': 'Rydw i’n newydd yma', 'Carry on where you left off': 'Parhau o’r man lle gadawoch chi', 'Join the study': 'Ymuno â’r astudiaeth',
-  'I have registered before': 'Rydw i wedi cofrestru o’r blaen', 'Sign in with my email and PIN': 'Mewngofnodi gyda fy e-bost a’m rhif PIN',
+  'I have registered before': 'Rydw i wedi cofrestru o’r blaen', 'Sign in with my participant ID and PIN': 'Mewngofnodi gyda fy rhif cyfranogwr a’m rhif PIN',
   '<b>Local mode.</b> The study database is not connected, so everything stays in this browser.': '<b>Modd lleol.</b> Dydy cronfa ddata’r astudiaeth ddim wedi’i chysylltu, felly mae popeth yn aros yn y porwr hwn.',
   'Questions about the study? Email {team}': 'Cwestiynau am yr astudiaeth? E-bostiwch {team}',
   'About the study': 'Am yr astudiaeth',
@@ -576,29 +577,36 @@ const CY = {
   'On {dev}, reminders only work in the Home Screen app, and the study needs them. The app keeps its own copy of your answers, separate from Safari, so join or sign in there.':
     'Ar {dev}, dim ond yn yr ap ar y sgrin gartref y mae nodiadau atgoffa’n gweithio, ac mae eu hangen ar yr astudiaeth. Mae’r ap yn cadw ei gopi ei hun o’ch atebion, ar wahân i Safari, felly ymunwch neu fewngofnodi yno.',
   'How to get there': 'Sut i gyrraedd yno', 'Three quick steps': 'Tri cham cyflym',
-  'Joined before? In the Home Screen app, choose <b>I have registered before</b> and sign in with your email and PIN. Forgot your PIN? Email {team}.':
-    'Wedi ymuno o’r blaen? Yn yr ap ar y sgrin gartref, dewiswch <b>Rydw i wedi cofrestru o’r blaen</b> a mewngofnodwch gyda’ch e-bost a’ch rhif PIN. Wedi anghofio’ch rhif PIN? E-bostiwch {team}.',
+  'Joined before? In the Home Screen app, choose <b>I have registered before</b> and sign in with your participant ID and PIN. Forgot your PIN? Email {team}.':
+    'Wedi ymuno o’r blaen? Yn yr ap ar y sgrin gartref, dewiswch <b>Rydw i wedi cofrestru o’r blaen</b> a mewngofnodwch gyda’ch rhif cyfranogwr a’ch rhif PIN. Wedi anghofio’ch rhif PIN? E-bostiwch {team}.',
 
   /* signing in */
   'Sign in again': 'Mewngofnodi eto', 'Please sign in again': 'Mewngofnodwch eto',
-  'This phone was signed out. Your check-ins are safe: sign in with your email and your PIN.': 'Cafodd y ffôn hwn ei allgofnodi. Mae’ch cofnodion yn ddiogel: mewngofnodwch gyda’ch e-bost a’ch rhif PIN.',
-  'One more step': 'Un cam arall', 'Sign in with your email and a PIN': 'Mewngofnodwch gyda’ch e-bost a rhif PIN',
-  '{app} now keeps your check-ins on every phone and tablet you use. Enter the email you registered with and your 4-digit PIN: the one you chose before, or a new one if you have not chosen one yet.':
-    'Mae {app} bellach yn cadw’ch cofnodion ar bob ffôn a llechen rydych chi’n eu defnyddio. Rhowch yr e-bost y gwnaethoch chi gofrestru ag ef a’ch rhif PIN 4 digid: yr un a ddewisoch chi o’r blaen, neu un newydd os nad ydych chi wedi dewis un eto.',
+  'This phone was signed out. Your check-ins are safe: sign in with your participant ID and your PIN.': 'Cafodd y ffôn hwn ei allgofnodi. Mae’ch cofnodion yn ddiogel: mewngofnodwch gyda’ch rhif cyfranogwr a’ch rhif PIN.',
+  'One more step': 'Un cam arall', 'Sign in with your participant ID and a PIN': 'Mewngofnodwch gyda’ch rhif cyfranogwr a rhif PIN',
+  '{app} now keeps your check-ins on every phone and tablet you use. Enter your participant ID and your 4-digit PIN. No PIN yet? Ask the research team at {team} for a reset code, to choose one.':
+    'Mae {app} bellach yn cadw’ch cofnodion ar bob ffôn a llechen rydych chi’n eu defnyddio. Rhowch eich rhif cyfranogwr a’ch rhif PIN 4 digid. Dim rhif PIN eto? Gofynnwch i’r tîm ymchwil yn {team} am god ailosod, er mwyn dewis un.',
   'Welcome back': 'Croeso nôl', 'Sign in': 'Mewngofnodi',
-  'With the email you joined with and your 4-digit PIN. All your check-ins come with you.': 'Gyda’r e-bost y gwnaethoch chi ymuno ag ef a’ch rhif PIN 4 digid. Bydd eich holl gofnodion yn dod gyda chi.',
-  'Your participant code': 'Eich cod cyfranogwr', 'e.g. P07': 'e.e. P07',
-  'You have not chosen a PIN yet (or the research team has reset it), so the study asks for your participant code once. It is at the bottom of the Today screen in the old app, or of any phone or tablet where you are signed in. Or ask the research team at {team}.':
-    'Dydych chi ddim wedi dewis rhif PIN eto (neu mae’r tîm ymchwil wedi’i ailosod), felly mae’r astudiaeth yn gofyn am eich cod cyfranogwr unwaith. Mae ar waelod sgrin Heddiw yn yr hen ap, neu ar unrhyw ffôn neu lechen lle rydych chi wedi mewngofnodi. Neu gofynnwch i’r tîm ymchwil yn {team}.',
-  'Choose a 4-digit PIN': 'Dewiswch rif PIN 4 digid', 'Your PIN, or choose one': 'Eich rhif PIN, neu dewiswch un', 'PIN': 'Rhif PIN',
+  'With your participant ID and your 4-digit PIN. All your check-ins come with you.': 'Gyda’ch rhif cyfranogwr a’ch rhif PIN 4 digid. Bydd eich holl gofnodion yn dod gyda chi.',
+  'Participant ID': 'Rhif cyfranogwr', 'e.g. 4827': 'e.e. 4827',
+  'The 4-digit number you got when you joined. It is in Settings on any phone or tablet where you are signed in.':
+    'Y rhif 4 digid a gawsoch chi wrth ymuno. Mae i’w weld yn y Gosodiadau ar unrhyw ffôn neu lechen lle rydych chi wedi mewngofnodi.',
+  'Reset code': 'Cod ailosod', '6 digits': '6 digid',
+  'You have no PIN yet, or the research team has reset it. They give you a 6-digit reset code to choose a new PIN; it works for 7 days. No code? Email {team}.':
+    'Does gennych chi ddim rhif PIN eto, neu mae’r tîm ymchwil wedi’i ailosod. Maen nhw’n rhoi cod ailosod 6 digid i chi er mwyn dewis rhif PIN newydd; mae’n gweithio am 7 diwrnod. Dim cod? E-bostiwch {team}.',
+  'Choose a 4-digit PIN': 'Dewiswch rif PIN 4 digid', 'PIN': 'Rhif PIN',
   'Four digits you will remember. Please don&rsquo;t use your bank card PIN.': 'Pedwar digid y byddwch chi’n eu cofio. Peidiwch â defnyddio PIN eich cerdyn banc.',
   'Continue': 'Parhau',
   'Forgot your PIN? Email {team} and the research team will reset it.': 'Wedi anghofio’ch rhif PIN? E-bostiwch {team} a bydd y tîm ymchwil yn ei ailosod.',
   'Not you? Start again': 'Ddim chi? Dechrau eto', 'I haven&rsquo;t joined yet': 'Dydw i ddim wedi ymuno eto',
-  'Thanks!': 'Diolch!', 'Thanks, {name}!': 'Diolch, {name}!',
+  'Thanks!': 'Diolch!',
   'The research team will confirm your place, usually within a day. You can check in as soon as that&rsquo;s done.':
     'Bydd y tîm ymchwil yn cadarnhau eich lle, fel arfer o fewn diwrnod. Gallwch chi gofnodi cyn gynted ag y bydd hynny wedi’i wneud.',
-  'Check again': 'Gwirio eto', 'Your participant code is {code}': 'Eich cod cyfranogwr yw {code}',
+  'Check again': 'Gwirio eto',
+  'Your participant ID': 'Eich rhif cyfranogwr',
+  'Please write it down. You need it, with your PIN, to sign in on another phone or tablet, and the research team writes it on your paper questionnaire.':
+    'Ysgrifennwch ef i lawr. Bydd ei angen arnoch chi, gyda’ch rhif PIN, i fewngofnodi ar ffôn neu lechen arall, ac mae’r tîm ymchwil yn ei ysgrifennu ar eich holiadur papur.',
+  'Participant ID {code}': 'Rhif cyfranogwr {code}',
 
   /* Today */
   'Last one {ago}': 'Yr un diwethaf {ago}',
@@ -617,7 +625,8 @@ const CY = {
   'Not filled in yet': 'Heb ei lenwi eto',
   '{n} bedroom|{n} bedrooms': '{n} ystafell wely',
   'Your app': 'Eich ap', 'Settings': 'Gosodiadau', 'My home': 'Fy nghartref', 'Your home profile': 'Proffil eich cartref',
-  'Your account': 'Eich cyfrif', 'Participant code': 'Cod cyfranogwr', 'In the race': 'Yn y ras', 'Check-ins': 'Cofnodion',
+  'Your account': 'Eich cyfrif', 'In the race': 'Yn y ras', 'Check-ins': 'Cofnodion',
+  'To sign in on another phone or tablet, you need your participant ID and your PIN.': 'I fewngofnodi ar ffôn neu lechen arall, mae angen eich rhif cyfranogwr a’ch rhif PIN arnoch chi.',
   '<b>Local mode.</b> The study database is not connected: check-ins stay on this phone and nothing is sent.':
     '<b>Modd lleol.</b> Dydy cronfa ddata’r astudiaeth ddim wedi’i chysylltu: mae cofnodion yn aros ar y ffôn hwn a does dim yn cael ei anfon.',
   'Not you? Sign out': 'Ddim chi? Allgofnodi', 'About': 'Ynghylch',
@@ -644,7 +653,7 @@ const CY = {
   /* the review and the done screen */
   'Almost done': 'Bron â gorffen', 'Here&rsquo;s what we&rsquo;ll save': 'Dyma beth fyddwn ni’n ei gadw',
   'Tap {edit} to change an answer.': 'Tapiwch {edit} i newid ateb.', 'Save check-in': 'Cadw’r cofnod',
-  'That&rsquo;s today&rsquo;s goal!': 'Dyna nod heddiw!', 'Thank you!': 'Diolch!', 'Thank you, {name}!': 'Diolch, {name}!',
+  'That&rsquo;s today&rsquo;s goal!': 'Dyna nod heddiw!', 'Thank you!': 'Diolch!',
   'Above and beyond today, thank you! Every extra check-in makes your comfort story clearer.':
     'Y tu hwnt i’r disgwyl heddiw, diolch! Mae pob cofnod ychwanegol yn gwneud stori eich cysur yn gliriach.',
   '{w} of {wg} goal days this week. More check-ins today are always welcome.': '{w} o {wg} diwrnod nod yr wythnos hon. Mae croeso bob amser i fwy o gofnodion heddiw.',
@@ -665,7 +674,7 @@ const CY = {
 
   /* joining and signing in: messages */
   'Joining is not switched on yet. Please contact the research team.': 'Dydy ymuno ddim ar gael eto. Cysylltwch â’r tîm ymchwil.',
-  'We could not find that email. Check the spelling, or join as new.': 'Doedd dim modd dod o hyd i’r e-bost hwnnw. Gwiriwch y sillafu, neu ymunwch o’r newydd.',
+  'We could not find that participant ID. Check the number, or join as new.': 'Doedd dim modd dod o hyd i’r rhif cyfranogwr hwnnw. Gwiriwch y rhif, neu ymunwch o’r newydd.',
   'Could not reach the study database. Check the connection and try again.': 'Methu cyrraedd cronfa ddata’r astudiaeth. Gwiriwch y cysylltiad a rhowch gynnig arall arni.',
   'Could not sign in. Check the connection and try again.': 'Methu mewngofnodi. Gwiriwch y cysylltiad a rhowch gynnig arall arni.',
   'Could not join. Check the connection and try again.': 'Methu ymuno. Gwiriwch y cysylltiad a rhowch gynnig arall arni.',
@@ -678,19 +687,18 @@ const CY = {
     'Gormod o gynigion, felly mae mewngofnodi wedi’i oedi am {wait}. Rhowch gynnig arall arni wedyn, neu gofynnwch i’r tîm ymchwil ailosod eich rhif PIN.',
   'That PIN is easy to guess. Please choose another 4 digits.': 'Mae’n hawdd dyfalu’r rhif PIN yna. Dewiswch 4 digid arall.',
   'Please enter your 4-digit PIN.': 'Rhowch eich rhif PIN 4 digid.',
-  'Please enter the email you registered with, like name@example.com.': 'Rhowch yr e-bost y gwnaethoch chi gofrestru ag ef, fel enw@example.com.',
-  'Please enter your participant code: a P and its number, like P07.': 'Rhowch eich cod cyfranogwr: P a’i rif, fel P07.',
+  'Please enter your participant ID: the 4 digits you got when you joined, like 4827.': 'Rhowch eich rhif cyfranogwr: y 4 digid a gawsoch chi wrth ymuno, fel 4827.',
+  'Please enter the 6-digit reset code from the research team.': 'Rhowch y cod ailosod 6 digid gan y tîm ymchwil.',
   'Please enter a 4-digit PIN.': 'Rhowch rif PIN 4 digid.',
   'The study database is not connected yet, so signing in is not possible. Choose I&rsquo;m new here instead.':
     'Dydy cronfa ddata’r astudiaeth ddim wedi’i chysylltu eto, felly does dim modd mewngofnodi. Dewiswch Rydw i’n newydd yma yn lle hynny.',
-  'That participant code doesn&rsquo;t match.': 'Dydy’r cod cyfranogwr yna ddim yn cyfateb.',
-  'The code on this phone doesn&rsquo;t match this email: please type yours.': 'Dydy’r cod ar y ffôn hwn ddim yn cyfateb i’r e-bost hwn: teipiwch eich un chi.',
+  'That reset code isn&rsquo;t right, or it is more than 7 days old.': 'Dydy’r cod ailosod yna ddim yn iawn, neu mae’n hŷn na 7 diwrnod.',
   '{n} try left before a pause.|{n} tries left before a pause.': { two:'{n} gynnig ar ôl cyn saib.', few:'{n} chynnig ar ôl cyn saib.', other:'{n} cynnig ar ôl cyn saib.' },
-  'This is the first time you sign in with a PIN. Please also enter your participant code, then choose your PIN.':
-    'Dyma’r tro cyntaf i chi fewngofnodi gyda rhif PIN. Rhowch eich cod cyfranogwr hefyd, yna dewiswch eich rhif PIN.',
+  'This account needs a new PIN. Please enter the reset code from the research team, then choose your new PIN.':
+    'Mae angen rhif PIN newydd ar y cyfrif hwn. Rhowch y cod ailosod gan y tîm ymchwil, yna dewiswch eich rhif PIN newydd.',
   'Loading your check-ins&hellip;': 'Wrthi’n llwytho’ch cofnodion&hellip;',
-  'Welcome': 'Croeso', 'Welcome, {name}': 'Croeso, {name}', 'Welcome back, {name}': 'Croeso nôl, {name}',
-  'Your PIN is saved. Use it with your email on your other devices.': 'Mae’ch rhif PIN wedi’i gadw. Defnyddiwch ef gyda’ch e-bost ar eich dyfeisiau eraill.',
+  'Welcome': 'Croeso',
+  'Your PIN is saved. Use it with your participant ID on your other devices.': 'Mae’ch rhif PIN wedi’i gadw. Defnyddiwch ef gyda’ch rhif cyfranogwr ar eich dyfeisiau eraill.',
   'Your check-ins from your other devices are still on their way.': 'Mae’ch cofnodion o’ch dyfeisiau eraill yn dal ar eu ffordd.',
   'Your check-ins from all your devices are here.': 'Mae’ch cofnodion o’ch holl ddyfeisiau yma.',
   'Checking&hellip;': 'Wrthi’n gwirio&hellip;', 'You&rsquo;re in!': 'Rydych chi i mewn!', 'Welcome to the study': 'Croeso i’r astudiaeth',
@@ -729,8 +737,6 @@ const CY = {
 
   /* the join wizard */
   'Check and finish': 'Gwirio a gorffen',
-  'Please enter your name.': 'Rhowch eich enw.',
-  'Please enter an email address, like name@example.com.': 'Rhowch gyfeiriad e-bost, fel enw@example.com.',
   'Please choose one. &ldquo;Prefer not to say&rdquo; is fine.': 'Dewiswch un. Mae &ldquo;Gwell gen i beidio â dweud&rdquo; yn iawn.',
   'Please enter the year you were born.': 'Rhowch y flwyddyn y cawsoch chi eich geni.',
   'Please enter the year as four digits, like 1985.': 'Rhowch y flwyddyn fel pedwar digid, fel 1985.',
@@ -769,11 +775,9 @@ const CY = {
   'That PIN is easy to guess. Please choose another.': 'Mae’n hawdd dyfalu’r rhif PIN yna. Dewiswch un arall.',
   'The two PINs are not the same.': 'Dydy’r ddau rif PIN ddim yr un fath.',
   'Welcome to the study!': 'Croeso i’r astudiaeth!', 'Local mode: everything stays on this phone': 'Modd lleol: mae popeth yn aros ar y ffôn hwn',
-  'You already have an account. Please enter your participant code once, and your new PIN.': 'Mae gennych chi gyfrif yn barod. Rhowch eich cod cyfranogwr unwaith, a’ch rhif PIN newydd.',
-  'This email is already registered. {why}': 'Mae’r e-bost hwn wedi’i gofrestru’n barod. {why}',
-  'This email is already registered, with a different PIN. Use the PIN you chose before, or go back and sign in.':
-    'Mae’r e-bost hwn wedi’i gofrestru’n barod, gyda rhif PIN gwahanol. Defnyddiwch y rhif PIN a ddewisoch chi o’r blaen, neu ewch yn ôl a mewngofnodi.',
-  'That email was already registered, so we signed you in': 'Roedd yr e-bost hwnnw wedi’i gofrestru’n barod, felly rydyn ni wedi’ch mewngofnodi',
+  'This phone has joined already, with a different PIN. Please type the PIN you chose then.': 'Mae’r ffôn hwn wedi ymuno’n barod, gyda rhif PIN gwahanol. Teipiwch y rhif PIN a ddewisoch chi bryd hynny.',
+  'Your participant ID is {code}': 'Eich rhif cyfranogwr yw {code}',
+  'Please write it down: you need it, with your PIN, to sign in on another phone.': 'Ysgrifennwch ef i lawr: bydd ei angen arnoch chi, gyda’ch rhif PIN, i fewngofnodi ar ffôn arall.',
   'Your home profile is saved': 'Mae proffil eich cartref wedi’i gadw', 'Saved': 'Wedi’i gadw', 'Your home profile is up to date': 'Mae proffil eich cartref yn gyfredol',
   'Last step': 'Cam olaf', 'Less than a minute left': 'Llai na munud ar ôl',
   'About {n} minute left|About {n} minutes left': { two:'Tua {n} funud ar ôl', other:'Tua {n} munud ar ôl' },
@@ -802,8 +806,8 @@ const CY = {
   'Height, feet': 'Taldra, troedfeddi', 'Height, inches': 'Taldra, modfeddi', 'Height in centimetres': 'Taldra mewn centimetrau',
   'Weight, stone': 'Pwysau, stonau', 'Weight, pounds': 'Pwysau, pwysi', 'Weight in kilograms': 'Pwysau mewn cilogramau',
   'Which sounds most like you?': 'Pa un sy’n swnio fwyaf fel chi?', 'Which sounds most like you': 'Pa un sy’n swnio fwyaf fel chi',
-  'Used only to understand comfort differences between people. Your check-ins are stored under a participant code, not your name. The research team sees your name and email next to that code, to run the study and contact you.':
-    'Dim ond i ddeall gwahaniaethau cysur rhwng pobl. Caiff eich cofnodion eu cadw dan god cyfranogwr, nid dan eich enw. Mae’r tîm ymchwil yn gweld eich enw a’ch e-bost wrth ymyl y cod hwnnw, er mwyn cynnal yr astudiaeth a chysylltu â chi.',
+  'Used only to understand comfort differences between people. The study does not ask for your name or email: everything you tell it is stored under a participant ID, which you get when you join.':
+    'Dim ond i ddeall gwahaniaethau cysur rhwng pobl. Dydy’r astudiaeth ddim yn gofyn am eich enw na’ch e-bost: caiff popeth rydych chi’n ei ddweud wrthi ei gadw dan rif cyfranogwr, a gewch chi wrth ymuno.',
   'The first half of your postcode': 'Hanner cyntaf eich cod post', 'e.g. SA1': 'e.e. SA1',
   'Only the first half (like SA2 or CF10), never the full postcode: it matches your check-ins to the local weather.':
     'Dim ond yr hanner cyntaf (fel SA2 neu CF10), byth y cod post llawn: mae’n paru’ch cofnodion â’r tywydd lleol.',
@@ -850,8 +854,8 @@ const CY = {
   'Which side of your home is your bedroom on?': 'Ar ba ochr i’ch cartref mae’ch ystafell wely?',
   'Stand in the middle of your home and point the top of your phone towards your bedroom.': 'Sefwch yng nghanol eich cartref a phwyntiwch dop eich ffôn tuag at eich ystafell wely.',
   'Which side of the home the bedroom is on': 'Ar ba ochr i’r cartref mae’r ystafell wely',
-  'With your email, it lets you sign in on another phone or tablet and see all your check-ins there. Please don&rsquo;t use your bank card PIN.':
-    'Gyda’ch e-bost, mae’n gadael i chi fewngofnodi ar ffôn neu lechen arall a gweld eich holl gofnodion yno. Peidiwch â defnyddio PIN eich cerdyn banc.',
+  'When you join, you get a 4-digit participant ID. With that ID, this PIN lets you sign in on another phone or tablet and see all your check-ins there. Please don&rsquo;t use your bank card PIN.':
+    'Wrth ymuno, byddwch chi’n cael rhif cyfranogwr 4 digid. Gyda’r rhif hwnnw, mae’r rhif PIN hwn yn gadael i chi fewngofnodi ar ffôn neu lechen arall a gweld eich holl gofnodion yno. Peidiwch â defnyddio PIN eich cerdyn banc.',
   'Type it again': 'Teipiwch ef eto',
   'Joining means you agree to take part as described on the <a href="../">study page</a>.': 'Mae ymuno’n golygu eich bod chi’n cytuno i gymryd rhan fel y disgrifir ar <a href="../?lang=cy">dudalen yr astudiaeth</a>.',
   'Tell us about you': 'Dywedwch wrthon ni amdanoch chi',
@@ -873,8 +877,8 @@ const CY = {
   'From a reminder': 'O nodyn atgoffa', 'You started it': 'Chi a’i dechreuodd', 'Just got in': 'Newydd gyrraedd', 'Home over an hour': 'Gartref ers dros awr',
   'Took {secs}': 'Cymerodd {secs}', 'Same as the time before': 'Yr un fath â’r tro cynt', 'Example data': 'Data enghreifftiol', 'What you logged': 'Beth wnaethoch chi ei gofnodi',
   'Sign out on this phone?': 'Allgofnodi ar y ffôn hwn?',
-  'Reminders stop on this phone. Your check-ins so far stay saved, and any not sent yet go out when you sign in here again. To come back, choose &ldquo;I have registered before&rdquo; and enter your email and PIN.':
-    'Bydd nodiadau atgoffa’n stopio ar y ffôn hwn. Bydd eich cofnodion hyd yma’n aros wedi’u cadw, a bydd unrhyw rai sydd heb eu hanfon eto’n mynd pan fyddwch chi’n mewngofnodi yma eto. I ddod yn ôl, dewiswch &ldquo;Rydw i wedi cofrestru o’r blaen&rdquo; a rhowch eich e-bost a’ch rhif PIN.',
+  'Reminders stop on this phone. Your check-ins so far stay saved, and any not sent yet go out when you sign in here again. To come back, choose &ldquo;I have registered before&rdquo; and enter your participant ID ({code}) and PIN.':
+    'Bydd nodiadau atgoffa’n stopio ar y ffôn hwn. Bydd eich cofnodion hyd yma’n aros wedi’u cadw, a bydd unrhyw rai sydd heb eu hanfon eto’n mynd pan fyddwch chi’n mewngofnodi yma eto. I ddod yn ôl, dewiswch &ldquo;Rydw i wedi cofrestru o’r blaen&rdquo; a rhowch eich rhif cyfranogwr ({code}) a’ch rhif PIN.',
   'Sign out': 'Allgofnodi', 'Cancel': 'Canslo',
 
   /* ---------- the check-in questions (questions.js) ---------- */

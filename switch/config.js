@@ -6,8 +6,8 @@
  * what is stored in the browser it is opened in.
  *
  * The publishable key and the VAPID public key are designed to be public. What the publishable key may do is
- * limited by the row-level security policies and functions in supabase-setup.sql (join, sign in with email
- * and PIN, check approval; with a device key: send check-ins, read the participant's own check-ins, profile,
+ * limited by the row-level security policies and functions in supabase-setup.sql (join, sign in with participant
+ * ID and PIN, check approval; with a device key: send check-ins, read the participant's own check-ins, profile,
  * points and the anonymous race, register a phone for reminders; change the reminder row of the push
  * endpoint it names, and no other row; nothing else). The matching VAPID *private* key lives only in the
  * GitHub secret VAPID_PRIVATE_KEY.

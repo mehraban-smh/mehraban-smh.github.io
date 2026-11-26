@@ -10,6 +10,9 @@
  * Days and hours are UK time (config.js timeZone, Europe/London) from the server-checked `ts`, the same rule
  * the points use, so a phone with a wrong clock or a crafted local_time cannot move a check-in to another day.
  *
+ * Participants are shown by their participant ID (the code: 4827 from 1.5, P01 ... before). Since 1.5 nobody gives a
+ * name or an email; what earlier participants gave stays in the database but is shown nowhere here, nor downloaded.
+ *
  * Browser storage (keys start "switch_"): sessionStorage switch_token, switch_email, switch_token_exp (the
  * research login, this tab only); localStorage switch_dash_range, switch_dash_hm (display choices only).
  */
@@ -42,8 +45,9 @@
   const NUM_COLS = new Set(['tsv', 'clo', 'met', 'seconds', 'tz_offset_min', 'stat_temp_c', 'comfort_score']);
   // the on-screen table: question order, legacy columns left out
   const TABLE_COLS = ['participant', 'local_time', 'prompt', 'at_home', 'room_time', 'tsv', 'preference', 'acceptability', 'clo', 'garments', 'met', 'activity', 'room', 'air', 'sun', 'heating_on', 'heating_src', 'heating_for', 'stat_temp_c', 'wall', 'actions', 'notes', 'same_as_last', 'seconds', 'app_version', 'ts', 'tz_offset_min', 'created_at', 'client_id', 'id'];
-  const PCOLS = ['code', 'name', 'email', 'alias', 'alias_colour', 'lang', 'approved', 'gender', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity', 'created_at', 'updated_at', 'notified_at'];
+  const PCOLS = ['code', 'alias', 'alias_colour', 'lang', 'approved', 'gender', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity', 'created_at', 'updated_at', 'notified_at'];
   const PNUM = new Set(['birth_year', 'height_cm', 'weight_kg', 'alias_colour']);
+  const PRIVATE_COLS = new Set(['name', 'email']);   // kept from before 1.5 in the database, never shown or downloaded
   const HOME_KEYS = ['postcode_area', 'home_type', 'flat_position', 'tenure', 'year_built', 'floors', 'bedrooms', 'floor_area_m2', 'epc', 'adults', 'children', 'pets', 'bedroom_share',
     'main_heating', 'other_heaters', 'heating_pattern', 'payment', 'controls', 'stat_display', 'setpoint_c', 'bedroom_trv', 'wall_insulation', 'loft', 'glazing', 'windows_open', 'damp',
     'bedroom_facing', 'bedroom_facing_deg', 'bedroom_side', 'bedroom_side_deg',
@@ -550,7 +554,7 @@
     if (!el) { el = document.createElement('span'); el.className = 'err'; el.setAttribute('role', 'alert'); host.appendChild(el); }
     el.textContent = msg;
   }
-  const who = code => { const p = person(code); return p && p.name ? p.name + ' (' + code + ')' : code; };
+  const who = code => 'participant ' + code;
   async function approve(code, btn) {
     if (st.local) return;
     if (!(await writeAction(btn, code, 'approve', () => S.approve(session.token, code)))) return;
@@ -568,19 +572,19 @@
   }
   async function resetPin(code, btn) {
     if (st.local) return;
-    if (!confirm(`Reset the PIN of ${who(code)}?\n\nOnly do this when they have asked for it. The next time they sign in with their email, the PIN they type becomes their new PIN. The devices they already use keep working.`)) return;
-    let had = true;
-    if (!(await writeAction(btn, code, 'reset the PIN of', async () => { had = await S.resetPin(session.token, code); return true; }))) return;
-    if (had === false) toast('No PIN to reset for ' + code, 'They have not set a PIN yet; they choose one at their next sign-in.');
-    else toast('PIN reset for ' + code, 'Ask them to sign in with their email and choose a new PIN.');
+    if (!confirm(`Reset the PIN of ${who(code)}?\n\nOnly do this when they have asked for it, and you can give them the reset code straight away (in person or on the phone). You get a 6-digit reset code: with their participant ID and that code they choose a new PIN. It works for 7 days. The devices they already use keep working.`)) return;
+    let reset = null;
+    if (!(await writeAction(btn, code, 'reset the PIN of', async () => { reset = await S.resetPin(session.token, code); return !!reset; }))) return;
+    alert(`Reset code for ${code}: ${reset}\n\nTell them this code now: it is shown only once. In the app they choose "I have registered before", enter their participant ID ${code} and a new PIN, then this code when the app asks for it.\n\nIt works once, for 7 days. Reset PIN again gives a new code.`);
+    toast('PIN reset for ' + code, 'Reset code ' + reset + ', valid for 7 days.');
     await loadData(true); focusTitle();
   }
   async function signOutDevices(code, btn) {
     if (st.local) return;
-    if (!confirm(`Sign ${who(code)} out on all their devices?\n\nEach phone or tablet then asks for their email and PIN before it shows anything. Check-ins already sent are kept.`)) return;
+    if (!confirm(`Sign ${who(code)} out on all their devices?\n\nEach phone or tablet then asks for their participant ID and PIN before it shows anything. Check-ins already sent are kept.`)) return;
     let n = 0;
     if (!(await writeAction(btn, code, 'sign out', async () => { n = await S.signOutDevices(session.token, code); return true; }))) return;
-    toast(code + ' signed out', (Number(n) ? plural(Number(n), 'device') + ' will ask' : 'No device was signed in. Any new device asks') + ' for the email and PIN.');
+    toast(code + ' signed out', (Number(n) ? plural(Number(n), 'device') + ' will ask' : 'No device was signed in. Any new device asks') + ' for the participant ID and PIN.');
     await loadData(true); focusTitle();
   }
   function focusTitle() { const t = $('#mainTitle'); if (t) t.focus({ preventScroll: true }); }
@@ -657,7 +661,7 @@
   /* ---------------------------------------------------------------- sidebar */
   function sideHtml() {
     return `<div id="sideCards">${sideCards()}</div>
-      <div class="search">${icon('search')}<label class="sr" for="psearch">Search by code, name, alias or email</label><input id="psearch" type="search" placeholder="Search code, name, alias" autocomplete="off" value="${esc(st.q)}" data-fk="search"></div>
+      <div class="search">${icon('search')}<label class="sr" for="psearch">Search by participant ID or alias</label><input id="psearch" type="search" placeholder="Search ID or alias" autocomplete="off" value="${esc(st.q)}" data-fk="search"></div>
       <div id="pfilter"></div>
       <h2>Participants</h2>
       <ul class="plist" id="plist"></ul>`;
@@ -697,7 +701,7 @@
       if (st.pf === 'quiet' && !isQuiet(e)) return false;
       if (!q) return true;
       const p = e.p || {};
-      return [e.code, p.name, p.email, p.alias].some(v => String(v || '').toLowerCase().includes(q));
+      return [e.code, p.alias].some(v => String(v || '').toLowerCase().includes(q));
     });
     const all = `<li><button class="p" type="button" data-act="sel" data-code="ALL" data-fk="p-ALL"${st.sel === 'ALL' ? ' aria-current="true"' : ''}><b>All participants</b><span class="cnt">${fmtN(st.R.length)}</span><small>${plural(st.entries.length, 'code')} · every check-in</small></button></li>`;
     $('#plist').innerHTML = all + (list.length ? list.map(rowHtml).join('') : `<li class="none">${q ? 'Nobody matches “' + esc(st.q) + '”.' : st.pf === 'waiting' ? 'Nobody is waiting for approval.' : st.pf === 'quiet' ? 'Nobody has gone quiet.' : 'Nobody here yet.'}</li>`);
@@ -713,7 +717,7 @@
     if (p && p.lang === 'cy') flags.push('<i class="flag hid" title="Uses the app in Welsh">Cymraeg</i>');
     const sub = [p && p.alias ? p.alias : '', e.last ? 'last ' + ago(e.last.t) : 'no check-ins yet'].filter(Boolean).join(' · ');
     return `<li><button class="p" type="button" data-act="sel" data-code="${esc(e.code)}" data-fk="p-${esc(e.code)}"${st.sel === e.code ? ' aria-current="true"' : ''}>
-      <b>${esc(e.code)}${p && p.name ? ' · ' + esc(p.name) : ''}</b><span class="cnt">${fmtN(e.rows.length)}</span><small>${esc(sub)}</small>${flags.length ? `<span class="flags">${flags.join('')}</span>` : ''}</button></li>`;
+      <b>${esc(e.code)}</b><span class="cnt">${fmtN(e.rows.length)}</span><small>${esc(sub)}</small>${flags.length ? `<span class="flags">${flags.join('')}</span>` : ''}</button></li>`;
   }
 
   /* ---------------------------------------------------------------- main column */
@@ -729,7 +733,7 @@
     if (st.warn.length) notes.push(`<div class="notice warn"><div><b>Some details could not be loaded:</b> ${esc(st.warn.join('; '))}. Everything else on the page is complete; Refresh to try again.</div></div>`);
     if (session.expired() && !st.local) notes.push(`<div class="notice bad" role="alert" id="expNote"><div><b>Your sign-in has expired.</b> What is on screen stays (and the downloads still work), but refreshing or changing anything needs a new sign-in.</div><button class="btn sm" type="button" data-act="relogin">Sign in again</button></div>`);
     if (odd) notes.push(`<div class="notice"><div>${plural(odd, 'check-in')} ${odd === 1 ? 'has' : 'have'} a date before ${esc(dnFull(SANE_DN))} or in the future (a phone clock far off). ${odd === 1 ? 'It is' : 'They are'} left out of the tiles and charts but ${odd === 1 ? 'is' : 'are'} in the table's “All time” view and the downloads.</div></div>`);
-    const title = sel === 'ALL' ? 'Study overview' : (p && p.name ? `${esc(p.name)} <span class="code">· ${esc(sel)}</span>` : esc(sel));
+    const title = sel === 'ALL' ? 'Study overview' : 'Participant ' + esc(sel);
     const subBits = sel === 'ALL'
       ? [plural(st.entries.filter(enrolled).length, 'participant') + (st.local ? '' : ' approved'), plural(V.length, 'check-in') + ' in ' + rangeWords()]
       : [p && p.alias ? 'Bay Race alias ' + p.alias : (p ? 'No alias yet' : 'No profile stored'), plural(V.length, 'check-in') + ' in ' + rangeWords()];
@@ -867,7 +871,7 @@
     if (!pend.length) return '';
     return `<section class="pending" aria-labelledby="apprTitle"><div class="phead"><b id="apprTitle">${plural(pend.length, 'person', 'people')} waiting for approval</b><span>New sign-ups cannot check in or get reminders until you approve them. Approve the people you expect and remove anyone you do not recognise.</span></div>
       ${pend.map(p => { const t = Date.parse(p.created_at); const hp = homePills(p); return `<div class="prow" data-errhost><code>${esc(p.code)}</code>
-        <div class="pwho"><button type="button" data-act="sel" data-code="${esc(String(p.code).toUpperCase())}">${esc(p.name || p.code)}</button><span>${esc(p.email || '')} · signed up ${esc(isFinite(t) ? ago(t) + ' (' + fmtStamp(p.created_at) + ')' : '')}</span>${hp ? `<div class="pills">${hp}</div>` : `<div class="pills"><span class="pill">Home profile not filled in</span></div>`}</div>
+        <div class="pwho"><button type="button" data-act="sel" data-code="${esc(String(p.code).toUpperCase())}">Participant ID ${esc(p.code)}</button><span>Signed up ${esc(isFinite(t) ? ago(t) + ' (' + fmtStamp(p.created_at) + ')' : '')}</span>${hp ? `<div class="pills">${hp}</div>` : `<div class="pills"><span class="pill">Home profile not filled in</span></div>`}</div>
         <div class="pbtns"><button class="btn sm" type="button" data-act="approve" data-code="${esc(p.code)}">Approve</button><button class="btn ghost sm danger" type="button" data-act="remove" data-code="${esc(p.code)}">Remove</button></div></div>`; }).join('')}</section>`;
   }
 
@@ -1178,11 +1182,11 @@
     if (!rows) body = `<p class="tnote">${st.pointsErr ? 'The points could not be loaded: ' + esc(st.pointsErr) + '. Refresh to try again.' : 'No points yet.'}</p>`;
     else if (!rows.length) body = '<p class="tnote">Nobody is approved yet.</p>';
     else {
-      body = `<div class="tablewrap" style="max-height:440px"><table class="ptable"><thead><tr><th scope="col">Rank</th><th scope="col">Code</th><th scope="col">Name</th><th scope="col">Alias</th><th scope="col">Language</th><th scope="col" class="n">Check-ins</th><th scope="col" class="n">Counted</th><th scope="col" class="n">Goal days</th><th scope="col" class="n">Full weeks</th><th scope="col" class="n">Points</th>${target ? '<th scope="col">Of target</th>' : ''}</tr></thead><tbody>
+      body = `<div class="tablewrap" style="max-height:440px"><table class="ptable"><thead><tr><th scope="col">Rank</th><th scope="col">Participant ID</th><th scope="col">Alias</th><th scope="col">Language</th><th scope="col" class="n">Check-ins</th><th scope="col" class="n">Counted</th><th scope="col" class="n">Goal days</th><th scope="col" class="n">Full weeks</th><th scope="col" class="n">Points</th>${target ? '<th scope="col">Of target</th>' : ''}</tr></thead><tbody>
         ${rows.map(r => { const p = person(r.code); const c = p && num(p.alias_colour) !== null ? RUNNER[num(p.alias_colour) % RUNNER.length] : null; const ratio = target ? Math.min(1, r.points / target) : 0;
-          return `<tr><td class="rank">${r.points && r.rank <= 3 ? `<span class="medal m${r.rank}" aria-label="${ordinal(r.rank)}">${r.rank}</span>` : esc(ordinal(r.rank))}</td><td><button class="lnkcode" type="button" data-act="sel" data-code="${esc(r.code)}" style="color:var(--accent);font-family:var(--mono);font-weight:600">${esc(r.code)}</button></td><td style="font-family:var(--sans)">${esc(p ? p.name : '')}</td><td style="font-family:var(--sans)">${c ? `<span class="dot" style="background:${c}"></span>` : ''}${esc(r.alias || (p && p.alias) || '–')}</td><td style="font-family:var(--sans)">${esc(langWord(p && p.lang))}</td><td class="n">${fmtN(num(r.checkins) || 0)}</td><td class="n">${fmtN(num(r.counted) || 0)}</td><td class="n">${fmtN(num(r.goal_days) || 0)}</td><td class="n">${fmtN(num(r.full_weeks) || 0)}</td><td class="n"><b>${fmtN(r.points)}</b></td>${target ? `<td class="prog"${tipA(pct(r.points, target) + ' of ' + fmtN(target))}><div class="meter"><i style="width:${(100 * ratio).toFixed(1)}%;background:${r.points >= target ? 'var(--teal)' : 'var(--accent)'}"></i></div></td>` : ''}</tr>`; }).join('')}
+          return `<tr><td class="rank">${r.points && r.rank <= 3 ? `<span class="medal m${r.rank}" aria-label="${ordinal(r.rank)}">${r.rank}</span>` : esc(ordinal(r.rank))}</td><td><button class="lnkcode" type="button" data-act="sel" data-code="${esc(r.code)}" style="color:var(--accent);font-family:var(--mono);font-weight:600">${esc(r.code)}</button></td><td style="font-family:var(--sans)">${c ? `<span class="dot" style="background:${c}"></span>` : ''}${esc(r.alias || (p && p.alias) || '–')}</td><td style="font-family:var(--sans)">${esc(langWord(p && p.lang))}</td><td class="n">${fmtN(num(r.checkins) || 0)}</td><td class="n">${fmtN(num(r.counted) || 0)}</td><td class="n">${fmtN(num(r.goal_days) || 0)}</td><td class="n">${fmtN(num(r.full_weeks) || 0)}</td><td class="n"><b>${fmtN(r.points)}</b></td>${target ? `<td class="prog"${tipA(pct(r.points, target) + ' of ' + fmtN(target))}><div class="meter"><i style="width:${(100 * ratio).toFixed(1)}%;background:${r.points >= target ? 'var(--teal)' : 'var(--accent)'}"></i></div></td>` : ''}</tr>`; }).join('')}
         </tbody></table></div>
-        <p class="fnote">${PTS.checkin} points a counted check-in (at least ${Number(cfg.checkinGapMin) || 45} minutes after the one before, up to ${PTS.dailyCap} a day), +${PTS.goalDay} for each day with ${GOAL} or more (a goal day), +${PTS.fullWeek} for a Monday–Sunday week of goal days, counted in the period that holds its Sunday. Every approved participant is in the race and the rank; participants see aliases only, never codes or names.</p>`;
+        <p class="fnote">${PTS.checkin} points a counted check-in (at least ${Number(cfg.checkinGapMin) || 45} minutes after the one before, up to ${PTS.dailyCap} a day), +${PTS.goalDay} for each day with ${GOAL} or more (a goal day), +${PTS.fullWeek} for a Monday–Sunday week of goal days, counted in the period that holds its Sunday. Every approved participant is in the race and the rank; participants see aliases only, never participant IDs.</p>`;
     }
     return `<section class="charts" style="grid-template-columns:minmax(0,1fr)">${fig('pts', 'Points and the Bay Race', sub, body, { wide: true, btns })}</section>`;
   }
@@ -1260,7 +1264,7 @@
     const x = st.pinsBy.get(code);
     if (!x) return 'No PIN yet · no devices';
     const last = Date.parse(x.last_seen);
-    return (x.locked ? 'Locked after wrong PINs' : x.pin_set ? 'PIN set' : 'No PIN yet (set at the next sign-in)') + ' · ' + plural(num(x.devices) || 0, 'device') + (isFinite(last) ? ' · last used ' + ago(last) : '');
+    return (x.locked ? 'Locked after wrong PINs' : x.pin_set ? 'PIN set' : x.reset_pending ? 'PIN reset: they choose a new one with the reset code' : 'No PIN yet (Reset PIN gives the reset code they need)') + ' · ' + plural(num(x.devices) || 0, 'device') + (isFinite(last) ? ' · last used ' + ago(last) : '');
   }
   function reminderWords(code) {
     if (st.local) return '';
@@ -1291,7 +1295,7 @@
     const status = dbStale() ? '<i class="status-wait">Unknown until the database is updated</i>' : p.approved ? '<i class="status-ok">Approved</i>' : '<i class="status-wait">Waiting for approval</i>';
     const colour = num(p.alias_colour) !== null ? RUNNER[num(p.alias_colour) % RUNNER.length] : null;
     const facts = [
-      f('Name', esc(p.name)), f('Email', p.email ? `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>` : ''), f('Code', `<code>${esc(code)}</code>`),
+      f('Participant ID', `<code>${esc(code)}</code>`),
       f('Bay Race alias', p.alias ? (colour ? `<span class="dot" style="background:${colour}"></span>` : '') + esc(p.alias) : ''),
       f('Status', status), f('Registered', esc(fmtStamp(p.created_at))), f('Profile updated', esc(fmtStamp(p.updated_at)), true), f('Team notified', p.notified_at ? esc(fmtStamp(p.notified_at)) : 'Not yet', true),
       f('PIN and devices', esc(pinWords(code))), f('Reminders', esc(reminderWords(code))),
@@ -1300,7 +1304,7 @@
       f('Thermal sensitivity', esc(lab('sensitivity', p.sensitivity)))
     ].join('');
     const actions = (st.local || dbStale()) ? '' : `<div class="pact" data-errhost>${p.approved ? '' : `<button class="btn sm" type="button" data-act="approve" data-code="${esc(code)}">Approve</button>`}<button class="btn ghost sm" type="button" data-act="pinreset" data-code="${esc(code)}">${icon('key')}Reset PIN</button><button class="btn ghost sm" type="button" data-act="devout" data-code="${esc(code)}">${icon('out')}Sign out devices</button><button class="btn ghost sm danger" type="button" data-act="remove" data-code="${esc(code)}">Remove from the study</button>
-      <span class="hint">${p.approved ? 'Reset PIN lets them choose a new PIN at their next sign-in (their devices keep working). Sign out devices makes every phone ask for the email and PIN again. Remove deletes the profile, PIN, devices and reminder phones; the check-ins already submitted are kept under the code.' : 'They cannot check in until approved. Remove anyone you do not recognise; nothing they submitted is lost.'}</span></div>`;
+      <span class="hint">${p.approved ? 'Reset PIN gives you a 6-digit reset code: with it and their participant ID they choose a new PIN (their devices keep working). Sign out devices makes every phone ask for the participant ID and PIN again. Remove deletes the profile, PIN, devices and reminder phones; the check-ins already submitted are kept under the code.' : 'They cannot check in until approved. Remove anyone you do not recognise; nothing they submitted is lost.'}</span></div>`;
     const h = homeOf(p);
     const home = h && Object.keys(h).length ? `<div class="homedl">${HOME_GROUPS.slice(1).map(([gt, keys]) => { const items = keys.map(([key, title, kind]) => { const v = homeValue(h, key, kind); return v ? `<dt>${esc(title + (RETIRED.has(key) ? RETIRED_NOTE : ''))}</dt><dd>${esc(v)}</dd>` : ''; }).join(''); return items ? `<section><h3>${esc(gt)}</h3><dl>${items}</dl></section>` : ''; }).join('')}</div>${Object.keys(h).filter(k => !HOME_KEYS.includes(k)).length ? `<p class="tnote">Other stored answers: ${esc(Object.keys(h).filter(k => !HOME_KEYS.includes(k)).map(k => k + ' = ' + (Array.isArray(h[k]) ? h[k].join('|') : typeof h[k] === 'object' ? JSON.stringify(h[k]) : h[k])).join(' · '))}</p>` : ''}`
       : '<p class="tnote">No home profile yet. The app asks for it before their next check-in.</p>';
@@ -1396,7 +1400,7 @@
     const name = n => { let s = String(n).replace(/[\\/?*[\]:]/g, '_').slice(0, 31) || 'Sheet'; let i = 2; while (used.has(s.toLowerCase())) s = String(n).slice(0, 28) + '_' + i++; used.add(s.toLowerCase()); return s; };
     const list = exportRows(), cols = colsOf(list);
     const extraP = new Set(), extraH = new Set();
-    st.people.forEach(p => { Object.keys(p).forEach(k => { if (!PCOLS.includes(k) && k !== 'home' && !DERIVED.includes(k)) extraP.add(k); }); Object.keys(homeOf(p) || {}).forEach(k => { if (!HOME_KEYS.includes(k)) extraH.add(k); }); });
+    st.people.forEach(p => { Object.keys(p).forEach(k => { if (!PCOLS.includes(k) && k !== 'home' && !DERIVED.includes(k) && !PRIVATE_COLS.has(k)) extraP.add(k); }); Object.keys(homeOf(p) || {}).forEach(k => { if (!HOME_KEYS.includes(k)) extraH.add(k); }); });
     const pHeader = [...PCOLS, ...extraP, ...DERIVED, ...HOME_KEYS, ...extraH];
     const pointsSheet = () => {
       const keys = ['week', 'month', 'all'], byCode = new Map();
