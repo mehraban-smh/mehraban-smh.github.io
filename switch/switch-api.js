@@ -45,8 +45,8 @@
  *
  * ---- participant side (publishable key; "key" = this device's key from joining or signing in) ----
  *   key(), setKey(k)                  this device's key in localStorage switch_key (setKey(null) removes it)
- *   register(fields)                  register_participant. fields: pin, gender, birth_year, height_cm,
- *                                     weight_kg, sensitivity, home (object), lang ('en' | 'cy'; 'en' when left
+ *   register(fields)                  register_participant. fields: pin, gender, age_band, height_band,
+ *                                     weight_band (1.6: ranges), sensitivity, home (object), lang ('en' | 'cy'; 'en' when left
  *                                     out), join (a token made once per joining, kept with the draft). No name
  *                                     or email (1.5). -> outcome row
  *                                     { status, tries_left, wait_min, code, name, is_new, approved, home,
@@ -72,8 +72,10 @@
  *   myProfile()                       my_profile -> { code, name, approved, gender, birth_year, height_cm,
  *                                     weight_kg, sensitivity, home, alias, alias_colour, race_hidden (always
  *                                     false now), lang ('en' | 'cy') } or null
- *   updateMyProfile(fields, home)     update_my_profile; fields: any of name, gender, birth_year, height_cm,
- *                                     weight_kg, sensitivity, lang ('en' | 'cy') (only keys given change);
+ *   updateMyProfile(fields, home)     update_my_profile; fields: any of gender, age_band, height_band,
+ *                                     weight_band, sensitivity, lang ('en' | 'cy') (only keys given change);
+ *   addContact(email, lang)           1.6: add_study_contact, the separate email list: sent on its own, with no
+ *                                     participant ID and no device key
  *                                     home: the whole profile
  *                                     object, or null to leave it. -> the my_profile row. 22023 with a message
  *   myCheckins()                      my_checkins -> every check-in of this participant from all devices,
@@ -353,8 +355,8 @@
     /* ---- joining and signing in: the database assigns the participant ID and gives this device a key ---- */
     async register(fields) {
       if (!live) return null;
-      const body = { p_gender: fields.gender || null, p_birth_year: fields.birth_year ?? null,
-        p_height_cm: fields.height_cm ?? null, p_weight_kg: fields.weight_kg ?? null, p_sensitivity: fields.sensitivity || null,
+      const body = { p_gender: fields.gender || null, p_age_band: fields.age_band || null,
+        p_height_band: fields.height_band || null, p_weight_band: fields.weight_band || null, p_sensitivity: fields.sensitivity || null,
         p_home: fields.home || null, p_pin: fields.pin || null, p_lang: fields.lang === 'cy' ? 'cy' : 'en', p_join: fields.join || null };
       return S.rpcRow('register_participant', body, 'Registration failed');
     },
@@ -402,6 +404,13 @@
     },
     async myProfile() { return first(await S.keyed('my_profile')); },
     async updateMyProfile(fields, home) { return first(await S.keyed('update_my_profile', { p_fields: fields || {}, p_home: home || null })); },
+    // 1.6: an email for the study's contact list, in a request of its own (no participant ID, no device key)
+    async addContact(email, lang) {
+      if (!live) return null;
+      const r = await fetch(rest('rpc/add_study_contact'), { method: 'POST', headers: headers(), body: JSON.stringify({ p_email: email, p_lang: lang === 'cy' ? 'cy' : 'en' }) });
+      if (!r.ok) throw new Error('Could not save the email (' + r.status + ')');
+      return true;
+    },
     async myPoints() { return first(await S.keyed('my_points')); },
     async race(period) { return first(await S.keyed('race', { p_period: period === 'month' || period === 'last_week' ? period : 'week' })); },
     async setRaceHidden(hidden) { return !!(await S.keyed('set_race_hidden', { p_hidden: !!hidden })); },
@@ -498,6 +507,13 @@
     async fetchParticipants(token) {
       const r = await fetch(rest('participants') + '?select=*&order=code', { headers: bearer(token) });
       if (!r.ok) throw await writeError(r, 'Could not load the participants');
+      return r.json();
+    },
+    // 1.6, dashboard: the separate email list, sorted by address ([] when the database is still on 1.5)
+    async fetchContacts(token) {
+      const r = await fetch(rest('study_contacts') + '?select=email,lang&order=email', { headers: bearer(token) });
+      if (r.status === 404) return [];
+      if (!r.ok) throw await writeError(r, 'Could not load the contact emails');
       return r.json();
     },
     async fetchPush(token) {

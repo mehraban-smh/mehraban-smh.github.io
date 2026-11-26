@@ -34,6 +34,9 @@
 --     become optional; what participants who joined before gave stays where it is. Every ID ever given out is kept
 --     in participant_ids, so none is given out twice. A PIN reset on the dashboard now gives a 6-digit reset code:
 --     with the ID, it lets the participant choose a new PIN (the ID alone never does).
+--   - 1.6: age, height and weight are ranges (age_band, height_band, weight_band), never the exact values (the
+--     ethics committee), and the email asked on the last joining step goes to study_contacts: a separate list that
+--     holds no participant ID, so the address is never linked to anyone's answers.
 
 create extension if not exists pgcrypto;
 
@@ -106,6 +109,11 @@ alter table public.participants add column if not exists lang text not null defa
 -- 1.5: joining asks for neither a name nor an email. What participants gave before stays (a second run changes nothing).
 alter table public.participants alter column email drop not null;
 alter table public.participants alter column name drop not null;
+-- 1.6: age, height and weight as ranges only (no exact personal data). birth_year, height_cm and weight_kg stay for
+-- the test participants who joined before; nothing new is written to them.
+alter table public.participants add column if not exists age_band text;
+alter table public.participants add column if not exists height_band text;
+alter table public.participants add column if not exists weight_band text;
 -- The Bay Race is no longer optional: nobody is hidden from it any more (a second run finds nobody to change).
 update public.participants set race_hidden = false where race_hidden;
 create unique index if not exists participants_alias_unique on public.participants (alias);
@@ -354,6 +362,39 @@ language sql immutable set search_path = public as $$
 $$;
 revoke all on function public.sw_weak_pin(text) from public, anon, authenticated;
 
+-- 1.6: the ranges. sw_band_ok: a range the app offers (or none). sw_band_of: the range of an exact value that an app
+-- before 1.6 still sends (a year of birth, cm, kg), so that only the range is kept.
+create or replace function public.sw_band_ok(p_kind text, p_band text)
+returns boolean
+language sql immutable set search_path = public as $$
+  select p_band is null or p_band = any (case p_kind
+    when 'age'    then array['18_24', '25_34', '35_44', '45_54', '55_64', '65_74', '75plus', 'prefer_not']
+    when 'height' then array['lt150', '150_159', '160_169', '170_179', '180_189', '190plus', 'prefer_not']
+    when 'weight' then array['lt50', '50_59', '60_69', '70_79', '80_89', '90_99', '100_109', '110plus', 'prefer_not']
+    else array[]::text[] end);
+$$;
+revoke all on function public.sw_band_ok(text, text) from public, anon, authenticated;
+create or replace function public.sw_band_of(p_kind text, v numeric)
+returns text
+language plpgsql stable set search_path = public as $$
+declare a numeric;
+begin
+  if v is null then return null; end if;
+  if p_kind = 'age' then
+    a := extract(year from now()) - v;
+    return case when a < 25 then '18_24' when a < 35 then '25_34' when a < 45 then '35_44' when a < 55 then '45_54'
+                when a < 65 then '55_64' when a < 75 then '65_74' else '75plus' end;
+  elsif p_kind = 'height' then
+    return case when v < 150 then 'lt150' when v < 160 then '150_159' when v < 170 then '160_169' when v < 180 then '170_179'
+                when v < 190 then '180_189' else '190plus' end;
+  elsif p_kind = 'weight' then
+    return case when v < 50 then 'lt50' when v < 60 then '50_59' when v < 70 then '60_69' when v < 80 then '70_79'
+                when v < 90 then '80_89' when v < 100 then '90_99' when v < 110 then '100_109' else '110plus' end;
+  end if;
+  return null;
+end $$;
+revoke all on function public.sw_band_of(text, numeric) from public, anon, authenticated;
+
 -- One wrong try (a wrong PIN, or a wrong reset code while choosing a new PIN) for a participant whose
 -- PIN row is locked by the caller. The fifth in a row locks signing in: 15 minutes the first time, 1 hour the
 -- second, 24 hours from the third (lock_count is cleared only by a successful sign-in).
@@ -481,13 +522,14 @@ drop function if exists public.register_participant(text, integer, numeric, nume
 create or replace function public.register_participant(
   p_gender text default null, p_birth_year integer default null,
   p_height_cm numeric default null, p_weight_kg numeric default null, p_sensitivity text default null,
-  p_home jsonb default null, p_pin text default null, p_lang text default 'en', p_join text default null)
+  p_home jsonb default null, p_pin text default null, p_lang text default 'en', p_join text default null,
+  p_age_band text default null, p_height_band text default null, p_weight_band text default null)
 returns table(status text, tries_left integer, wait_min integer, code text, name text, is_new boolean,
               approved boolean, home jsonb, device_key text, pin_set boolean, alias text, lang text)
 language plpgsql security definer set search_path = public as $$
 #variable_conflict use_column
 declare
-  v_code text; v_alias text; v_salt text; v_key text;
+  v_code text; v_alias text; v_salt text; v_key text; v_age text; v_height text; v_weight text;
   v_join text := nullif(trim(coalesce(p_join, '')), '');
   v_lang text := lower(trim(coalesce(nullif(trim(p_lang), ''), 'en')));
 begin
@@ -495,6 +537,13 @@ begin
   if v_lang not in ('en', 'cy') then raise exception 'Unknown language "%" (en or cy)', p_lang using errcode = '22023'; end if;
   if p_pin is null or p_pin !~ '^[0-9]{4}$' then raise exception 'Please choose a 4-digit PIN' using errcode = '22023'; end if;
   if v_join is not null and length(v_join) > 100 then raise exception 'The join token is too long' using errcode = '22023'; end if;
+  -- 1.6: ranges only. An app before 1.6 sends the exact values: only their ranges are kept.
+  v_age := coalesce(nullif(trim(p_age_band), ''), public.sw_band_of('age', p_birth_year));
+  v_height := coalesce(nullif(trim(p_height_band), ''), public.sw_band_of('height', p_height_cm));
+  v_weight := coalesce(nullif(trim(p_weight_band), ''), public.sw_band_of('weight', p_weight_kg));
+  if not (public.sw_band_ok('age', v_age) and public.sw_band_ok('height', v_height) and public.sw_band_ok('weight', v_weight)) then
+    raise exception 'Please choose your age, height and weight from the lists' using errcode = '22023';
+  end if;
   if public.sw_weak_pin(p_pin) then
     return query select 'weak_pin'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text, null::text;
     return;
@@ -510,8 +559,8 @@ begin
     end if;
   end if;
   v_code := public.sw_new_participant_id();
-  insert into public.participants (code, gender, birth_year, height_cm, weight_kg, sensitivity, home, lang)
-    values (v_code, left(trim(p_gender), 40), p_birth_year, p_height_cm, p_weight_kg,
+  insert into public.participants (code, gender, age_band, height_band, weight_band, sensitivity, home, lang)
+    values (v_code, left(trim(p_gender), 40), v_age, v_height, v_weight,
             case when p_sensitivity in ('cold', 'average', 'warm') then p_sensitivity end, p_home, v_lang)
     returning alias into v_alias;
   v_salt := replace(gen_random_uuid()::text, '-', '');
@@ -520,8 +569,8 @@ begin
   v_key := public.sw_new_key(v_code);
   return query select 'ok'::text, null::integer, null::integer, v_code, null::text, true, false, p_home, v_key, true, v_alias, v_lang;
 end $$;
-revoke all on function public.register_participant(text, integer, numeric, numeric, text, jsonb, text, text, text) from public;
-grant execute on function public.register_participant(text, integer, numeric, numeric, text, jsonb, text, text, text) to anon, authenticated;
+revoke all on function public.register_participant(text, integer, numeric, numeric, text, jsonb, text, text, text, text, text, text) from public;
+grant execute on function public.register_participant(text, integer, numeric, numeric, text, jsonb, text, text, text, text, text, text) to anon, authenticated;
 
 -- The participant's own profile for a signed-in device (the same on every device). A key that is not
 -- (or no longer) valid is refused (28000), so the app asks to sign in again.
@@ -529,16 +578,19 @@ drop function if exists public.my_profile(text);
 drop function if exists public.sw_profile(text);
 create or replace function public.sw_profile(p_code text)
 returns table(code text, name text, approved boolean, gender text, birth_year integer, height_cm numeric, weight_kg numeric,
-              sensitivity text, home jsonb, alias text, alias_colour smallint, race_hidden boolean, lang text)
+              sensitivity text, home jsonb, alias text, alias_colour smallint, race_hidden boolean, lang text,
+              age_band text, height_band text, weight_band text)
 language sql stable security definer set search_path = public as $$
-  select x.code, null::text, x.approved, x.gender, x.birth_year, x.height_cm, x.weight_kg, x.sensitivity, x.home, x.alias, x.alias_colour, false, x.lang
+  select x.code, null::text, x.approved, x.gender, x.birth_year, x.height_cm, x.weight_kg, x.sensitivity, x.home, x.alias, x.alias_colour, false, x.lang,
+         x.age_band, x.height_band, x.weight_band
     from public.participants x where x.code = p_code;          -- name: null since 1.5 (no name goes to a phone)
 $$;
 revoke all on function public.sw_profile(text) from public, anon, authenticated;
 
 create or replace function public.my_profile(p_key text)
 returns table(code text, name text, approved boolean, gender text, birth_year integer, height_cm numeric, weight_kg numeric,
-              sensitivity text, home jsonb, alias text, alias_colour smallint, race_hidden boolean, lang text)
+              sensitivity text, home jsonb, alias text, alias_colour smallint, race_hidden boolean, lang text,
+              age_band text, height_band text, weight_band text)
 language plpgsql security definer set search_path = public as $$
 declare v_code text := public.sw_code_of(p_key);
 begin
@@ -549,14 +601,16 @@ revoke all on function public.my_profile(text) from public;
 grant execute on function public.my_profile(text) to anon, authenticated;
 
 -- "My home" in Settings, and "Tell us about your home" for participants who joined before 1.0.
--- p_fields holds only what changes, any of: gender, birth_year, height_cm, weight_kg, sensitivity, lang
+-- p_fields holds only what changes, any of: gender, age_band, height_band, weight_band (1.6), sensitivity, lang
+-- (birth_year, height_cm and weight_kg from apps before 1.6 are kept as their ranges only)
 -- ('en' or 'cy'). name, which apps before 1.5 still send, is accepted and ignored: no name is stored any more.
 -- p_home is the whole home profile (it replaces the stored one), or null to leave it. The same checks as
 -- joining. Returns the profile afterwards.
 drop function if exists public.update_my_profile(text, jsonb, jsonb);
 create or replace function public.update_my_profile(p_key text, p_fields jsonb default '{}'::jsonb, p_home jsonb default null)
 returns table(code text, name text, approved boolean, gender text, birth_year integer, height_cm numeric, weight_kg numeric,
-              sensitivity text, home jsonb, alias text, alias_colour smallint, race_hidden boolean, lang text)
+              sensitivity text, home jsonb, alias text, alias_colour smallint, race_hidden boolean, lang text,
+              age_band text, height_band text, weight_band text)
 language plpgsql security definer set search_path = public as $$
 #variable_conflict use_column
 declare
@@ -567,7 +621,8 @@ begin
   if v_code is null then raise exception 'This device is not signed in' using errcode = '28000'; end if;
   if jsonb_typeof(f) <> 'object' then raise exception 'p_fields must be a JSON object' using errcode = '22023'; end if;
   select k into bad from jsonb_object_keys(f) k
-   where k <> all (array['name', 'gender', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity', 'lang']) limit 1;
+   where k <> all (array['name', 'gender', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity', 'lang',
+                         'age_band', 'height_band', 'weight_band']) limit 1;
   if bad is not null then raise exception 'Unknown field "%"', bad using errcode = '22023'; end if;
   if f ? 'lang' and coalesce(lower(trim(f->>'lang')), '') not in ('en', 'cy') then
     raise exception 'Unknown language "%" (en or cy)', f->>'lang' using errcode = '22023';
@@ -576,11 +631,19 @@ begin
   begin v_h := (f->>'height_cm')::numeric; exception when others then raise exception 'Please check the height' using errcode = '22023'; end;
   begin v_w := (f->>'weight_kg')::numeric; exception when others then raise exception 'Please check the weight' using errcode = '22023'; end;
   perform public.sw_check_profile(null, v_by, v_h, v_w, case when jsonb_typeof(p_home) = 'null' then null else p_home end);
+  if (f ? 'age_band' and not public.sw_band_ok('age', nullif(f->>'age_band', '')))
+     or (f ? 'height_band' and not public.sw_band_ok('height', nullif(f->>'height_band', '')))
+     or (f ? 'weight_band' and not public.sw_band_ok('weight', nullif(f->>'weight_band', ''))) then
+    raise exception 'Please choose your age, height and weight from the lists' using errcode = '22023';
+  end if;
   update public.participants x set
     gender      = case when f ? 'gender' then left(trim(f->>'gender'), 40) else x.gender end,
-    birth_year  = case when f ? 'birth_year' then v_by else x.birth_year end,
-    height_cm   = case when f ? 'height_cm' then v_h else x.height_cm end,
-    weight_kg   = case when f ? 'weight_kg' then v_w else x.weight_kg end,
+    age_band    = case when f ? 'age_band' then nullif(f->>'age_band', '') when f ? 'birth_year' then public.sw_band_of('age', v_by) else x.age_band end,
+    height_band = case when f ? 'height_band' then nullif(f->>'height_band', '') when f ? 'height_cm' then public.sw_band_of('height', v_h) else x.height_band end,
+    weight_band = case when f ? 'weight_band' then nullif(f->>'weight_band', '') when f ? 'weight_kg' then public.sw_band_of('weight', v_w) else x.weight_band end,
+    birth_year  = case when f ? 'age_band' or f ? 'birth_year' then null else x.birth_year end,     -- 1.6: ranges only
+    height_cm   = case when f ? 'height_band' or f ? 'height_cm' then null else x.height_cm end,
+    weight_kg   = case when f ? 'weight_band' or f ? 'weight_kg' then null else x.weight_kg end,
     sensitivity = case when f ? 'sensitivity' then (case when f->>'sensitivity' in ('cold', 'average', 'warm') then f->>'sensitivity' end) else x.sensitivity end,
     lang        = case when f ? 'lang' then lower(trim(f->>'lang')) else x.lang end,
     home        = case when p_home is null or jsonb_typeof(p_home) = 'null' then x.home else p_home end,
@@ -590,6 +653,43 @@ begin
 end $$;
 revoke all on function public.update_my_profile(text, jsonb, jsonb) from public;
 grant execute on function public.update_my_profile(text, jsonb, jsonb) to anon, authenticated;
+
+-- ===================================================================================================
+-- 1.6: email addresses, kept apart from everything else (the ethics committee)
+--
+-- The app asks for an email on its last joining step and sends it here in a request of its own, with no participant
+-- ID and no device key. This list holds only the address and the language to write in: no ID, no time, nothing
+-- that links it to a participant or to their answers. The research team uses it only to contact participants about
+-- the study and to share the results. Researchers see it on the dashboard, sorted by address. To remove an address
+-- (someone asks), delete its row in Supabase: Table Editor, study_contacts.
+-- ===================================================================================================
+create table if not exists public.study_contacts (
+  email text primary key,
+  lang  text not null default 'en' check (lang in ('en', 'cy'))
+);
+alter table public.study_contacts enable row level security;
+revoke all on public.study_contacts from anon, authenticated;
+grant select, delete on public.study_contacts to authenticated;
+grant select, insert, update, delete on public.study_contacts to service_role;
+drop policy if exists "researchers can read the contacts" on public.study_contacts;
+create policy "researchers can read the contacts" on public.study_contacts for select to authenticated using (true);
+drop policy if exists "researchers can remove contacts" on public.study_contacts;
+create policy "researchers can remove contacts" on public.study_contacts for delete to authenticated using (true);
+
+create or replace function public.add_study_contact(p_email text, p_lang text default 'en')
+returns boolean
+language plpgsql security definer set search_path = public as $$
+declare v text := lower(trim(coalesce(p_email, '')));
+begin
+  if v !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' or length(v) > 254 then
+    raise exception 'That does not look like an email address' using errcode = '22023';
+  end if;
+  insert into public.study_contacts (email, lang) values (v, case when p_lang = 'cy' then 'cy' else 'en' end)
+    on conflict (email) do update set lang = excluded.lang;
+  return true;
+end $$;
+revoke all on function public.add_study_contact(text, text) from public;
+grant execute on function public.add_study_contact(text, text) to anon, authenticated;
 
 -- Signing out on a device: its key stops working.
 create or replace function public.forget_device(p_key text)

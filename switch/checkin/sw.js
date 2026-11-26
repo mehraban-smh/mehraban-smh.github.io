@@ -7,7 +7,7 @@
 importScripts('../config.js');
 const CFG = self.SWITCH_CONFIG || {};
 const APP = CFG.appName || 'HomePulse';
-const CACHE = 'switch-checkin-v23';
+const CACHE = 'switch-checkin-v24';
 const BASE = new URL('../', self.registration.scope).pathname;   // /switch/
 
 self.addEventListener('install', () => self.skipWaiting());

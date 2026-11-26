@@ -521,6 +521,7 @@ a{color:var(--accent);font-weight:700}
 .pid-k{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .pid-card .pid{font-size:2.6rem;font-weight:800;line-height:1.1;letter-spacing:.14em;padding-left:.14em;color:var(--accent);font-variant-numeric:tabular-nums}
 .pid-card p{margin:2px 0 0;font-size:.88rem;line-height:1.4}
+.contact-card{margin-top:4px}                                                    /* 1.6 */
 .pid-card .pid-ok{width:100%;margin-top:10px}                                   /* 1.5.2 */
 .today-hero+.pid-card,.msg+.pid-card{margin-top:0}
 .pid-card.pid-sm{margin:4px 0 12px}

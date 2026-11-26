@@ -150,7 +150,7 @@ function seed(){
   store = { votes: store.votes.filter(v => !v.example).concat(rows), paused:null, pausedWhy:'' };
   save();
   if(!homeProfile()) LS.set(HOME_KEY, JSON.stringify(EXAMPLE_HOME));
-  if(!meKnown()) LS.set(ME_KEY, JSON.stringify(Object.assign({ code:PARTICIPANT, gender:'prefer_not', birth_year:1985, height_cm:170, weight_kg:70, sensitivity:'average', alias:'Puffin', alias_colour:3 }, meProfile(), { code:PARTICIPANT })));
+  if(!meKnown()) LS.set(ME_KEY, JSON.stringify(Object.assign({ code:PARTICIPANT, gender:'prefer_not', age_band:'35_44', height_band:'170_179', weight_band:'70_79', sensitivity:'average', alias:'Puffin', alias_colour:3 }, meProfile(), { code:PARTICIPANT })));
 }
 const EXAMPLE_HOME = { postcode_area:'SA2', main_road:'near', home_type:'semi', year_built:'1945_1964', floors:2, bedrooms:3, floor_area_m2:86, epc:'D',
   adults:2, children:1, pets:0, bedroom_share:1, changes:'no', drying:'yes', drying_room:'Kitchen', tariff:'standard', main_heating:['gas'], control_warmth:3, control_air:4, heating_pattern:'timer',
@@ -838,8 +838,8 @@ function homeSections(r, h){
     : h.heating_times === 'varies' ? tr('It varies') : h.heating_times === 'unsure' ? tr('Not sure') : null;
   const grid = (rows, opts) => rows.map(w => [art(w.art), (w.__en && w.__en.n) || w.n, label(opts, h[w.id]) || null]);   // the English name: glanceItem translates it
   const you = []
-    .concat([[ic('users'), 'Sex', label(GENDERS, f.gender) || null], [ic('calendar'), 'Year of birth', pn('birth_year', f.birth_year ? String(f.birth_year) : null)],
-      [ic('ruler'), 'Height', pn('height', f.height_cm ? Math.round(f.height_cm) + ' cm' : null)], [ic('scale'), 'Weight', pn('weight', f.weight_kg ? f.weight_kg + ' kg' : null)],
+    .concat([[ic('users'), 'Sex', label(GENDERS, f.gender) || null], [ic('calendar'), 'Age', label(AGE_BANDS, f.age_band) || null],
+      [ic('ruler'), 'Height', label(HEIGHT_BANDS, f.height_band) || null], [ic('scale'), 'Weight', label(WEIGHT_BANDS, f.weight_band) || null],
       [art('feel_cold:' + (h.feel_cold || 'same')), 'Feels the cold', label(FEEL, h.feel_cold) || null], [art('feel_warm:' + (h.feel_warm || 'same')), 'Feels too warm', label(FEEL, h.feel_warm) || null]]);
   return [
     ['About you', 'you', you],
@@ -1327,7 +1327,7 @@ function keyLost(){
 function cacheProfile(prof){
   if(!prof || typeof prof !== 'object') return false;
   let changed = false;
-  const me = { code:prof.code, gender:prof.gender, birth_year:prof.birth_year, height_cm:prof.height_cm, weight_kg:prof.weight_kg,
+  const me = { code:prof.code, gender:prof.gender, age_band:prof.age_band, height_band:prof.height_band, weight_band:prof.weight_band, birth_year:prof.birth_year, height_cm:prof.height_cm, weight_kg:prof.weight_kg,
     sensitivity:prof.sensitivity, alias:prof.alias, alias_colour:prof.alias_colour };
   if(LS.get(ME_KEY) !== JSON.stringify(me)){ LS.set(ME_KEY, JSON.stringify(me)); changed = true; }
   if(prof.home && typeof prof.home === 'object' && Object.keys(prof.home).length && LS.get(HOME_KEY) !== JSON.stringify(prof.home)){ LS.set(HOME_KEY, JSON.stringify(prof.home)); changed = true; }
@@ -1410,6 +1410,7 @@ function fieldError(id, msg){
   if(e){ e.hidden = !msg; e.innerHTML = msg ? ic('alert') + '<span>' + msg + '</span>' : ''; }
   if(msg){ const t = input && input.matches && input.matches('input,select') ? input : f; if(t){ if(!t.matches('input,select,button')) t.setAttribute('tabindex', '-1'); t.focus({ preventScroll:true }); t.scrollIntoView({ block:'center', behavior: reduceMotion() ? 'auto' : 'smooth' }); } }
 }
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;           // 1.6: the email for the separate contact list
 const weakPin = p => /^(\d)\1{3}$/.test(p) || ['1234','4321','0123','9876','1212','2580'].includes(p);
 /* The participant ID as typed, the way the database keeps it: four digits (4827, from 1.5), or a code of a participant
  * who joined before (P07; on a phone's number pad just 7 or 07, which can never be a 4-digit ID). '' if neither. */
@@ -1783,7 +1784,7 @@ const HOME_KEYS = ['feel_cold','feel_warm','prefer_not','postcode_area','main_ro
 const SQFT = 0.09290304;   // one square foot in square metres
 const HEAT_TIME_KEYS = ['heating_wd_start','heating_wd_end','heating_we_start','heating_we_end'];
 const stepOf = id => Math.max(0, REG_STEPS.findIndex(s => s.id === id));
-const regFresh = mode => ({ v:1, mode: mode || 'join', code:'', step:0, touched:false, areaTxt:'', au:'m2', gender:'', birth_year:'', hu:'cm', cm:'', ft:'', inch:'', wu:'kg', kg:'', st:'', lb:'', sens:null, pns:[], consent:[], home:{}, edit:false, pin:'', pin2:'' });
+const regFresh = mode => ({ v:1, mode: mode || 'join', code:'', step:0, touched:false, areaTxt:'', au:'m2', gender:'', age_band:'', height_band:'', weight_band:'', contact:'', birth_year:'', hu:'cm', cm:'', ft:'', inch:'', wu:'kg', kg:'', st:'', lb:'', sens:null, pns:[], consent:[], home:{}, edit:false, pin:'', pin2:'' });
 function loadReg(mode){ try{ const r = JSON.parse(LS.get(REG_KEY) || 'null'); if(r && r.v === 1 && r.home && r.mode === mode) return Object.assign(regFresh(mode), r, { step: Math.max(0, Math.min(REG_STEPS.length-1, r.step|0)), pin:'', pin2:'' }); }catch(e){} return regFresh(mode); }
 let REG = regFresh('join');
 function saveReg(){ if(S.screen === 'homeedit') return; REG.touched = true; LS.set(REG_KEY, JSON.stringify(Object.assign({}, REG, { pin:'', pin2:'', edit:false }))); }   // the PIN is never kept in the draft
@@ -1791,6 +1792,13 @@ const isFlat = () => REG.home.home_type === 'flat';
 const numOf = s => { const n = parseFloat(String(s ?? '').replace(',', '.')); return isFinite(n) ? n : null; };
 const blank = s => String(s ?? '').trim() === '';
 /* the wizard's fields from a profile (my_profile, and the home) */
+/* 1.6: the range of an exact value from before 1.6 (a year of birth, cm, kg) */
+function bandOf(kind, v){
+  if(typeof v !== 'number' || !isFinite(v)) return '';
+  if(kind === 'age'){ const a = new Date().getFullYear() - v; return a < 25 ? '18_24' : a < 35 ? '25_34' : a < 45 ? '35_44' : a < 55 ? '45_54' : a < 65 ? '55_64' : a < 75 ? '65_74' : '75plus'; }
+  if(kind === 'height') return v < 150 ? 'lt150' : v < 160 ? '150_159' : v < 170 ? '160_169' : v < 180 ? '170_179' : v < 190 ? '180_189' : '190plus';
+  return v < 50 ? 'lt50' : v < 60 ? '50_59' : v < 70 ? '60_69' : v < 80 ? '70_79' : v < 90 ? '80_89' : v < 100 ? '90_99' : v < 110 ? '100_109' : '110plus';
+}
 function regFromProfile(me, h){
   me = me || {}; const r = regFresh('profile');
   r.gender = me.gender || ''; r.birth_year = me.birth_year ? String(me.birth_year) : '';
@@ -1798,6 +1806,11 @@ function regFromProfile(me, h){
   r.sens = me.sensitivity || null;
   r.home = JSON.parse(JSON.stringify(h || {}));
   r.pns = Array.isArray(r.home.prefer_not) ? [...r.home.prefer_not] : [];
+  /* 1.6: the ranges. A profile from before 1.6 has the exact values (or "Prefer not to say"): shown as their ranges */
+  const old = r.pns; r.pns = [];
+  r.age_band = me.age_band || (old.includes('birth_year') ? 'prefer_not' : bandOf('age', me.birth_year));
+  r.height_band = me.height_band || (old.includes('height') ? 'prefer_not' : bandOf('height', me.height_cm));
+  r.weight_band = me.weight_band || (old.includes('weight') ? 'prefer_not' : bandOf('weight', me.weight_kg));
   ['main_heating', 'wall_insulation'].forEach(k => { if(typeof r.home[k] === 'string') r.home[k] = [r.home[k]]; });   // one answer until 1.4   // "Prefer not to say" (1.3): birth_year, height, weight
   return r;
 }
@@ -1827,8 +1840,8 @@ function regFieldsOf(r){
   /* the participants column keeps one word, made from the two 1.3 questions: cold, warm or average */
   const fc = home.feel_cold, fw = home.feel_warm;
   const sensitivity = fc || fw ? (fc === 'more' && fw !== 'more' ? 'cold' : fw === 'more' && fc !== 'more' ? 'warm' : 'average') : (r.sens || null);
-  return { gender: r.gender || null, birth_year: by !== null ? Math.round(by) : null,
-    height_cm, weight_kg, sensitivity, home };
+  return { gender: r.gender || null, age_band: r.age_band || null, height_band: r.height_band || null, weight_band: r.weight_band || null,
+    sensitivity, home };                                    // 1.6: ranges, never the exact numbers
 }
 const regFields = () => regFieldsOf(REG);
 /* switching units converts what has been typed so far */
@@ -1859,34 +1872,9 @@ function regProblem(step, r){
   const has = k => H[k] !== undefined && H[k] !== null && H[k] !== '', some = k => Array.isArray(H[k]) && H[k].length > 0, picked = (k, v) => some(k) && H[k].includes(v);
   if(id === 'you'){
     if(!r.gender) return ['r_gender', tr('Please choose one. &ldquo;Prefer not to say&rdquo; is fine.')];
-    if(!pns.includes('birth_year')){
-      const by = numOf(r.birth_year);
-      if(blank(r.birth_year)) return ['r_year', tr('Please enter the year you were born.')];
-      if(by === null || by % 1 || by < 1900 || by > y) return ['r_year', tr('Please enter the year as four digits, like 1985.')];
-      if(by > y - 18) return ['r_year', tr('You need to be 18 or over to take part.')];
-    }
-    if(!pns.includes('height')){
-      if(r.hu === 'ftin'){
-        const ft = numOf(r.ft), inch = numOf(r.inch);
-        if(blank(r.ft)) return ['r_ft', tr('Please enter your height in feet and inches.')];
-        if(ft === null || ft < 3 || ft > 8 || (!blank(r.inch) && (inch === null || inch < 0 || inch >= 12))) return ['r_ft', tr('Please check your height: feet from 3 to 8, inches from 0 to 11.')];
-      } else {
-        const cm = numOf(r.cm);
-        if(blank(r.cm)) return ['r_cm', tr('Please enter your height in centimetres.')];
-        if(cm === null || cm < 100 || cm > 250) return ['r_cm', tr('Please check your height: between 100 and 250 cm.')];
-      }
-    }
-    if(!pns.includes('weight')){
-      if(r.wu === 'stlb'){
-        const st = numOf(r.st), lb = numOf(r.lb);
-        if(blank(r.st)) return ['r_st', tr('Please enter your weight in stone and pounds.')];
-        if(st === null || st < 4 || st > 47 || (!blank(r.lb) && (lb === null || lb < 0 || lb >= 14))) return ['r_st', tr('Please check your weight: stone from 4 to 47, pounds from 0 to 13.')];
-      } else {
-        const kg = numOf(r.kg);
-        if(blank(r.kg)) return ['r_kg', tr('Please enter your weight in kilograms.')];
-        if(kg === null || kg < 30 || kg > 300) return ['r_kg', tr('Please check your weight: between 30 and 300 kg.')];
-      }
-    }
+    if(!r.age_band) return ['r_age', tr('Please choose your age range. &ldquo;Prefer not to say&rdquo; is fine.')];
+    if(!r.height_band) return ['r_height', tr('Please choose your height range. &ldquo;Prefer not to say&rdquo; is fine.')];
+    if(!r.weight_band) return ['r_weight', tr('Please choose your weight range. &ldquo;Prefer not to say&rdquo; is fine.')];
     if(!has('feel_cold')) return ['feel_cold', tr('Please choose one.')];
     if(!has('feel_warm')) return ['feel_warm', tr('Please choose one.')];
   }
@@ -1953,6 +1941,8 @@ function regProblem(step, r){
   }
   if(id === 'check' && mode === 'join'){
     if(CONSENT.some(c => !(r.consent || []).includes(c.id))) return ['consent', tr('Please tick every statement to take part.')];
+    const mail = (r.contact || '').trim();
+    if(!EMAIL_RE.test(mail) || mail.length > 254) return ['r_contact', tr('Please enter your email address, like name@example.com.')];
     if(!/^\d{4}$/.test(r.pin || '')) return ['r_pin', tr('Please choose a 4-digit PIN.')];
     if(weakPin(r.pin)) return ['r_pin', tr('That PIN is easy to guess. Please choose another.')];
     if(r.pin2 !== r.pin) return ['r_pin2', tr('The two PINs are not the same.')];
@@ -1983,6 +1973,15 @@ const busy = (b, on) => { if(!b) return; b.disabled = on; b.classList.toggle('bu
 /* Joining (1.5: no name or email): the database gives the new participant ID, shown on the waiting screen and in a
  * toast so it can be written down. The join token (REG.jid, kept with the draft) makes a second tap after a lost
  * answer sign in to the participant the first one made, rather than make another. */
+/* 1.6: the email for the separate contact list, in a request of its own that carries nothing else (no participant ID,
+ * no device key), kept on the phone only until it has gone */
+const CONTACT_OUT_KEY = 'switch_contact_out';
+function sendContact(mail){ if(!mail || !SWITCH.live) return; LS.set(CONTACT_OUT_KEY, JSON.stringify({ mail, lang: LANG })); quiet(flushContact()); }
+async function flushContact(){
+  const o = readJSON(CONTACT_OUT_KEY); if(!o || !o.mail){ LS.del(CONTACT_OUT_KEY); return; }
+  if(!SWITCH.live || navigator.onLine === false) return;
+  await SWITCH.addContact(o.mail, o.lang); LS.del(CONTACT_OUT_KEY);
+}
 async function regJoin(){
   const b = $('[data-act="reg-next"]'), f = regFields();
   fieldError('join', '');
@@ -2000,14 +1999,16 @@ async function regJoin(){
       if(r.status === 'wrong') return fieldError('r_pin', `${tr('This phone has joined already, with a different PIN. Please type the PIN you chose then.')} ${trn(r.tries_left, '{n} try left before a pause.', '{n} tries left before a pause.')}`);
       if(r.status === 'locked') return fieldError('r_pin', pinOutcome(r));
       return fieldError('join', tr('Could not join. Check the connection and try again.')); }
+    const mail = (REG.contact || '').trim();
     await signedIn(r);
     languageAfterSignIn(r);
     finishJoin(f);
+    sendContact(mail);
     afterIdentity(r.approved);
     showToast({ title:tr('Your participant ID is {code}', { code: esc(r.code) }), sub:tr('Please write it down: you need it, with your PIN, to sign in on another phone.'), kind:'info', ms:15000 });
   }catch(e){ busy(b, false); fieldError('join', friendly(e.message, 'Could not join. Check the connection and try again.')); }
 }
-const profileFieldsOf = f => ({ gender:f.gender, birth_year:f.birth_year, height_cm:f.height_cm, weight_kg:f.weight_kg, sensitivity:f.sensitivity });
+const profileFieldsOf = f => ({ gender:f.gender, age_band:f.age_band, height_band:f.height_band, weight_band:f.weight_band, sensitivity:f.sensitivity });
 function finishJoin(f){
   if(f){
     LS.set(HOME_KEY, JSON.stringify(f.home));
@@ -2157,27 +2158,16 @@ function unitSwitch(kind, cur, a, b){
 }
 const REGS = {
   you: () => {
-    const r = REG, pns = r.pns || [];
-    const off = k => pns.includes(k) ? ' disabled' : '';
-    /* 1.3: "Prefer not to say" for the year of birth, the height and the weight */
-    const pnsChip = k => `<button type="button" class="chip pns ${pns.includes(k) ? 'on' : ''}" aria-pressed="${pns.includes(k)}" data-act="reg-pns" data-v="${k}">${ic('check')}${tr('Prefer not to say')}</button>`;
-    const inp = (id, key, lab, attrs, extra='') => `<div class="field" id="f-${id}"><label for="${id}">${tr(lab)}</label><input class="in" id="${id}" data-reg="${key}" value="${esc(r[key])}" ${attrs} aria-describedby="err-${id}">${extra}<p class="err" id="err-${id}" hidden></p></div>`;
-    const sfx = (id, key, lab, s, attrs) => `<span class="in-sfx"><input class="in" id="${id}" data-reg="${key}" value="${esc(r[key])}" ${attrs} aria-label="${tr(lab)}"><span aria-hidden="true">${s}</span></span>`;
-    const height = r.hu === 'ftin'
-      ? `<div class="field" id="f-r_ft"><span class="lab-row"><label for="r_ft">${tr('Height')}</label>${unitSwitch('h', r.hu, ['cm','cm'], ['ftin','ft, in'])}</span><span class="pair">${sfx('r_ft','ft','Height, feet','ft','inputmode="numeric" maxlength="1" placeholder="5"' + off('height'))}${sfx('r_in','inch','Height, inches','in','inputmode="numeric" maxlength="2" placeholder="8"' + off('height'))}</span>${pnsChip('height')}<p class="err" id="err-r_ft" hidden></p></div>`
-      : `<div class="field" id="f-r_cm"><span class="lab-row"><label for="r_cm">${tr('Height')}</label>${unitSwitch('h', r.hu, ['cm','cm'], ['ftin','ft, in'])}</span>${sfx('r_cm','cm','Height in centimetres','cm','inputmode="decimal" maxlength="5" placeholder="172"' + off('height'))}${pnsChip('height')}<p class="err" id="err-r_cm" hidden></p></div>`;
-    const weight = r.wu === 'stlb'
-      ? `<div class="field" id="f-r_st"><span class="lab-row"><label for="r_st">${tr('Weight')}</label>${unitSwitch('w', r.wu, ['kg','kg'], ['stlb','st, lb'])}</span><span class="pair">${sfx('r_st','st','Weight, stone','st','inputmode="numeric" maxlength="2" placeholder="11"' + off('weight'))}${sfx('r_lb','lb','Weight, pounds','lb','inputmode="numeric" maxlength="2" placeholder="6"' + off('weight'))}</span>${pnsChip('weight')}<p class="err" id="err-r_st" hidden></p></div>`
-      : `<div class="field" id="f-r_kg"><span class="lab-row"><label for="r_kg">${tr('Weight')}</label>${unitSwitch('w', r.wu, ['kg','kg'], ['stlb','st, lb'])}</span>${sfx('r_kg','kg','Weight in kilograms','kg','inputmode="decimal" maxlength="5" placeholder="70"' + off('weight'))}${pnsChip('weight')}<p class="err" id="err-r_kg" hidden></p></div>`;
+    const r = REG;
+    /* 1.6: age, height and weight as ranges to choose from (each with "Prefer not to say"), never the exact numbers */
+    const sel = (id, key, lab, list) => `<div class="field" id="f-${id}"><label for="${id}">${tr(lab)}</label><select class="in" id="${id}" data-reg="${key}" aria-describedby="err-${id}"><option value="">${tr('Choose')}</option>${list.filter(o => !o.old || o.id === r[key]).map(o => `<option value="${o.id}"${r[key] === o.id ? ' selected' : ''}>${o.n}</option>`).join('')}</select><p class="err" id="err-${id}" hidden></p></div>`;
     return `<div class="form" id="regForm">
-      <div class="row2">
-        <div class="field" id="f-r_gender"><label for="r_gender">${tr('Sex')}</label><select class="in" id="r_gender" data-reg="gender" aria-describedby="err-r_gender"><option value="">${tr('Choose')}</option>${GENDERS.filter(g => !g.old || g.id === r.gender).map(g => `<option value="${g.id}"${r.gender===g.id?' selected':''}>${g.n}</option>`).join('')}</select><p class="err" id="err-r_gender" hidden></p></div>
-        ${inp('r_year', 'birth_year', 'Year of birth', `inputmode="numeric" maxlength="4" placeholder="${tr('e.g. 1985')}" autocomplete="bday-year"${off('birth_year')}`, pnsChip('birth_year'))}
-      </div>
-      <div class="row2">${height}${weight}</div>
+      <div class="row2">${sel('r_gender', 'gender', 'Sex', GENDERS)}${sel('r_age', 'age_band', 'Age', AGE_BANDS)}</div>
+      ${sel('r_height', 'height_band', 'Height', HEIGHT_BANDS)}
+      ${sel('r_weight', 'weight_band', 'Weight', WEIGHT_BANDS)}
       ${fieldBlock('feel_cold', 'Compared with most people, how easily do you feel cold?', '', pick1('home.feel_cold', FEEL, o => art('feel_cold:' + o.id), 3, 'How easily you feel cold', 'sm'))}
       ${fieldBlock('feel_warm', 'Compared with most people, how easily do you feel too warm?', '', pick1('home.feel_warm', FEEL, o => art('feel_warm:' + o.id), 3, 'How easily you feel too warm', 'sm'))}
-      <p class="note">${tr('Used only to understand comfort differences between people. The study does not ask for your name or email: everything you tell it is stored under a participant ID, which you get when you join.')}</p>
+      <p class="note">${tr('Used only to understand comfort differences between people. Everything you tell the study is stored under a participant ID, which you get when you join, never with your name or email.')}</p>
     </div>`;
   },
   area: () => {
@@ -2264,8 +2254,11 @@ const REGS = {
     const consent = fieldBlock('consent', 'Consent', 'Please read the participant information sheet on the study page and tick each statement you agree with.',
       `<div class="consent" role="group" aria-label="${tr('Consent')}">${CONSENT.map(o => { const on = c.includes(o.id); return `<button type="button" class="${on ? 'on' : ''}" aria-pressed="${on}" data-act="reg-consent" data-v="${o.id}"><span class="box" aria-hidden="true">${on ? ic('check') : ''}</span><span>${o.n}</span></button>`; }).join('')}</div>` +
       `<p class="note"><a href="${studyHref()}" target="_blank" rel="noopener">${tr('Read the participant information on the study page')}</a></p>`);
+    /* 1.6: the email, right before joining. It goes to a separate list that never holds the participant ID */
+    const contact = `<section class="pin-card contact-card" id="contact-card" aria-labelledby="ctH"><div class="pin-top">${ic('mail')}<div><b id="ctH">${tr('Your email address')}</b><p class="note">${tr('Kept separately from your answers: it is never stored with your participant ID. The research team uses it only to contact you about the study and to share the results with you.')}</p></div></div>
+        <div class="field" id="f-r_contact"><label for="r_contact">${tr('Email')}</label><input class="in" id="r_contact" data-reg="contact" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" maxlength="254" value="${esc(REG.contact || '')}" aria-describedby="err-r_contact"><p class="err" id="err-r_contact" hidden></p></div></section>`;
     return `<div class="form">${homeGlance(REG, REG.home, 'reg-edit')}
-      ${join ? consent + `<section class="pin-card" aria-labelledby="pinH"><div class="pin-top">${ic('key')}<div><b id="pinH">${tr('Choose a 4-digit PIN')}</b><p class="note">${tr('When you join, you get a 4-digit participant ID. With that ID, this PIN lets you sign in on another phone or tablet and see all your check-ins there. Please don&rsquo;t use your bank card PIN.')}</p></div></div>
+      ${join ? consent + contact + `<section class="pin-card" aria-labelledby="pinH"><div class="pin-top">${ic('key')}<div><b id="pinH">${tr('Choose a 4-digit PIN')}</b><p class="note">${tr('When you join, you get a 4-digit participant ID. With that ID, this PIN lets you sign in on another phone or tablet and see all your check-ins there. Please don&rsquo;t use your bank card PIN.')}</p></div></div>
         <div class="row2">
           <div class="field" id="f-r_pin"><label for="r_pin">${tr('PIN')}</label><input class="in pin" id="r_pin" data-reg="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" value="${esc(REG.pin || '')}" aria-describedby="err-r_pin"><p class="err" id="err-r_pin" hidden></p></div>
           <div class="field" id="f-r_pin2"><label for="r_pin2">${tr('Type it again')}</label><input class="in pin" id="r_pin2" data-reg="pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" value="${esc(REG.pin2 || '')}" aria-describedby="err-r_pin2"><p class="err" id="err-r_pin2" hidden></p></div>
@@ -2666,14 +2659,14 @@ if(DEBUG){
 I18N.register({ ROOM_TIME, ACTS, ROOMS, TP, TA, AIR, SUN, HEAT, HEAT_FOR, WALL, ACTIONS, ACTION_BOXES, NOTES, NOTE_BOXES, HEAT_OTHER,
   GENDERS, SENSITIVITY, HOME_TYPES, FLAT_POS, TENURE, YEAR_BUILT, FLOORS, EPC, BED_SHARE, MAIN_HEATING, OTHER_HEATERS, HEAT_PATTERN,
   CONTROLS, WALL_INS, LOFT, GLAZING, WINDOWS_OPEN, DAMP, FACING, TSV, GARMENTS, GARMENT_GROUPS, REG_STEPS, TA_OLD, HEAT_FOR_OLD, QNAME,
-  CONTROL5, FEEL, MAIN_ROAD, YES_NO, TARIFF, FREQ, WINDOW_WAYS, PUT_OFF, VENTS, VENT_USE, COOL_DOWN, CONSENT });
+  CONTROL5, AGE_BANDS, HEIGHT_BANDS, WEIGHT_BANDS, FEEL, MAIN_ROAD, YES_NO, TARIFF, FREQ, WINDOW_WAYS, PUT_OFF, VENTS, VENT_USE, COOL_DOWN, CONSENT });
 I18N.set(I18N.initial(!!PARTICIPANT));                     // ?lang= (the study page) only for someone not signed in, and only for what they see
 load();
 migrateHours();
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
-window.addEventListener('online', () => quiet(flushPending()));
+window.addEventListener('online', () => { quiet(flushPending()); quiet(flushContact()); });
 window.addEventListener('pagehide', endHolds);              // closed or navigated away during the Undo time
-quiet(flushPending()); flushLater();
+quiet(flushPending()); flushLater(); quiet(flushContact());
 if(!PARTICIPANT){
   S.screen = installFirst() ? 'install' : START === 'join' ? 'join' : START === 'signin' ? 'signin' : 'welcome';
   if(S.screen === 'join') REG = loadReg('join');
