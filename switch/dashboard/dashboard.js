@@ -50,10 +50,11 @@
     // 1.3: the Home Visit Questionnaire v2
     'feel_cold', 'feel_warm', 'prefer_not', 'main_road', 'home_type_other', 'glazing_notes', 'changes', 'changes_note', 'pet_door', 'drying', 'drying_room', 'tariff',
     'heating_times', 'heating_wd_start', 'heating_wd_end', 'heating_we_start', 'heating_we_end', 'other_heaters_other', 'window_short', 'window_long', 'window_night',
-    'window_putoff', 'window_putoff_other', 'vent_kitchen', 'vent_bathroom', 'vent_trickle', 'vent_whole_house', 'overheat', 'cool_down', 'cool_down_other', 'consent', 'consent_at'];
+    'window_putoff', 'window_putoff_other', 'vent_kitchen', 'vent_bathroom', 'vent_trickle', 'vent_whole_house', 'overheat', 'cool_down', 'cool_down_other', 'consent', 'consent_at', 'control_warmth', 'control_air'];
   const HOME_NUM = new Set(['floors', 'bedrooms', 'floor_area_m2', 'adults', 'children', 'pets', 'bedroom_share', 'setpoint_c', 'bedroom_facing_deg', 'bedroom_side_deg']);
 
   /* ---------------------------------------------------------------- words for stored values (spec 3 and 4) */
+  const CONTROL5 = { 1: '1 No control at all', 2: '2 A little', 3: '3 Some', 4: '4 A lot', 5: '5 Complete control' };
   const FREQ = { often: 'Often', sometimes: 'Sometimes', rarely: 'Rarely or never' };
   const VENT = { use: 'Has it and uses it', rarely: 'Has it, rarely uses it', no: 'Doesn’t have it', unsure: 'Not sure' };
   const FACING = { N: 'North', NE: 'North-east', E: 'East', SE: 'South-east', S: 'South', SW: 'South-west', W: 'West', NW: 'North-west', unsure: 'Not sure' };
@@ -65,17 +66,17 @@
     preference: { much_cooler: 'Much cooler', cooler: 'Cooler', same: 'No change', warmer: 'Warmer', much_warmer: 'Much warmer' },   // much_*: from 1.3 (cooler / warmer read "a bit" there)
     acceptability: { acceptable: 'Acceptable', unacceptable: 'Not acceptable', clearly_acc: 'Clearly acceptable (older scale)', just_acc: 'Just acceptable (older scale)', just_unacc: 'Just unacceptable (older scale)', clearly_unacc: 'Clearly unacceptable (older scale)' },
     garments: { tshirt: 'T-shirt', long: 'Long sleeves', jumper: 'Thick jumper', hoodie: 'Hoodie or fleece', shorts: 'Shorts', trousers: 'Jeans or trousers', joggers: 'Joggers', skirt: 'Skirt or dress', pyjamas: 'Pyjamas', coat_light: 'Light jacket or summer coat', coat_winter: 'Winter coat', socks: 'Socks', slippers: 'Slippers', blanket: 'Blanket', duvet: 'Duvet',
-      outfit_vlight: 'Very light outfit (0.35 clo)', outfit_light: 'Light outfit (0.55 clo)', outfit_medium: 'Medium outfit (0.75 clo)', outfit_warm: 'Warm outfit (1.00 clo)' },
+      outfit_vlight: 'Very light outfit (0.35 clo)', outfit_light: 'Light outfit (0.55 clo)', outfit_medium: 'Medium outfit (0.75 clo)', outfit_warm: 'Warm outfit (0.90 clo; 1.00 until 1.4)', outfit_vwarm: 'Very warm outfit (1.20 clo)' },
     activity: { sleep: 'Sleeping', lying: 'Lying down', sit: 'Sitting relaxed', desk: 'Desk work', stand: 'Standing', house: 'Cooking or housework', walk: 'Walking about', exercise: 'Exercising' },
     room: { living: 'Living room', bedroom: 'Bedroom', kitchen: 'Kitchen', office: 'Home office (until 1.3)', bathroom: 'Bathroom', other: 'Somewhere else at home' },
     air: { still: 'Still', slight: 'A little air movement', draughty: 'Clearly draughty', drafty: 'Clearly draughty' },
-    sun: { yes: 'Sun on me', no: 'No direct sun', dark: 'It’s dark (until 1.3)' },
+    sun: { 1: '1 No sun', 2: '2 A little sun', 3: '3 Some sun', 4: '4 A lot of sun', 5: '5 Bright direct sun', yes: 'Sun on me (1.4)', no: 'No direct sun (1.4)', dark: 'It’s dark (until 1.3)' },
     heating_on: { on: 'On', off: 'Off', unsure: 'Not sure' },
     heating_for: { lt30: 'Less than 30 minutes (no longer offered)', '30_60': '30 minutes to an hour', '1_2h': '1 to 2 hours', '2_4h': '2 to 4 hours', gt4h: 'More than 4 hours', always: 'Always on (the thermostat switches it on and off)', unsure: 'Not sure' },
     wall: { cold: 'Cold', cool: 'Cool', neutral: 'Neither cold nor warm', warm: 'Warm', hot: 'Hot', no_reach: 'Can’t reach one' },
     actions: { win_open: 'Opened a window', win_close: 'Closed a window', door_open: 'Opened a door', door_close: 'Closed a door', heat_up: 'Turned the heating up', heat_down: 'Turned the heating down or off', layer_on: 'Put on a layer or more clothes', layer_off: 'Took off a layer or some clothes', blanket: 'Got a blanket', fan: 'Turned a fan on', curtains: 'Drew or closed the curtains or blinds', moved: 'Moved to another room', none: 'None of these' },
     notes: { hot_drink: 'Hot drink', cold_drink: 'Cold drink', ate: 'Ate something', hungry: 'Felt hungry', tired: 'Felt tired', unwell: 'Felt unwell', none: 'None of these' },
-    gender: { woman: 'Woman', man: 'Man', non_binary: 'Non-binary', self_describe: 'Another identity', prefer_not: 'Prefer not to say' },
+    gender: { female: 'Female', male: 'Male', woman: 'Woman', man: 'Man', non_binary: 'Non-binary', self_describe: 'Another identity', prefer_not: 'Prefer not to say' },
     sensitivity: { cold: 'Feels the cold easily', average: 'About average', warm: 'Feels the heat easily' },
     lang: { en: 'English', cy: 'Cymraeg (Welsh)' },
     age: { a18: '18–24', a25: '25–34', a35: '35–44', a45: '45–54', a55: '55–64', a65: '65–74', a75: '75 or older' },
@@ -92,9 +93,9 @@
     pets: { 0: 'No pets', 1: '1 pet', 2: '2 pets', 3: '3 pets', 4: '4 pets', 5: '5 pets', 6: '6 pets', 7: '7 pets', 8: '8 or more pets' },
     bedroom_share: { 0: 'Just me', 1: 'With 1 other person', 2: 'With 2 others', 3: 'With 3 or more others' },
     main_heating: { gas_combi: 'Gas combi boiler (no tank)', gas_tank: 'Gas boiler with a hot water tank', oil: 'Oil boiler', lpg: 'LPG boiler', ashp: 'Air source heat pump', gshp: 'Ground source heat pump', storage: 'Electric storage heaters', electric: 'Electric radiators or panel heaters', communal: 'Communal or district heating', solid: 'Solid fuel (wood, coal or another)', none: 'No central heating', unsure: 'Not sure',
-      gas: 'Gas boiler', oil_lpg: 'Oil or LPG boiler', heat_pump: 'Heat pump (air or ground source)', infrared: 'Infrared heating panels' },
+      gas: 'Gas boiler', wood_burner: 'Wood burner or stove', oil_lpg: 'Oil or LPG boiler', heat_pump: 'Heat pump (air or ground source)', infrared: 'Infrared heating panels' },
     other_heaters: { plugin: 'Plug-in electric heater', gas_fire: 'Gas fire', electric_fire: 'Electric fire', stove: 'Wood burner or multi-fuel stove', open_fire: 'Open fire', electric_blanket: 'Electric blanket', none: 'None of these',
-      fire: 'Fire or stove', hot_water_bottle: 'Hot water bottle', blankets: 'Extra blankets or throws', curtains: 'Closing curtains or blinds', other: 'Something else' },
+      fire: 'Fire (gas or electric from 1.5)', wood_burner: 'Wood burner or stove', hot_water_bottle: 'Hot water bottle', blankets: 'Extra blankets or throws', curtains: 'Closing curtains or blinds', other: 'Something else' },
     heating_pattern: { timer: 'On a timer at set times', when_needed: 'Switched on when needed', most_day: 'On most of the day', always_on: 'Always on (the thermostat switches it on and off)', rarely: 'Rarely used', unsure: 'Not sure', not_me: 'Someone else controls it' },
     payment: { prepay: 'Prepayment meter', bill: 'Bill or Direct Debit', in_rent: 'Included in the rent', unsure: 'Not sure', prefer_not: 'Prefer not to say' },
     controls: { room_stat: 'Wall thermostat', smart: 'Smart thermostat', programmer: 'Timer or programmer', trvs: 'Radiator dials (TRVs)', none: 'None of these', unsure: 'Not sure' },
@@ -108,6 +109,7 @@
     damp: { bedroom: 'Bedroom', living: 'Living room', kitchen: 'Kitchen', bathroom: 'Bathroom', elsewhere: 'Elsewhere', none: 'No damp or mould', unsure: 'Not sure' },
     bedroom_facing: FACING, bedroom_side: FACING,
     // 1.3
+    control_warmth: CONTROL5, control_air: CONTROL5,
     feel_cold: { more: 'More easily than most', same: 'About the same', less: 'Less easily' },
     feel_warm: { more: 'More easily than most', same: 'About the same', less: 'Less easily' },
     main_road: { on: 'On a main road', near: 'Near a main road', no: 'No', unsure: 'Not sure' },
@@ -1193,16 +1195,16 @@
   const setBand = v => { const r = Math.round(v); return r <= 17 ? 'le17' : r >= 24 ? 'ge24' : String(r); };
   // [key, title, kind]: kind p = participant column, multi = several answers, area / setp = binned numbers
   const HOME_GROUPS = [
-    ['The people', [['gender', 'Gender', 'p'], ['feel_cold', 'Feels the cold'], ['feel_warm', 'Feels too warm'], ['sensitivity', 'Thermal sensitivity (from the two above since 1.3)', 'p'], ['age', 'Age', 'age'], ['lang', 'App language', 'p']]],
+    ['The people', [['gender', 'Sex (gender until 1.4)', 'p'], ['feel_cold', 'Feels the cold'], ['feel_warm', 'Feels too warm'], ['sensitivity', 'Thermal sensitivity (from the two above since 1.3)', 'p'], ['age', 'Age', 'age'], ['lang', 'App language', 'p']]],
     ['Area and home', [['postcode_area', 'Postcode area', 'free'], ['main_road', 'On or near a main road'], ['home_type', 'Home type'], ['flat_position', 'Flat position (flats only)'], ['tenure', 'Tenure']]],
     ['Age and size', [['year_built', 'Year built'], ['floors', 'Floors'], ['bedrooms', 'Bedrooms'], ['floor_area_m2', 'Floor area', 'area'], ['epc', 'EPC rating']]],
     ['Who lives here', [['adults', 'Adults'], ['children', 'Children'], ['pets', 'Pets'], ['bedroom_share', 'Sharing the bedroom'], ['changes', 'Expects changes during the study'],
       ['pet_door', 'Opens an outside door for pets'], ['drying', 'Dries clothes indoors'], ['tariff', 'Energy tariff']]],
-    ['Heating', [['main_heating', 'Main heating'], ['heating_pattern', 'How the heating is used'], ['heating_times', 'Heating times'], ['other_heaters', 'Other ways to keep warm', 'multi'], ['payment', 'How the heating is paid for']]],
+    ['Heating', [['main_heating', 'Heating (several from 1.5)', 'multi'], ['heating_pattern', 'How the heating is used'], ['heating_times', 'Heating times'], ['control_warmth', 'Control over warmth (1–5)'], ['other_heaters', 'Other ways to keep warm', 'multi'], ['payment', 'How the heating is paid for']]],
     ['Heating controls', [['controls', 'Controls', 'multi'], ['stat_display', 'Thermostat screen'], ['setpoint_c', 'Usual thermostat setting', 'setp'], ['bedroom_trv', 'Dial on the bedroom radiator']]],
-    ['Walls, roof and windows', [['wall_insulation', 'Wall insulation'], ['loft', 'Loft'], ['glazing', 'Glazing'], ['windows_open', 'Windows that open'], ['damp', 'Damp or mould in the last year', 'multi']]],
+    ['Walls, roof and windows', [['wall_insulation', 'Wall insulation', 'multi'], ['loft', 'Loft'], ['glazing', 'Glazing'], ['windows_open', 'Windows that open'], ['damp', 'Damp or mould in the last year', 'multi']]],
     ['Windows and fresh air', [['window_short', 'Opens a window for a few minutes'], ['window_long', 'Opens a window for an hour or more'], ['window_night', 'Window open overnight in the bedroom'],
-      ['window_putoff', 'Put off opening windows by', 'multi'], ['vent_kitchen', 'Kitchen extractor fan'], ['vent_bathroom', 'Bathroom extractor fan'], ['vent_trickle', 'Trickle vents'], ['vent_whole_house', 'Whole-house ventilation']]],
+      ['window_putoff', 'Put off opening windows by', 'multi'], ['vent_kitchen', 'Kitchen extractor fan'], ['vent_bathroom', 'Bathroom extractor fan'], ['vent_trickle', 'Trickle vents'], ['vent_whole_house', 'Whole-house ventilation'], ['control_air', 'Control over fresh air (1–5)']]],
     ['Keeping cool', [['overheat', 'Home gets uncomfortably warm'], ['cool_down', 'Cools down by', 'multi']]],
     ['The bedroom', [['bedroom_facing', 'Bedroom window faces'], ['bedroom_side', 'Bedroom side of the home']]]
   ];

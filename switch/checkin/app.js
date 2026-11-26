@@ -135,9 +135,9 @@ function seed(){
   if(!meKnown()) LS.set(ME_KEY, JSON.stringify(Object.assign({ code:PARTICIPANT, name:NAME, gender:'prefer_not', birth_year:1985, height_cm:170, weight_kg:70, sensitivity:'average', alias:'Puffin', alias_colour:3 }, meProfile(), { code:PARTICIPANT })));
 }
 const EXAMPLE_HOME = { postcode_area:'SA2', main_road:'near', home_type:'semi', year_built:'1945_1964', floors:2, bedrooms:3, floor_area_m2:86, epc:'D',
-  adults:2, children:1, pets:0, bedroom_share:1, changes:'no', drying:'yes', drying_room:'Kitchen', tariff:'standard', main_heating:'gas', heating_pattern:'timer',
+  adults:2, children:1, pets:0, bedroom_share:1, changes:'no', drying:'yes', drying_room:'Kitchen', tariff:'standard', main_heating:['gas'], control_warmth:3, control_air:4, heating_pattern:'timer',
   heating_times:'set', heating_wd_start:'06:30', heating_wd_end:'22:00', heating_we_start:'08:00', heating_we_end:'22:30',
-  controls:['room_stat','trvs'], setpoint_c:20, other_heaters:['blankets'], wall_insulation:'cavity', glazing:'double', bedroom_facing:'SW', bedroom_side:'S',
+  controls:['room_stat','trvs'], setpoint_c:20, other_heaters:['blankets'], wall_insulation:['cavity'], glazing:'double', bedroom_facing:'SW', bedroom_side:'S',
   feel_cold:'more', feel_warm:'same', window_short:'often', window_long:'rarely', window_night:'sometimes', window_putoff:['noise'],
   vent_kitchen:'use', vent_bathroom:'use', vent_trickle:'rarely', vent_whole_house:'no', overheat:'sometimes', cool_down:['windows','fan'] };
 
@@ -226,9 +226,9 @@ function waitSheet(open, opener){
 /* The questions of FLOW_ALL every time, all starting unanswered (clothing offers "Same as last time"). */
 function beginQuestions(){
   S.same = false;
-  S.a = { room:S.a.room };
+  S.a = {};
   refreshFlow();
-  S.i = Math.max(0, S.flow.indexOf('room_time')); go('q');   // the room was the first screen
+  S.i = 0; go('q');
 }
 /* The steps asked depend on the answers so far (the heating) and on the home profile (the thermostat). */
 /* The current step is found again by its id when the list changes (an answer, or the profile arriving mid-way). */
@@ -427,8 +427,8 @@ function statusCard(){
   let icon = 'bell', title, sub;
   if(store.paused && new Date(store.paused) > now){
     icon = 'pause';
-    if(store.pausedWhy==='manual'){ title = tr('Paused until you&rsquo;re back'); sub = tr('Back home? Tap Check in now.') + (on ? tr(' Otherwise reminders resume {when}.', { when: whenWord(nextReminder()) }) : ''); }
-    else { title = tr('Paused until {until}', { until: untilWord(new Date(store.paused)) }); sub = tr('No reminders on this phone while you&rsquo;re out.') + (on ? tr(' Next one {when}.', { when: whenWord(nextReminder()) }) : ''); }
+    if(store.pausedWhy==='manual'){ title = tr('Paused until you open the app'); sub = tr('Ready? Tap Check in now.') + (on ? tr(' Otherwise reminders resume {when}.', { when: whenWord(nextReminder()) }) : ''); }
+    else { title = tr('Paused until {until}', { until: untilWord(new Date(store.paused)) }); sub = tr('No reminders on this phone until then.') + (on ? tr(' Next one {when}.', { when: whenWord(nextReminder()) }) : ''); }
   }
   else if(studyOver()){ icon = 'checkc'; title = tr('The study has ended'); sub = tr('Reminders have stopped. Thank you for taking part.'); }
   else if(on){ title = tr('Next reminder {when}', { when: whenWord(nextReminder()) }); sub = daysWord(hours()); }
@@ -801,6 +801,8 @@ function howSheet(opener){
 
 /* ---------- the home profile, read back ---------- */
 const label = (list, id) => (byId(list, id) || {}).n;
+/* one answer or several (several from 1.5 for the heating and the wall insulation) */
+const asList = v => Array.isArray(v) ? v : v ? [v] : [];
 const listWord = (opts, ids) => Array.isArray(ids) && ids.length ? ids.map(id => label(opts, id)).filter(Boolean).join(', ') : null;
 const countWord = (n, max) => typeof n === 'number' ? (max && n >= max ? max + '+' : String(n)) : null;
 const facingWord = (v, deg) => v === 'unsure' ? tr('Not sure') : label(FACING, v) ? label(FACING, v) + (typeof deg === 'number' ? ` (${deg}°)` : '') : null;
@@ -813,22 +815,28 @@ function homeSections(r, h, withEmail){
   const pn = (k, v) => pns.includes(k) ? tr('Prefer not to say') : v;
   const withNote = (v, note) => v && note ? v + ': ' + note : (v || null);
   const picked = (k, id) => Array.isArray(h[k]) && h[k].includes(id);
+  const ctl = v => typeof v === 'number' ? v + ' &middot; ' + (label(CONTROL5, v) || '') : null;   // 1.5: the control questions, 1 to 5
   const times = h.heating_times === 'set' && h.heating_wd_start ? tr('Weekdays {a}–{b}, weekends {c}–{d}', { a:h.heating_wd_start, b:h.heating_wd_end, c:h.heating_we_start, d:h.heating_we_end })
     : h.heating_times === 'varies' ? tr('It varies') : h.heating_times === 'unsure' ? tr('Not sure') : null;
   const grid = (rows, opts) => rows.map(w => [art(w.art), (w.__en && w.__en.n) || w.n, label(opts, h[w.id]) || null]);   // the English name: glanceItem translates it
   const you = [[ic('user'), 'Name', f.name || null]].concat(withEmail ? [[ic('mail'), 'Email', f.email || null]] : [])
-    .concat([[ic('users'), 'Gender', label(GENDERS, f.gender) || null], [ic('calendar'), 'Year of birth', pn('birth_year', f.birth_year ? String(f.birth_year) : null)],
+    .concat([[ic('users'), 'Sex', label(GENDERS, f.gender) || null], [ic('calendar'), 'Year of birth', pn('birth_year', f.birth_year ? String(f.birth_year) : null)],
       [ic('ruler'), 'Height', pn('height', f.height_cm ? Math.round(f.height_cm) + ' cm' : null)], [ic('scale'), 'Weight', pn('weight', f.weight_kg ? f.weight_kg + ' kg' : null)],
       [art('feel_cold:' + (h.feel_cold || 'same')), 'Feels the cold', label(FEEL, h.feel_cold) || null], [art('feel_warm:' + (h.feel_warm || 'same')), 'Feels too warm', label(FEEL, h.feel_warm) || null]]);
   return [
     ['About you', 'you', you],
+    ['Heating', 'heat', [[firstArt('heat', asList(h.main_heating), art('heat:gas')), 'Heating', listWord(MAIN_HEATING, asList(h.main_heating))],
+      [artx('pattern:' + h.heating_pattern, 'clock'), 'How it&rsquo;s used', label(HEAT_PATTERN, h.heating_pattern) || null], [art('pattern:timer'), 'Heating times', times]]],
+    ['Heating controls', 'controls', [[firstArt('controls', h.controls, ic('sliders')), 'Controls', listWord(CONTROLS, h.controls)],
+      [pic('thermo'), 'Usual setting', typeof h.setpoint_c === 'number' ? h.setpoint_c.toFixed(1) + ' °C (' + Math.round(h.setpoint_c * 9 / 5 + 32) + ' °F)' : notSure(h.setpoint_c)],
+      [firstArt('other', h.other_heaters, pic('flame')), 'Also keeps warm with', withNote(listWord(OTHER_HEATERS, h.other_heaters), picked('other_heaters', 'other') && h.other_heaters_other)], [pic('stat'), 'Control over warmth', ctl(h.control_warmth)]]],
     ['Your area and home', 'area', [[ic('pin'), 'Postcode area', h.postcode_area || null], [art('road:' + (h.main_road || 'no')), 'Main road', label(MAIN_ROAD, h.main_road) || null],
       [art(h.home_type ? 'home_type:' + h.home_type : 'home_type:detached'), 'Home', withNote(label(HOME_TYPES, h.home_type), h.home_type === 'other' && h.home_type_other)]]
       .concat(h.home_type === 'flat' ? [[art(h.flat_position ? 'flat_position:' + h.flat_position : 'flat_position:middle'), 'Floor', label(FLAT_POS, h.flat_position) || null]] : [])],
     ['Age and size', 'size', [[h.year_built ? art('year_built:' + h.year_built) : ic('calendar'), 'Built', label(YEAR_BUILT, h.year_built) || null], [art('floors:' + Math.min(h.floors || 2, 4)), 'Floors', h.floors ? (h.floors >= 4 ? tr('4 or more') : h.floors === 3 ? tr('3 or more') : String(h.floors)) : null],
       [pic('bed'), 'Bedrooms', countWord(h.bedrooms, h.bedrooms > 4 ? 6 : 4)], [ic('ruler'), 'Floor area', typeof h.floor_area_m2 === 'number' ? h.floor_area_m2 + ' m²' + (r.au === 'ft2' ? ' (' + Math.round(h.floor_area_m2 / SQFT) + ' sq ft)' : '') : notSure(h.floor_area_m2)],
       [epcArt(h.epc), 'EPC rating', label(EPC, h.epc) || null]]],
-    ['Walls and windows', 'fabric', [[art(h.wall_insulation ? 'wall:' + h.wall_insulation : 'wall:none'), 'Walls', label(WALL_INS, h.wall_insulation) || null],
+    ['Walls and windows', 'fabric', [[firstArt('wall', asList(h.wall_insulation), art('wall:none')), 'Walls', listWord(WALL_INS, asList(h.wall_insulation))],
       [h.glazing ? art('glazing:' + h.glazing) : pic('window'), 'Glazing', withNote(label(GLAZING, h.glazing), h.glazing_notes)]]],
     ['Your bedroom', 'bedroom', [[art('compass'), 'Window faces', facingWord(h.bedroom_facing, h.bedroom_facing_deg)],
       [art('compass'), 'Bedroom is on the', h.bedroom_side === 'unsure' ? tr('Not sure') : facingWord(h.bedroom_side, h.bedroom_side_deg) && (LANG === 'cy' ? facingWord(h.bedroom_side, h.bedroom_side_deg) : facingWord(h.bedroom_side, h.bedroom_side_deg).replace(/^([\w-]+)/, '$1 side'))]]],
@@ -837,12 +845,7 @@ function homeSections(r, h, withEmail){
       .concat(h.pets > 0 ? [[art('pet_door:' + (h.pet_door || 'no')), 'Outside door for pets', label(YES_NO, h.pet_door) || null]] : [])
       .concat([[art('drying:' + (h.drying || 'no')), 'Dries clothes indoors', withNote(label(YES_NO, h.drying), h.drying === 'yes' && h.drying_room)],
         [art((byId(TARIFF, h.tariff) || {}).art || 'tariff:standard'), 'Energy tariff', label(TARIFF, h.tariff) || null]])],
-    ['Heating', 'heat', [[art(h.main_heating ? 'heat:' + h.main_heating : 'heat:gas'), 'Main heating', label(MAIN_HEATING, h.main_heating) || null],
-      [artx('pattern:' + h.heating_pattern, 'clock'), 'How it&rsquo;s used', label(HEAT_PATTERN, h.heating_pattern) || null], [art('pattern:timer'), 'Heating times', times]]],
-    ['Heating controls', 'controls', [[firstArt('controls', h.controls, ic('sliders')), 'Controls', listWord(CONTROLS, h.controls)],
-      [pic('thermo'), 'Usual setting', typeof h.setpoint_c === 'number' ? h.setpoint_c.toFixed(1) + ' °C (' + Math.round(h.setpoint_c * 9 / 5 + 32) + ' °F)' : notSure(h.setpoint_c)],
-      [firstArt('other', h.other_heaters, pic('flame')), 'Also keeps warm with', withNote(listWord(OTHER_HEATERS, h.other_heaters), picked('other_heaters', 'other') && h.other_heaters_other)]]],
-    ['Windows and fresh air', 'air', grid(WINDOW_WAYS, FREQ).concat([[firstArt('putoff', h.window_putoff, pic('windowOpen')), 'Put off opening windows by', withNote(listWord(PUT_OFF, h.window_putoff), picked('window_putoff', 'other') && h.window_putoff_other)]], grid(VENTS, VENT_USE))],
+    ['Windows and fresh air', 'air', grid(WINDOW_WAYS, FREQ).concat([[firstArt('putoff', h.window_putoff, pic('windowOpen')), 'Put off opening windows by', withNote(listWord(PUT_OFF, h.window_putoff), picked('window_putoff', 'other') && h.window_putoff_other)]], grid(VENTS, VENT_USE), [[pic('windowOpen'), 'Control over fresh air', ctl(h.control_air)]])],
     ['Keeping cool', 'cool', [[art('overheat:' + (h.overheat || 'sometimes')), 'Gets uncomfortably warm', label(FREQ, h.overheat) || null],
       [firstArt('cool', h.cool_down, pic('fan')), 'Cools down by', withNote(listWord(COOL_DOWN, h.cool_down), picked('cool_down', 'other') && h.cool_down_other)]]]
   ];
@@ -958,13 +961,18 @@ const SCREENS = {
   },
   /* 1.4: "Where are you right now?": a room starts the check-in (at room_time); "I'm not at home" asks when to remind them.
    * Until 1.3 this screen asked "Are you at home right now?" (at_home long, recent or out). */
-  athome: () => qhead(tr('Before we start'), tr('Where are you right now?'), tr('Then a few quick questions about how you feel.')) +
-    `<div class="where fill">${roomTiles('where')}<button class="row away-row" data-act="where" data-v="out"><span class="aw-art">${art('away:out')}</span><div><b>${tr('I&rsquo;m not at home')}</b><span>${tr('Pause reminders for a while')}</span></div>${ic('chev','go')}</button></div>`,
+  /* 1.5: "Are you able to do a check-in now?": yes goes to "Where are you right now?", not now asks when to remind them.
+   * The app never asks whether anyone is at home (1.4 asked the room here, with "I'm not at home"). */
+  athome: () => qhead(tr('Before we start'), tr('Are you able to do a check-in now?'), tr('Then a few quick questions about how you feel.')) +
+    `<div class="rows fill able">
+      <button class="row tall" data-act="able" data-v="yes"><span class="orb">${pic('check')}</span><div><b>${tr('Yes, I can')}</b><span>${tr('Let&rsquo;s do the check-in')}</span></div>${ic('chev','go')}</button>
+      <button class="row tall" data-act="able" data-v="later"><span class="orb">${pic('clock')}</span><div><b>${tr('Not right now')}</b><span>${tr('Choose when to be reminded')}</span></div>${ic('chev','go')}</button>
+    </div>`,
   /* each pause with the time it ends on the phone's clock */
   away: () => {
     const opt = (v, icon, lab, sub) => `<button class="row" data-act="pause" data-v="${v}">${ic(icon)}<div><b>${tr(lab)}</b><span>${sub}</span></div>${ic('chev','go')}</button>`;
     const until = min => tr('Until {until}', { until: untilWord(new Date(Date.now() + min*60000)) });
-    return qhead(tr('Out and about'), tr('When should we remind you to do this check-in?'), tr('This phone stays quiet until then.')) +
+    return qhead(tr('Later'), tr('When would you be able to do it?'), tr('This phone stays quiet until then.')) +
       `<div class="rows fill">
         ${opt(60, 'clock', 'In an hour', until(60))}
         ${opt(180, 'clock', 'In three hours', until(180))}
@@ -1091,9 +1099,8 @@ function toggle(q, v){
   rerender();
 }
 /* 1.4: a room on the first screen starts the check-in (and ends any pause); "I'm not at home" asks when to remind them. */
-function onWhere(v){
-  if(v === 'out'){ go('away'); return; }
-  S.a.room = v;
+function onAble(v){
+  if(v !== 'yes'){ go('away'); return; }
   store.paused=null; store.pausedWhy=''; save();
   schedChange({ paused_until:null, settled_at:null });
   beginQuestions();
@@ -1115,7 +1122,7 @@ function setPause(v){
   save();
   schedChange({ paused_until: store.paused });
   go('today');
-  showToast({ title:tr('Reminders paused'), sub: store.pausedWhy==='manual' ? tr('Tap Check in now when you&rsquo;re back') : tr('Until {until}', { until: untilWord(new Date(store.paused)) }), kind:'info' });
+  showToast({ title:tr('Reminders paused'), sub: store.pausedWhy==='manual' ? tr('Tap Check in now when you&rsquo;re ready') : tr('Until {until}', { until: untilWord(new Date(store.paused)) }), kind:'info' });
 }
 /* Saves the check-in on the phone at once and shows the done screen; it is sent after HOLD_MS (see hold), so
  * Undo can take it back everywhere. The row uses the answer keys switch-api.js toRecord reads. */
@@ -1731,13 +1738,13 @@ function remMsg(t, kind){ const m = $('#remMsg'); if(!m) return; m.hidden = fals
  * it from My home and saves that. Everything is stored metric. */
 const REG_STEPS = [
   {id:'you',     ic:'user',       t:'About you',          min:1.4},
+  {id:'heat',    ic:'flame',      t:'Heating',            min:1.0},   // 1.5: heating second (seventh until 1.4)
+  {id:'controls',ic:'stat',       t:'Heating controls',   min:1.0},
   {id:'area',    ic:'pin',        t:'Your area and home', min:0.8},
   {id:'size',    ic:'ruler',      t:'Age and size',       min:0.8},
   {id:'fabric',  ic:'wall',       t:'Walls and windows',  min:0.6},
   {id:'bedroom', ic:'compass',    t:'Your bedroom',       min:1.2},
   {id:'people',  ic:'users',      t:'Your household',     min:1.0},
-  {id:'heat',    ic:'flame',      t:'Heating',            min:1.0},
-  {id:'controls',ic:'stat',       t:'Heating controls',   min:0.9},
   {id:'air',     ic:'windowOpen', t:'Fresh air',          min:1.2},
   {id:'cool',    ic:'sun',        t:'Keeping cool',       min:0.5},
   {id:'check',   ic:'check',      t:'Check and finish',   min:0.6}
@@ -1767,7 +1774,8 @@ function regFromProfile(me, h){
   r.cm = typeof me.height_cm === 'number' ? String(Math.round(me.height_cm)) : ''; r.kg = typeof me.weight_kg === 'number' ? String(me.weight_kg) : '';
   r.sens = me.sensitivity || null;
   r.home = JSON.parse(JSON.stringify(h || {}));
-  r.pns = Array.isArray(r.home.prefer_not) ? [...r.home.prefer_not] : [];   // "Prefer not to say" (1.3): birth_year, height, weight
+  r.pns = Array.isArray(r.home.prefer_not) ? [...r.home.prefer_not] : [];
+  ['main_heating', 'wall_insulation'].forEach(k => { if(typeof r.home[k] === 'string') r.home[k] = [r.home[k]]; });   // one answer until 1.4   // "Prefer not to say" (1.3): birth_year, height, weight
   return r;
 }
 /* height and weight in metric from what was typed (cm, or feet and inches; kg, or stone and pounds) */
@@ -1881,7 +1889,7 @@ function regProblem(step, r){
     if(!H.epc) return ['epc', tr('Please choose the rating, or &ldquo;I don&rsquo;t know&rdquo;.')];
   }
   if(id === 'fabric'){
-    if(!H.wall_insulation) return ['wall_insulation', tr('Please choose one, or &ldquo;Not sure&rdquo;.')];
+    if(!asList(H.wall_insulation).length) return ['wall_insulation', tr('Please choose any that apply, or &ldquo;Not sure&rdquo;.')];
     if(!H.glazing) return ['glazing', tr('Please choose one, or &ldquo;Not sure&rdquo;.')];
   }
   if(id === 'bedroom'){
@@ -1899,7 +1907,7 @@ function regProblem(step, r){
     if(!has('tariff')) return ['tariff', tr('Please choose one, or &ldquo;Not sure&rdquo;.')];
   }
   if(id === 'heat'){
-    if(!H.main_heating) return ['main_heating', tr('Please choose your main heating, or &ldquo;Not sure&rdquo;.')];
+    if(!asList(H.main_heating).length) return ['main_heating', tr('Please choose any that apply, or &ldquo;Not sure&rdquo;.')];
     if(!H.heating_pattern) return ['heating_pattern', tr('Please choose the one closest to how it&rsquo;s used.')];
     if(!['varies','unsure'].includes(H.heating_times) && !HEAT_TIME_KEYS.every(k => has(k))) return ['htimes', tr('Please give the times for weekdays and weekends, or tap &ldquo;It varies&rdquo; or &ldquo;Not sure&rdquo;.')];
   }
@@ -1908,12 +1916,14 @@ function regProblem(step, r){
     if(H.setpoint_c === undefined) return ['setpoint', tr('Please set the usual temperature, or tap &ldquo;Not sure&rdquo;.')];
     if(!some('other_heaters')) return ['other_heaters', tr('Please choose any you use, or &ldquo;No, nothing else&rdquo;.')];
     if(picked('other_heaters', 'other') && blank(H.other_heaters_other)) return ['other_heaters', tr('Please say what else you use.')];
+    if(!num('control_warmth')) return ['control_warmth', tr('Please choose a number from 1 to 5.')];
   }
   if(id === 'air'){
     if(WINDOW_WAYS.some(w => !has(w.id))) return ['windows', tr('Please answer each row.')];
     if(!some('window_putoff')) return ['window_putoff', tr('Please choose any that apply, or &ldquo;No, nothing&rdquo;.')];
     if(picked('window_putoff', 'other') && blank(H.window_putoff_other)) return ['window_putoff', tr('Please say what else.')];
     if(VENTS.some(w => !has(w.id))) return ['vents', tr('Please answer each row.')];
+    if(!num('control_air')) return ['control_air', tr('Please choose a number from 1 to 5.')];
   }
   if(id === 'cool'){
     if(!has('overheat')) return ['overheat', tr('Please choose one.')];
@@ -2025,6 +2035,9 @@ function minutesLeft(){
 /* ---- pieces of the wizard ---- */
 const regTile = (k, o, on, artHtml, cls='') => `<button class="ptile ${cls} ${on?'on':''}" type="button" role="radio" aria-checked="${on}" aria-label="${o.n.replace(/<[^>]+>/g,'')}${o.h ? ', ' + o.h : ''}" data-act="reg-pick" data-k="${k}" data-v="${o.id}">${artHtml ? `<span class="pt-art">${artHtml}</span>` : ''}<span class="pt-t"><b>${o.n}</b>${o.h?`<small>${o.h}</small>`:''}</span><span class="tick">${ic('check')}</span></button>`;
 const regMulti = (k, o, on, artHtml, cls='') => `<button class="ptile ${cls} ${on?'on':''}" type="button" aria-pressed="${on}" data-act="reg-toggle" data-k="${k}" data-v="${o.id}">${artHtml ? `<span class="pt-art">${artHtml}</span>` : ''}<span class="pt-t"><b>${o.n}</b>${o.h?`<small>${o.h}</small>`:''}</span><span class="tick">${ic('check')}</span></button>`;
+/* 1.5: a five-point scale, 1 to 5 with its words (the control questions); the value is kept as a number */
+const scale5 = k => { const v = REG.home[k.slice(5)];
+  return `<div class="gq-opts scale5" role="radiogroup" style="--n:5">${CONTROL5.map(o => `<button type="button" role="radio" aria-checked="${v === o.id}" class="${v === o.id ? 'on' : ''}" data-act="reg-pick" data-k="${k}" data-v="${o.id}"><b>${o.id}</b><small>${o.n}</small></button>`).join('')}</div>`; };
 const groupErr = id => `<p class="err" id="err-${id}" hidden></p>`;
 /* one question of the wizard; howTo: a short "How to tell" note that opens under the question (and stays open
  * while answers are tapped: HOWTO_OPEN remembers it across redraws) */
@@ -2147,7 +2160,7 @@ const REGS = {
       ${inp('r_name', 'name', 'Full name', 'autocomplete="name" autocapitalize="words"')}
       ${join ? inp('r_email', 'email', 'Email', 'type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false"') : ''}
       <div class="row2">
-        <div class="field" id="f-r_gender"><label for="r_gender">${tr('Gender')}</label><select class="in" id="r_gender" data-reg="gender" aria-describedby="err-r_gender"><option value="">${tr('Choose')}</option>${GENDERS.map(g => `<option value="${g.id}"${r.gender===g.id?' selected':''}>${g.n}</option>`).join('')}</select><p class="err" id="err-r_gender" hidden></p></div>
+        <div class="field" id="f-r_gender"><label for="r_gender">${tr('Sex')}</label><select class="in" id="r_gender" data-reg="gender" aria-describedby="err-r_gender"><option value="">${tr('Choose')}</option>${GENDERS.filter(g => !g.old || g.id === r.gender).map(g => `<option value="${g.id}"${r.gender===g.id?' selected':''}>${g.n}</option>`).join('')}</select><p class="err" id="err-r_gender" hidden></p></div>
         ${inp('r_year', 'birth_year', 'Year of birth', `inputmode="numeric" maxlength="4" placeholder="${tr('e.g. 1985')}" autocomplete="bday-year"${off('birth_year')}`, pnsChip('birth_year'))}
       </div>
       <div class="row2">${height}${weight}</div>
@@ -2193,7 +2206,7 @@ const REGS = {
     const t = (k, lab) => `<input class="in" type="time" id="r_${k}" data-reg="home.${k}" value="${esc(h[k] || '')}" aria-label="${tr(lab)}">`;
     const chip = (v, en) => `<button class="chip ${h.heating_times === v ? 'on' : ''}" aria-pressed="${h.heating_times === v}" data-act="reg-pick" data-k="home.heating_times" data-v="${v}">${ic('check')}${tr(en)}</button>`;
     return `<div class="form">
-      ${fieldBlock('main_heating', 'What is the main way your home is heated?', 'The one that heats most of your home.', pick1('home.main_heating', MAIN_HEATING, o => art('heat:' + o.id), 2, 'Main heating'))}
+      ${fieldBlock('main_heating', 'How is your home heated?', 'Tap every kind of heating you have.', pickN('home.main_heating', MAIN_HEATING, o => art('heat:' + o.id), 2, 'Heating'))}
       ${fieldBlock('heating_pattern', 'How do you usually use your heating in winter?', '', pick1('home.heating_pattern', HEAT_PATTERN, o => artx('pattern:' + o.id, o.ic), 1, 'How the heating is used', 'line'))}
       ${fieldBlock('htimes', 'At what times does your heating usually come on?', 'The usual times, from when it comes on to when it goes off.', `<div class="htimes"><b>${tr('Weekdays')}</b>${t('heating_wd_start', 'Weekdays, from')}<span>${tr('to')}</span>${t('heating_wd_end', 'Weekdays, to')}<b>${tr('Weekends')}</b>${t('heating_we_start', 'Weekends, from')}<span>${tr('to')}</span>${t('heating_we_end', 'Weekends, to')}</div><div class="cmp-actions">${chip('varies', 'It varies')}${chip('unsure', 'Not sure')}</div>`)}
     </div>`;
@@ -2201,11 +2214,12 @@ const REGS = {
   controls: () => `<div class="form">
       ${fieldBlock('controls', 'Which heating controls do you have?', 'Tap all that you have.', pickN('home.controls', CONTROLS, o => art('controls:' + o.id), 3, 'Heating controls'))}
       ${fieldBlock('setpoint', 'When someone is at home, what temperature is your thermostat usually set to?', '', dialHtml('setpoint_c', 'Usual setting'))}
+      ${fieldBlock('control_warmth', 'How much control do you feel you have over how warm or cool your home is?', '', scale5('home.control_warmth'))}
       ${fieldBlock('other_heaters', 'Do you use anything else to keep warm?', 'Tap all that you use.', pickN('home.other_heaters', OTHER_HEATERS, o => art('other:' + o.id), 3, 'Other ways to keep warm') + ((REG.home.other_heaters || []).includes('other') ? noteIn('other_heaters_other', 'What else do you use?') : ''))}
     </div>`,
   /* These matter a lot for the study: large pictures (two to a row), and a "How to tell" note under each question. */
   fabric: () => `<div class="form">
-      ${fieldBlock('wall_insulation', 'Are your outside walls insulated?', 'A good guess is fine.', pick1('home.wall_insulation', WALL_INS, o => art('wall:' + o.id), 2, 'Wall insulation', 'lg'),
+      ${fieldBlock('wall_insulation', 'Are your outside walls insulated?', 'Tap all that apply. A good guess is fine.', pickN('home.wall_insulation', WALL_INS, o => art('wall:' + o.id), 2, 'Wall insulation', 'lg'),
         'Look at the outside brickwork. If every brick shows its long side, the walls are probably cavity walls (most homes built after about 1930). If some bricks show their short ends, they are probably solid walls. A regular pattern of small filled holes in the mortar means the cavity has been filled.')}
       ${fieldBlock('glazing', 'What kind of windows does your home have?', '', pick1('home.glazing', GLAZING, o => art('glazing:' + o.id), 2, 'Glazing', 'lg') + noteIn('glazing_notes', 'Notes (optional)', 'e.g. single glazing in the bathroom'),
         'Look at the edge of the glass: two sheets with a gap between them is double glazing, three is triple.')}
@@ -2224,6 +2238,7 @@ const REGS = {
       ${fieldBlock('windows', 'In winter, how often do you open a window in each of these ways?', 'Opening a window for a few minutes to let fresh air in is very different from leaving it open for a long time, so please answer each row.', grid(WINDOW_WAYS, FREQ, 'How often windows are opened'))}
       ${fieldBlock('window_putoff', 'Does anything put you off opening your windows?', 'Tap all that apply.', pickN('home.window_putoff', PUT_OFF, o => art('putoff:' + o.id), 2, 'What puts you off opening windows') + ((h.window_putoff || []).includes('other') ? noteIn('window_putoff_other', 'What else?') : ''))}
       ${fieldBlock('vents', 'Which of these does your home have, and do you use them?', 'For window vents, &ldquo;use&rdquo; means keeping them open.', grid(VENTS, VENT_USE, 'Fans and vents'))}
+      ${fieldBlock('control_air', 'How much control do you feel you have over the fresh air and air quality in your home?', '', scale5('home.control_air'))}
     </div>`;
   },
   cool: () => {
@@ -2363,7 +2378,7 @@ document.addEventListener('click', async e => {
     case 'home': onHome(d.v); break;
     case 'pause': setPause(d.v); break;
     case 'nothome': go('away'); break;
-    case 'where': onWhere(d.v); break;
+    case 'able': onAble(d.v); break;
     case 'pick': pick(d.q, d.v); break;
     case 'toggle': toggle(d.q, d.v); break;
     case 'none': S.a[d.q] = []; rerender(); break;
@@ -2432,7 +2447,7 @@ document.addEventListener('click', async e => {
       if(i >= 0) arr.splice(i, 1); else arr.push(d.v);
       saveReg(); rerender(); break; }
     case 'reg-pick': {
-      let v = d.v; if(['home.floors','home.bedroom_share','home.bedrooms'].includes(d.k)) v = Number(v);
+      let v = d.v; if(['home.floors','home.bedroom_share','home.bedrooms','home.control_warmth','home.control_air'].includes(d.k)) v = Number(v);
       regSet(d.k, v);
       if(d.k === 'home.home_type' && !isFlat()) delete REG.home.flat_position;
       if(d.k === 'home.heating_times') HEAT_TIME_KEYS.forEach(k => delete REG.home[k]);   // "It varies" / "Not sure" clear the times
@@ -2638,7 +2653,7 @@ if(DEBUG){
 I18N.register({ ROOM_TIME, ACTS, ROOMS, TP, TA, AIR, SUN, HEAT, HEAT_FOR, WALL, ACTIONS, ACTION_BOXES, NOTES, NOTE_BOXES, HEAT_OTHER,
   GENDERS, SENSITIVITY, HOME_TYPES, FLAT_POS, TENURE, YEAR_BUILT, FLOORS, EPC, BED_SHARE, MAIN_HEATING, OTHER_HEATERS, HEAT_PATTERN,
   CONTROLS, WALL_INS, LOFT, GLAZING, WINDOWS_OPEN, DAMP, FACING, TSV, GARMENTS, GARMENT_GROUPS, REG_STEPS, TA_OLD, HEAT_FOR_OLD, QNAME,
-  FEEL, MAIN_ROAD, YES_NO, TARIFF, FREQ, WINDOW_WAYS, PUT_OFF, VENTS, VENT_USE, COOL_DOWN, CONSENT });
+  CONTROL5, FEEL, MAIN_ROAD, YES_NO, TARIFF, FREQ, WINDOW_WAYS, PUT_OFF, VENTS, VENT_USE, COOL_DOWN, CONSENT });
 I18N.set(I18N.initial(!!PARTICIPANT));                     // ?lang= (the study page) only for someone not signed in, and only for what they see
 load();
 migrateHours();

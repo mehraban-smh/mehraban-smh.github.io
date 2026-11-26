@@ -144,8 +144,8 @@ function dayEndsAt(ymd, zone) {
  * anything else is English). It travels in the push so the service worker shows it: title, body, lang (for the
  * notification's lang attribute) and actions (the two buttons; the ids "open" and "away" never change). */
 const WORDS = {
-  en: { title: n => `${n}: how does your home feel?`, body: 'A quick comfort check-in, under a minute.', open: "I'm home", away: 'Not home' },
-  cy: { title: n => `${n}: sut mae'ch cartref yn teimlo?`, body: "Cofnodwch sut rydych chi'n teimlo — llai na munud.", open: 'Rydw i gartref', away: 'Dydw i ddim gartref' }
+  en: { title: n => `${n}: how does your home feel?`, body: 'A quick comfort check-in, under a minute.', open: 'Check in now', away: 'Later' },
+  cy: { title: n => `${n}: sut mae'ch cartref yn teimlo?`, body: "Cofnodwch sut rydych chi'n teimlo — llai na munud.", open: 'Cofnodi nawr', away: 'Nes ymlaen' }
 };
 function notice(lang, appName) {
   const l = lang === 'cy' ? 'cy' : 'en', w = WORDS[l];
@@ -291,11 +291,11 @@ function selfTest() {
   const words = [
     ['English title', en.title, 'HomePulse: how does your home feel?'],
     ['English body', en.body, 'A quick comfort check-in, under a minute.'],
-    ['English buttons', en.actions.map(a => a.action + '=' + a.title).join(' | '), "open=I'm home | away=Not home"],
+    ['English buttons', en.actions.map(a => a.action + '=' + a.title).join(' | '), 'open=Check in now | away=Later'],
     ['English lang', en.lang, 'en'],
     ['Welsh title', cy.title, "HomePulse: sut mae'ch cartref yn teimlo?"],
     ['Welsh body', cy.body, "Cofnodwch sut rydych chi'n teimlo — llai na munud."],
-    ['Welsh buttons (same ids)', cy.actions.map(a => a.action + '=' + a.title).join(' | '), 'open=Rydw i gartref | away=Dydw i ddim gartref'],
+    ['Welsh buttons (same ids)', cy.actions.map(a => a.action + '=' + a.title).join(' | '), 'open=Cofnodi nawr | away=Nes ymlaen'],
     ['Welsh lang', cy.lang, 'cy'],
     ['no language stored: English', notice(undefined, 'HomePulse').title, 'HomePulse: how does your home feel?'],
     ['an unknown language: English', notice('fr', 'HomePulse').lang, 'en'],

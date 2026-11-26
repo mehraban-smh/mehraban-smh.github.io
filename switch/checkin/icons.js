@@ -775,7 +775,7 @@ A['heat:infrared'] = SH(24, 44.2, 18) + R(5, 5, 38, 14.6, M.white, 1.4) + R(6.8,
   '';
 A['heat:gas'] = A['heat:gas_combi']; A['heat:oil_lpg'] = A['heat:oil']; A['heat:heat_pump'] = A['heat:ashp'];
 A['pattern:unsure'] = unsureArt;
-A['other:fire'] = A['other:stove'];
+A['other:fire'] = A['other:gas_fire']; A['other:wood_burner'] = A['other:stove']; A['heat:wood_burner'] = A['other:stove'];   // 1.5
 A['other:hot_water_bottle'] = SH(24, 44, 12) + G('rotate(-10 24 25) translate(0 -.6)',
   Pp('M20.6 7.4H27.4V10.4C27.4 11.6 28 12.2 29.2 12.6L33.6 14C35 14.6 35.6 15.8 35.6 17.2V38C35.6 40.2 33.8 42 31.6 42H16.4C14.2 42 12.4 40.2 12.4 38V17.2C12.4 15.8 13 14.6 14.4 14L18.8 12.6C20 12.2 20.6 11.6 20.6 10.4Z', '#D8505E') +
   R(15.6, 18, 16.8, 20.8, 'none', 2, ` stroke="#A83846" stroke-width=".9" vector-effect="non-scaling-stroke"`) + T(Array.from({length: 8}, (_, i) => `M17 ${n1(20.2 + i * 2.4)}h14`).join(''), '#B23E4C', 1) +
@@ -921,14 +921,15 @@ const GARMENTS = [
   {id:'slippers',    n:'Slippers',         clo:0.03, ic:'slippers'},
   {id:'blanket',     n:'Blanket',          clo:0.60, ic:'blanket', est:true},
   {id:'duvet',       n:'Duvet',            clo:2.00, ic:'bed',     est:true},
-  /* From 1.3 the check-in asks for one of four ready-made outfits instead (OUTFITS). look: the garments drawn on the
-   * avatar; clo: typical ASHRAE 55 ensembles, about 0.35, 0.55, 0.75 and 1.0 or more. */
-  {id:'outfit_vlight', n:'Very light', s:'A T-shirt with shorts, or a light dress',                         clo:0.35, look:['tshirt','shorts']},
-  {id:'outfit_light',  n:'Light',      s:'A T-shirt or thin top with trousers or a long skirt',             clo:0.55, look:['tshirt','trousers']},
-  {id:'outfit_medium', n:'Medium',     s:'A long-sleeved top or a light jumper with trousers',              clo:0.75, look:['long','trousers','socks']},
-  {id:'outfit_warm',   n:'Warm',       s:'A thick jumper or hoodie, several layers, or a blanket over you', clo:1.00, look:['jumper','joggers','socks','slippers']}
+  /* From 1.3 the check-in asks for one of the ready-made outfits instead (OUTFITS; five from 1.5, Medium in the middle).
+   * look: the garments drawn on the avatar; clo: typical ASHRAE 55 ensembles. */
+  {id:'outfit_vlight', n:'Very light', s:'For example, a T-shirt and shorts, or a light summer dress',                 clo:0.30, look:['tshirt','shorts']},
+  {id:'outfit_light',  n:'Light',      s:'For example, a T-shirt or blouse with trousers, jeans or a skirt',          clo:0.50, look:['tshirt','trousers']},
+  {id:'outfit_medium', n:'Medium',     s:'For example, a long-sleeved top or shirt with trousers and socks',          clo:0.70, look:['long','trousers','socks']},
+  {id:'outfit_warm',   n:'Warm',       s:'For example, a jumper, hoodie or fleece with trousers, socks and slippers', clo:0.90, look:['jumper','joggers','socks','slippers']},
+  {id:'outfit_vwarm',  n:'Very warm',  s:'For example, several warm layers, a dressing gown, or a blanket over you',   clo:1.20, look:['long','hoodie','joggers','socks','slippers','blanket']}
 ];
-const OUTFITS = ['outfit_vlight','outfit_light','outfit_medium','outfit_warm'];
+const OUTFITS = ['outfit_vlight','outfit_light','outfit_medium','outfit_warm','outfit_vwarm'];
 /* the clothing screen shows the garments in boxes; "pair" boxes sit side by side */
 const GARMENT_GROUPS = [
   {n:'Tops',                ic:'tshirt',  ids:['tshirt','long','jumper','hoodie']},

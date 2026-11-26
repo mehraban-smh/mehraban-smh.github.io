@@ -787,12 +787,12 @@ begin
     public.sw_num(j, 'clo', 0, 8, 2),
     public.sw_picks(j, 'garments', array['tshirt', 'long', 'jumper', 'hoodie', 'shorts', 'trousers', 'joggers', 'skirt', 'pyjamas',
                                          'coat_light', 'coat_winter', 'socks', 'slippers', 'blanket', 'duvet',
-                                         'outfit_vlight', 'outfit_light', 'outfit_medium', 'outfit_warm']),   -- outfits: 1.3
+                                         'outfit_vlight', 'outfit_light', 'outfit_medium', 'outfit_warm', 'outfit_vwarm']),   -- outfits: 1.3 (very warm: 1.5)
     public.sw_num(j, 'met', 0.5, 5, 1),
     public.sw_pick(j, 'activity', array['sleep', 'lying', 'sit', 'desk', 'stand', 'house', 'walk', 'exercise']),
     public.sw_pick(j, 'room', array['living', 'bedroom', 'kitchen', 'office', 'bathroom', 'other']),
     public.sw_pick(j, 'air', array['still', 'slight', 'draughty']),
-    public.sw_pick(j, 'sun', array['yes', 'no', 'dark']),
+    public.sw_pick(j, 'sun', array['1', '2', '3', '4', '5', 'yes', 'no', 'dark']),   -- 1-5: 1.5
     v_on,
     public.sw_picks(j, 'heating_src', array['gas_combi', 'gas_tank', 'oil', 'lpg', 'ashp', 'gshp', 'storage', 'electric', 'communal', 'solid',
                                             'plugin', 'gas_fire', 'electric_fire', 'stove', 'open_fire', 'electric_blanket', 'main', 'other', 'unsure']),

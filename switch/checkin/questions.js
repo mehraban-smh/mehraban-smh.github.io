@@ -45,7 +45,13 @@ const AIR  = [
   {id:'draughty',n:'Yes, clearly',            s:'I can clearly feel air moving, or a draught', k:'Draughty',            ic:'draught'}
 ];
 /* 1.4: No / Yes, as in the doc (k: the words in summaries); "It's dark" until 1.3 */
-const SUN  = [{id:'no',n:'No',k:'No direct sun',s:'Or it&rsquo;s dark',ic:'cloud'},{id:'yes',n:'Yes',k:'Sun on me',s:'Direct sunlight where I am',ic:'sun'},{id:'dark',n:"It's dark",s:'Evening, or curtains drawn',ic:'moon',old:true}];
+/* 1.5: how much sunlight, 1 (none) to 5 (bright, direct sunshine); No / Yes in 1.4, "It's dark" until 1.3 (k: the words in summaries) */
+const SUN  = [
+  {id:'1',n:'None',k:'No sun on me',ic:'cloud'}, {id:'2',n:'A little',k:'A little sun on me',ic:'sun'}, {id:'3',n:'Some',k:'Some sun on me',ic:'sun'},
+  {id:'4',n:'A lot',k:'A lot of sun on me',ic:'sun'}, {id:'5',n:'Bright, direct sunshine',k:'Bright, direct sun on me',ic:'sun'},
+  {id:'no',n:'No',k:'No direct sun',ic:'cloud',old:true}, {id:'yes',n:'Yes',k:'Sun on me',ic:'sun',old:true}, {id:'dark',n:"It's dark",s:'Evening, or curtains drawn',ic:'moon',old:true}
+];
+const SUN_COL = { 1:'#B8C2CC', 2:'#F7E3A1', 3:'#F4D06A', 4:'#F2B93B', 5:'#EE9A1C' };
 /* the heating, right now (new in 1.0) */
 const HEAT = [
   {id:'on',     n:'Yes, it&rsquo;s on',  k:'Heating on',  ic:'flame',    cls:'hot'},
@@ -175,13 +181,13 @@ const Q = {
   act: () => qhead(tr('Activity'), tr('What have you mostly been doing in the last 15 minutes?')) +
     `<div class="tiles c2 fill" role="radiogroup" aria-label="${tr('Activity')}">${ACTS.map(o=>tile('act',o,S.a.act===o.id,`<small>${o.met.toFixed(1)} met</small>`)).join('')}</div>`,
   /* the room again (Back from the next question, or Edit on the review); the first screen asks it with "I'm not at home" */
-  room: () => qhead(tr('Location'), tr('Where are you right now?'), tr('The study&rsquo;s sensors are in your living room and, in some homes, your bedroom, so this matters.')) + roomTiles('pick'),
+  room: () => qhead(tr('Location'), tr('Where are you right now?'), tr('The study&rsquo;s sensors are in your living room and, in some homes, your bedroom, so this matters.')) + `<div class="where fill">${roomTiles('pick')}</div>`,
   room_time: () => qhead(tr('Location'), tr('How long have you been in this room?')) +
     `<div class="rows fill" role="radiogroup" aria-label="${tr('How long have you been in this room?')}">${ROOM_TIME.map(o => `<button class="row tall ${S.a.room_time===o.id?'on':''}" role="radio" aria-checked="${S.a.room_time===o.id}" data-act="pick" data-q="room_time" data-v="${o.id}"><span class="orb">${artx('room_time:' + o.id, 'clock')}</span><div><b>${o.n}</b></div></button>`).join('')}</div>`,
   air: () => qhead(tr('Air movement'), tr('Can you feel air moving on your skin right now?'), tr('Like air from a window, a door, a vent or a fan. Not how warm or cool it is, only whether the air moves.')) +
     `<div class="rows fill" role="radiogroup" aria-label="${tr('Air movement')}">${AIR.map(o=>tallRow('air',o,S.a.air===o.id)).join('')}</div>`,
-  sun: () => qhead(tr('Sunlight'), tr('Is direct sunlight falling on you right now?')) +
-    `<div class="rows fill" role="radiogroup" aria-label="${tr('Sunlight')}">${SUN.filter(o => !o.old).map(o=>tallRow('sun',o,S.a.sun===o.id)).join('')}</div>`,
+  sun: () => qhead(tr('Sunlight'), tr('How much sunlight is falling on you right now?'), tr('From 1, no sunlight on you, to 5, bright direct sunshine.')) +
+    `<div class="scale fill" role="radiogroup" aria-label="${tr('Sunlight')}">${SUN.filter(o => !o.old).map(o => scaleRow('sun', o.id, pic(o.ic), o.n, o.id, SUN_COL[o.id], S.a.sun === o.id)).join('')}</div>`,
   heat: () => qhead(tr('Heating'), tr('As far as you can tell, is the heating in this room giving out heat right now?'), tr('For example, a warm radiator or a heater that is on.')) +
     `<div class="rows fill" role="radiogroup" aria-label="${tr('Heating')}">${HEAT.map(o=>tallRow('heat',o,S.a.heat===o.id)).join('')}</div>`,
   heat_for: () => qhead(tr('Heating'), tr('How long has it been on?'), tr('Since it last came on.')) +
@@ -205,7 +211,9 @@ const Q = {
 /* ---------- the join wizard: the participant and their home (UK and Wales) ----------
  * Every value is stored as listed (participants columns, or participants.home). Labels n, hints h; k is a
  * shorter name where one is shown in a summary. */
-const GENDERS = [{id:'woman',n:'Woman'},{id:'man',n:'Man'},{id:'non_binary',n:'Non-binary'},{id:'self_describe',n:'Another identity'},{id:'prefer_not',n:'Prefer not to say'}];
+/* 1.5: sex, as in the ASHRAE database (stored in the gender column); the gender answers until 1.4 are kept for older profiles */
+const GENDERS = [{id:'female',n:'Female'},{id:'male',n:'Male'},{id:'prefer_not',n:'Prefer not to say'},
+  {id:'woman',n:'Woman',old:true},{id:'man',n:'Man',old:true},{id:'non_binary',n:'Non-binary',old:true},{id:'self_describe',n:'Another identity',old:true}];
 /* asked until 1.2 (one question); from 1.3 two questions, FEEL below, and the column keeps one word made from them */
 const SENSITIVITY = [
   {id:'cold',    n:'I feel the cold easily',  ic:'snow', cls:'cold'},
@@ -244,7 +252,8 @@ const MAIN_HEATING = [
   {id:'electric',  n:'Electric radiators or panel heaters', k:'Electric radiators'},
   {id:'infrared',  n:'Infrared heating panels', k:'Infrared panels'},
   {id:'communal',  n:'Communal or district heating', h:'Shared by several homes', k:'Communal heating'},
-  {id:'solid',     n:'Wood, coal or another solid fuel', k:'Solid fuel'},
+  {id:'wood_burner', n:'Wood burner or stove', k:'Wood burner'},   // 1.5
+  {id:'solid',     n:'Coal or another solid fuel', k:'Solid fuel'},
   {id:'none',      n:'No central heating'},
   {id:'unsure',    n:'Not sure'},
   /* asked until 1.2 (1.3 groups them as above) */
@@ -257,7 +266,7 @@ const MAIN_HEATING = [
 ];
 /* From 1.3 "Do you use anything else to keep warm?" (the same key, other_heaters) */
 const OTHER_HEATERS = [
-  {id:'plugin',n:'Plug-in electric heater', k:'Plug-in heater'}, {id:'fire',n:'Fire or stove', h:'Gas, electric, wood or coal', k:'Fire or stove'},
+  {id:'plugin',n:'Plug-in electric heater', k:'Plug-in heater'}, {id:'wood_burner',n:'Wood burner or stove', k:'Wood burner'}, {id:'fire',n:'Gas or electric fire', k:'Gas or electric fire'},
   {id:'electric_blanket',n:'Electric blanket'}, {id:'hot_water_bottle',n:'Hot water bottle'}, {id:'blankets',n:'Extra blankets or throws', k:'Extra blankets'},
   {id:'curtains',n:'Closing curtains or blinds', h:'To keep the heat in', k:'Closing curtains'}, {id:'other',n:'Something else'},
   {id:'none',n:'No, nothing else', k:'Nothing else'},
@@ -346,5 +355,8 @@ const CONSENT = [
   {id:'skip',   n:'I understand that I do not have to answer any question I would rather not answer.'},
   {id:'agree',  n:'I agree to take part in this study.'}
 ];
+/* 1.5 (Prof. Walker): how much control people feel they have over their home's warmth (control_warmth) and its fresh
+ * air (control_air), 1 to 5 */
+const CONTROL5 = [{id:1,n:'No control at all'},{id:2,n:'A little'},{id:3,n:'Some'},{id:4,n:'A lot'},{id:5,n:'Complete control'}];
 /* "first half of the postcode": SA1, CF10, SW1A (never the full postcode) */
 const POSTCODE_AREA_RE = /^[A-Z]{1,2}[0-9][A-Z0-9]?$/;

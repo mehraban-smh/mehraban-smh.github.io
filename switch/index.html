@@ -580,12 +580,17 @@ var APP_NAME = 'HomePulse';
 
     <div class="qgroups">
       <div class="qgroup">
-        <h3><span lang="en">First, where are you?</span><span lang="cy">Yn gyntaf, ble rydych chi?</span></h3>
+        <h3><span lang="en">First, can you check in now?</span><span lang="cy">Yn gyntaf, allwch chi gofnodi nawr?</span></h3>
         <ol class="qs">
           <li class="q wide gate"><div>
+            <h4><span lang="en">Are you able to do a check-in now?</span><span lang="cy">Allwch chi gofnodi nawr?</span></h4>
+            <p class="opts"><span lang="en">&ldquo;Yes, I can&rdquo; or &ldquo;Not right now&rdquo;. If not now, the app asks when to remind you: in 1, 3 or 5 hours, when you open the app again, or not today.</span><span lang="cy">&ldquo;Gallaf&rdquo; neu &ldquo;Ddim ar hyn o bryd&rdquo;. Os nad nawr, bydd yr ap yn gofyn pryd i’ch atgoffa: ymhen 1, 3 neu 5 awr, pan fyddwch chi’n agor yr ap eto, neu ddim heddiw.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Check-ins happen when it suits you. The app never asks whether you are at home or away.</span><span lang="cy">Rydych chi’n cofnodi pan fydd yn gyfleus i chi. Dydy’r ap byth yn gofyn a ydych chi gartref neu i ffwrdd.</span></p>
+          </div></li>
+          <li class="q wide"><div>
             <h4><span lang="en">Where are you right now?</span><span lang="cy">Ble rydych chi ar hyn o bryd?</span></h4>
-            <p class="opts"><span lang="en">The living room, the bedroom, the kitchen, the bathroom, somewhere else at home, or &ldquo;I&rsquo;m not at home&rdquo;. If you are out, the app asks when to remind you: in 1, 3 or 5 hours, when you open the app again, or not today.</span><span lang="cy">Yr ystafell fyw, yr ystafell wely, y gegin, yr ystafell ymolchi, rhywle arall gartref, neu &ldquo;Dydw i ddim gartref&rdquo;. Os ydych chi allan, bydd yr ap yn gofyn pryd i’ch atgoffa: ymhen 1, 3 neu 5 awr, pan fyddwch chi’n agor yr ap eto, neu ddim heddiw.</span></p>
-            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">The study is about how your home feels, so check-ins only happen when you are in it. The sensors are in your living room and, in some homes, your bedroom, so we need to know whether you are next to one of them or in another room, such as a colder kitchen.</span><span lang="cy">Mae’r astudiaeth yn ymwneud â sut mae’ch cartref yn teimlo, felly dim ond pan fyddwch chi ynddo y byddwch chi’n cofnodi. Mae’r synwyryddion yn eich ystafell fyw ac, mewn rhai cartrefi, yn eich ystafell wely, felly mae angen i ni wybod a ydych chi wrth ymyl un ohonyn nhw neu mewn ystafell arall, fel cegin oerach.</span></p>
+            <p class="opts"><span lang="en">The living room, the bedroom, the kitchen, the bathroom, or somewhere else at home.</span><span lang="cy">Yr ystafell fyw, yr ystafell wely, y gegin, yr ystafell ymolchi, neu rywle arall gartref.</span></p>
+            <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">The sensors are in your living room and, in some homes, your bedroom, so we need to know whether you are next to one of them or in another room, such as a colder kitchen.</span><span lang="cy">Mae’r synwyryddion yn eich ystafell fyw ac, mewn rhai cartrefi, yn eich ystafell wely, felly mae angen i ni wybod a ydych chi wrth ymyl un ohonyn nhw neu mewn ystafell arall, fel cegin oerach.</span></p>
           </div></li>
           <li class="q wide"><div>
             <h4><span lang="en">How long have you been in this room?</span><span lang="cy">Ers faint rydych chi yn yr ystafell hon?</span></h4>
@@ -630,7 +635,7 @@ var APP_NAME = 'HomePulse';
         <ol class="qs">
           <li class="q"><div>
             <h4><span lang="en">How warmly are you dressed right now?</span><span lang="cy">Pa mor gynnes yw’ch dillad chi ar hyn o bryd?</span><small><span lang="en">Choose the closest match. Any style of clothing counts: just think about how warm it is overall.</span><span lang="cy">Dewiswch yr un agosaf. Mae unrhyw fath o ddillad yn cyfrif: meddyliwch pa mor gynnes ydyn nhw at ei gilydd.</span></small></h4>
-            <p class="opts"><span lang="en">One tap: very light (a T-shirt with shorts, or a light dress), light (a T-shirt or thin top with trousers or a long skirt), medium (a long-sleeved top or a light jumper with trousers) or warm (a thick jumper or hoodie, several layers, or a blanket).</span><span lang="cy">Un tap: ysgafn iawn (crys-T gyda siorts, neu ffrog ysgafn), ysgafn (crys-T neu dop tenau gyda throwsus neu sgert hir), canolig (top llewys hir neu siwmper ysgafn gyda throwsus) neu gynnes (siwmper drwchus neu hwdi, sawl haen, neu flanced).</span></p>
+            <p class="opts"><span lang="en">One tap, from five: very light (for example, a T-shirt and shorts), light (a T-shirt or blouse with trousers or a skirt), medium (a long-sleeved top or shirt with trousers and socks), warm (a jumper, hoodie or fleece with socks and slippers) or very warm (several warm layers, a dressing gown, or a blanket).</span><span lang="cy">Un tap, o bump: ysgafn iawn (er enghraifft, crys-T a siorts), ysgafn (crys-T neu flows gyda throwsus neu sgert), canolig (top llewys hir neu grys gyda throwsus a sanau), cynnes (siwmper, hwdi neu gnu gyda sanau a sliperi) neu gynnes iawn (sawl haen gynnes, gŵn wisgo, neu flanced).</span></p>
             <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Clothes are insulation. A jumper, or a blanket on the sofa, changes how warm you feel at the same room temperature, and adding a layer is often what people do before they reach for the thermostat.</span><span lang="cy">Mae dillad yn inswleiddio. Mae siwmper, neu flanced ar y soffa, yn newid pa mor gynnes rydych chi’n teimlo ar yr un tymheredd ystafell, ac mae rhoi haen arall amdanoch yn aml yn rhywbeth mae pobl yn ei wneud cyn troi at y thermostat.</span></p>
           </div></li>
           <li class="q"><div>
@@ -650,8 +655,8 @@ var APP_NAME = 'HomePulse';
             <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Draughts from old windows, doors and floorboards make a room feel colder than the thermometer says.</span><span lang="cy">Mae drafftiau o hen ffenestri, drysau ac estyll llawr yn gwneud i ystafell deimlo’n oerach nag y mae’r thermomedr yn ei ddweud.</span></p>
           </div></li>
           <li class="q"><div>
-            <h4><span lang="en">Is direct sunlight falling on you right now?</span><span lang="cy">Ydy golau haul uniongyrchol yn disgyn arnoch chi ar hyn o bryd?</span></h4>
-            <p class="opts"><span lang="en">No or yes.</span><span lang="cy">Nac ydy neu ydy.</span></p>
+            <h4><span lang="en">How much sunlight is falling on you right now?</span><span lang="cy">Faint o olau haul sy’n disgyn arnoch chi ar hyn o bryd?</span></h4>
+            <p class="opts"><span lang="en">From 1 (no sunlight on you) to 5 (bright, direct sunshine).</span><span lang="cy">O 1 (dim golau haul arnoch chi) i 5 (heulwen lachar, uniongyrchol).</span></p>
             <p class="why"><span class="label"><span lang="en">Why it matters</span><span lang="cy">Pam mae’n bwysig</span></span><span lang="en">Sun through a window can warm you even when the air is cool, which is why a south-facing room can feel so different from a north-facing one.</span><span lang="cy">Gall haul drwy ffenestr eich cynhesu hyd yn oed pan fydd yr aer yn oeraidd, a dyna pam y gall ystafell sy’n wynebu’r de deimlo mor wahanol i un sy’n wynebu’r gogledd.</span></p>
           </div></li>
           <li class="q"><div>
