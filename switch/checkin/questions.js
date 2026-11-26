@@ -358,5 +358,14 @@ const CONSENT = [
 /* 1.5 (Prof. Walker): how much control people feel they have over their home's warmth (control_warmth) and its fresh
  * air (control_air), 1 to 5 */
 const CONTROL5 = [{id:1,n:'No control at all'},{id:2,n:'A little'},{id:3,n:'Some'},{id:4,n:'A lot'},{id:5,n:'Complete control'}];
+/* 1.6: age, height and weight as ranges to choose from, never the exact numbers (the ethics committee) */
+const AGE_BANDS = [{id:'18_24',n:'18–24'},{id:'25_34',n:'25–34'},{id:'35_44',n:'35–44'},{id:'45_54',n:'45–54'},{id:'55_64',n:'55–64'},
+  {id:'65_74',n:'65–74'},{id:'75plus',n:'75 or over'},{id:'prefer_not',n:'Prefer not to say'}];
+const HEIGHT_BANDS = [{id:'lt150',n:'Under 150 cm (under 4 ft 11 in)'},{id:'150_159',n:'150–159 cm (about 4 ft 11 in – 5 ft 2 in)'},
+  {id:'160_169',n:'160–169 cm (about 5 ft 3 in – 5 ft 6 in)'},{id:'170_179',n:'170–179 cm (about 5 ft 7 in – 5 ft 10 in)'},
+  {id:'180_189',n:'180–189 cm (about 5 ft 11 in – 6 ft 2 in)'},{id:'190plus',n:'190 cm or over (about 6 ft 3 in or over)'},{id:'prefer_not',n:'Prefer not to say'}];
+const WEIGHT_BANDS = [{id:'lt50',n:'Under 50 kg (under about 8 st)'},{id:'50_59',n:'50–59 kg (about 8 – 9½ st)'},{id:'60_69',n:'60–69 kg (about 9½ – 11 st)'},
+  {id:'70_79',n:'70–79 kg (about 11 – 12½ st)'},{id:'80_89',n:'80–89 kg (about 12½ – 14 st)'},{id:'90_99',n:'90–99 kg (about 14 – 15½ st)'},
+  {id:'100_109',n:'100–109 kg (about 15½ – 17 st)'},{id:'110plus',n:'110 kg or over (about 17 st or over)'},{id:'prefer_not',n:'Prefer not to say'}];
 /* "first half of the postcode": SA1, CF10, SW1A (never the full postcode) */
 const POSTCODE_AREA_RE = /^[A-Z]{1,2}[0-9][A-Z0-9]?$/;

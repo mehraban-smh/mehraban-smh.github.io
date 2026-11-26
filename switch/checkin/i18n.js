@@ -652,6 +652,36 @@ const CY = {
     'Bydd y tîm ymchwil yn cadarnhau eich lle, fel arfer o fewn diwrnod. Gallwch chi gofnodi cyn gynted ag y bydd hynny wedi’i wneud.',
   'Check again': 'Gwirio eto',
   'Your participant ID': 'Eich rhif cyfranogwr',
+  // 1.6: age, height and weight as ranges; the email kept separately
+  'Age': 'Oed', '75 or over': '75 neu’n hŷn',
+  'Under 150 cm (under 4 ft 11 in)': 'Llai na 150 cm (llai na 4 tr 11 mod)',
+  '150–159 cm (about 4 ft 11 in – 5 ft 2 in)': '150–159 cm (tua 4 tr 11 mod – 5 tr 2 mod)',
+  '160–169 cm (about 5 ft 3 in – 5 ft 6 in)': '160–169 cm (tua 5 tr 3 mod – 5 tr 6 mod)',
+  '170–179 cm (about 5 ft 7 in – 5 ft 10 in)': '170–179 cm (tua 5 tr 7 mod – 5 tr 10 mod)',
+  '180–189 cm (about 5 ft 11 in – 6 ft 2 in)': '180–189 cm (tua 5 tr 11 mod – 6 tr 2 mod)',
+  '190 cm or over (about 6 ft 3 in or over)': '190 cm neu fwy (tua 6 tr 3 mod neu fwy)',
+  'Under 50 kg (under about 8 st)': 'Llai na 50 kg (llai na tua 8 st)',
+  '50–59 kg (about 8 – 9½ st)': '50–59 kg (tua 8 – 9½ st)', '60–69 kg (about 9½ – 11 st)': '60–69 kg (tua 9½ – 11 st)',
+  '70–79 kg (about 11 – 12½ st)': '70–79 kg (tua 11 – 12½ st)', '80–89 kg (about 12½ – 14 st)': '80–89 kg (tua 12½ – 14 st)',
+  '90–99 kg (about 14 – 15½ st)': '90–99 kg (tua 14 – 15½ st)', '100–109 kg (about 15½ – 17 st)': '100–109 kg (tua 15½ – 17 st)',
+  '110 kg or over (about 17 st or over)': '110 kg neu fwy (tua 17 st neu fwy)',
+  'Please choose your age range. &ldquo;Prefer not to say&rdquo; is fine.': 'Dewiswch eich ystod oedran. Mae &ldquo;Gwell gen i beidio â dweud&rdquo; yn iawn.',
+  'Please choose your height range. &ldquo;Prefer not to say&rdquo; is fine.': 'Dewiswch eich ystod taldra. Mae &ldquo;Gwell gen i beidio â dweud&rdquo; yn iawn.',
+  'Please choose your weight range. &ldquo;Prefer not to say&rdquo; is fine.': 'Dewiswch eich ystod pwysau. Mae &ldquo;Gwell gen i beidio â dweud&rdquo; yn iawn.',
+  'Used only to understand comfort differences between people. Everything you tell the study is stored under a participant ID, which you get when you join, never with your name or email.':
+    'Dim ond i ddeall gwahaniaethau cysur rhwng pobl. Caiff popeth rydych chi’n ei ddweud wrth yr astudiaeth ei gadw dan rif cyfranogwr, a gewch chi wrth ymuno, a byth gyda’ch enw na’ch e-bost.',
+  'Your email address': 'Eich cyfeiriad e-bost',
+  'Kept separately from your answers: it is never stored with your participant ID. The research team uses it only to contact you about the study and to share the results with you.':
+    'Caiff ei gadw ar wahân i’ch atebion: dydy e byth yn cael ei gadw gyda’ch rhif cyfranogwr. Dim ond i gysylltu â chi am yr astudiaeth ac i rannu’r canlyniadau â chi y mae’r tîm ymchwil yn ei ddefnyddio.',
+  'Please enter your email address, like name@example.com.': 'Rhowch eich cyfeiriad e-bost, fel enw@example.com.',
+  // 1.5.2: the ID card on Today and its pop-up
+  'I&rsquo;ve written it down': 'Rydw i wedi’i ysgrifennu i lawr',
+  'Are your participant ID and PIN safe?': 'Ydy’ch rhif cyfranogwr a’ch rhif PIN yn ddiogel?',
+  'Please check that you have written down your participant ID and your PIN, or saved them somewhere safe. You need both to sign in on another phone or tablet, or if this phone is reset. The research team can&rsquo;t see your PIN: they can only reset it.':
+    'Gwiriwch eich bod wedi ysgrifennu’ch rhif cyfranogwr a’ch rhif PIN i lawr, neu wedi’u cadw yn rhywle diogel. Mae angen y ddau arnoch chi i fewngofnodi ar ffôn neu lechen arall, neu os caiff y ffôn hwn ei ailosod. Dydy’r tîm ymchwil ddim yn gallu gweld eich rhif PIN: dim ond ei ailosod y gallan nhw.',
+  'Yes, both are safe': 'Ydyn, mae’r ddau’n ddiogel',
+  'Your participant ID is always in Settings too.': 'Mae’ch rhif cyfranogwr bob amser yn y Gosodiadau hefyd.',
+  'Welcome to the study. Your participant ID is {code}.': 'Croeso i’r astudiaeth. Eich rhif cyfranogwr yw {code}.',
   'Please write it down. You need it, with your PIN, to sign in on another phone or tablet, and the research team writes it on your paper questionnaire.':
     'Ysgrifennwch ef i lawr. Bydd ei angen arnoch chi, gyda’ch rhif PIN, i fewngofnodi ar ffôn neu lechen arall, ac mae’r tîm ymchwil yn ei ysgrifennu ar eich holiadur papur.',
   'Participant ID {code}': 'Rhif cyfranogwr {code}',

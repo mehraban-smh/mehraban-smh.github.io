@@ -45,7 +45,7 @@
   const NUM_COLS = new Set(['tsv', 'clo', 'met', 'seconds', 'tz_offset_min', 'stat_temp_c', 'comfort_score']);
   // the on-screen table: question order, legacy columns left out
   const TABLE_COLS = ['participant', 'local_time', 'prompt', 'at_home', 'room_time', 'tsv', 'preference', 'acceptability', 'clo', 'garments', 'met', 'activity', 'room', 'air', 'sun', 'heating_on', 'heating_src', 'heating_for', 'stat_temp_c', 'wall', 'actions', 'notes', 'same_as_last', 'seconds', 'app_version', 'ts', 'tz_offset_min', 'created_at', 'client_id', 'id'];
-  const PCOLS = ['code', 'alias', 'alias_colour', 'lang', 'approved', 'gender', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity', 'created_at', 'updated_at', 'notified_at'];
+  const PCOLS = ['code', 'alias', 'alias_colour', 'lang', 'approved', 'gender', 'age_band', 'height_band', 'weight_band', 'birth_year', 'height_cm', 'weight_kg', 'sensitivity', 'created_at', 'updated_at', 'notified_at'];
   const PNUM = new Set(['birth_year', 'height_cm', 'weight_kg', 'alias_colour']);
   const PRIVATE_COLS = new Set(['name', 'email']);   // kept from before 1.5 in the database, never shown or downloaded
   const HOME_KEYS = ['postcode_area', 'home_type', 'flat_position', 'tenure', 'year_built', 'floors', 'bedrooms', 'floor_area_m2', 'epc', 'adults', 'children', 'pets', 'bedroom_share',
@@ -81,6 +81,9 @@
     actions: { win_open: 'Opened a window', win_close: 'Closed a window', door_open: 'Opened a door', door_close: 'Closed a door', heat_up: 'Turned the heating up', heat_down: 'Turned the heating down or off', layer_on: 'Put on a layer or more clothes', layer_off: 'Took off a layer or some clothes', blanket: 'Got a blanket', fan: 'Turned a fan on', curtains: 'Drew or closed the curtains or blinds', moved: 'Moved to another room', none: 'None of these' },
     notes: { hot_drink: 'Hot drink', cold_drink: 'Cold drink', ate: 'Ate something', hungry: 'Felt hungry', tired: 'Felt tired', unwell: 'Felt unwell', none: 'None of these' },
     gender: { female: 'Female', male: 'Male', woman: 'Woman', man: 'Man', non_binary: 'Non-binary', self_describe: 'Another identity', prefer_not: 'Prefer not to say' },
+    age_band: { '18_24': '18–24', '25_34': '25–34', '35_44': '35–44', '45_54': '45–54', '55_64': '55–64', '65_74': '65–74', '75plus': '75 or over', prefer_not: 'Prefer not to say' },
+    height_band: { lt150: 'Under 150 cm', '150_159': '150–159 cm', '160_169': '160–169 cm', '170_179': '170–179 cm', '180_189': '180–189 cm', '190plus': '190 cm or over', prefer_not: 'Prefer not to say' },
+    weight_band: { lt50: 'Under 50 kg', '50_59': '50–59 kg', '60_69': '60–69 kg', '70_79': '70–79 kg', '80_89': '80–89 kg', '90_99': '90–99 kg', '100_109': '100–109 kg', '110plus': '110 kg or over', prefer_not: 'Prefer not to say' },
     sensitivity: { cold: 'Feels the cold easily', average: 'About average', warm: 'Feels the heat easily' },
     lang: { en: 'English', cy: 'Cymraeg (Welsh)' },
     age: { a18: '18–24', a25: '25–34', a35: '35–44', a45: '45–54', a55: '55–64', a65: '65–74', a75: '75 or older' },
@@ -489,16 +492,19 @@
     const per = pointsPeriods();
     const pt = k => typeof S.pointsTable === 'function' ? soft('points', () => S.pointsTable(token, dnKey(per[k].from), dnKey(per[k].to))) : Promise.resolve({ e: 'not available', what: 'points' });
     try {
-      const [r, p, push, pins, pw, pm, pa] = await Promise.all([
+      const [r, p, push, pins, pw, pm, pa, ct] = await Promise.all([
         S.fetchAll(token), S.fetchParticipants(token),
         typeof S.fetchPush === 'function' ? soft('reminder phones', () => S.fetchPush(token)) : Promise.resolve({ e: 'not available', what: 'reminder phones' }),
         typeof S.signInInfo === 'function' ? soft('PINs and devices', () => S.signInInfo(token)) : Promise.resolve({ e: 'not available', what: 'PINs and devices' }),
-        pt('week'), pt('month'), pt('all')]);
+        pt('week'), pt('month'), pt('all'),
+        typeof S.fetchContacts === 'function' ? soft('contact emails', () => S.fetchContacts(token)) : Promise.resolve({ e: 'not available', what: 'contact emails' })]);
       rows = r; people = p;
       st.warn = [];
       st.push = push.e ? null : (Array.isArray(push.v) ? push.v : null);
       if (push.e) st.warn.push('reminder phones (' + push.e + ')');
       st.pins = pins.e ? null : pins.v;
+      st.contacts = ct.e ? null : (Array.isArray(ct.v) ? ct.v.map(x => x.email).filter(Boolean) : []);   // 1.6: never linked to a participant
+      if (ct.e) st.warn.push('contact emails (' + ct.e + ')');
       if (pins.e) st.warn.push('PINs and devices (' + pins.e + ')');
       st.points = { week: pw.e ? null : pw.v, month: pm.e ? null : pm.v, all: pa.e ? null : pa.v };
       st.pointsErr = [pw, pm, pa].find(x => x.e) ? [pw, pm, pa].find(x => x.e).e : '';
@@ -682,7 +688,10 @@
       <div class="ebar" aria-hidden="true"><i class="on" style="width:${(100 * approved / tot).toFixed(1)}%"></i>${wait ? `<i class="wt" style="width:${(100 * wait / tot).toFixed(1)}%"></i>` : ''}</div>
       <span>${plural(week, 'sign-up')} in the last 7 days · home profiles ${fmtN(homes)} of ${fmtN(approved)}</span>
       ${per ? `<span>${icon('cal')} ${esc(per)}</span>` : ''}
-    </div>`;
+    </div>
+    ${Array.isArray(st.contacts) ? `<div class="enrol" role="group" aria-label="Contact emails"><b style="color:var(--ink)">Contact emails: ${fmtN(st.contacts.length)}</b>
+      <span>A separate list, never linked to a participant ID or to any answers. For contacting participants about the study and sharing the results.</span>
+      ${st.contacts.length ? `<button class="btn ghost sm" type="button" data-act="copy-contacts">Copy all emails</button>` : ''}</div>` : ''}`;
   }
   function filterCounts(sp) {
     const act = new Set(); st.R.forEach(x => { if (inSpan(x, sp)) act.add(x.code); });
@@ -1199,7 +1208,7 @@
   const setBand = v => { const r = Math.round(v); return r <= 17 ? 'le17' : r >= 24 ? 'ge24' : String(r); };
   // [key, title, kind]: kind p = participant column, multi = several answers, area / setp = binned numbers
   const HOME_GROUPS = [
-    ['The people', [['gender', 'Sex (gender until 1.4)', 'p'], ['feel_cold', 'Feels the cold'], ['feel_warm', 'Feels too warm'], ['sensitivity', 'Thermal sensitivity (from the two above since 1.3)', 'p'], ['age', 'Age', 'age'], ['lang', 'App language', 'p']]],
+    ['The people', [['gender', 'Sex (gender until 1.4)', 'p'], ['feel_cold', 'Feels the cold'], ['feel_warm', 'Feels too warm'], ['sensitivity', 'Thermal sensitivity (from the two above since 1.3)', 'p'], ['age', 'Age (a range from 1.6)', 'age'], ['height_band', 'Height (a range, 1.6)', 'p'], ['weight_band', 'Weight (a range, 1.6)', 'p'], ['lang', 'App language', 'p']]],
     ['Area and home', [['postcode_area', 'Postcode area', 'free'], ['main_road', 'On or near a main road'], ['home_type', 'Home type'], ['flat_position', 'Flat position (flats only)'], ['tenure', 'Tenure']]],
     ['Age and size', [['year_built', 'Year built'], ['floors', 'Floors'], ['bedrooms', 'Bedrooms'], ['floor_area_m2', 'Floor area', 'area'], ['epc', 'EPC rating']]],
     ['Who lives here', [['adults', 'Adults'], ['children', 'Children'], ['pets', 'Pets'], ['bedroom_share', 'Sharing the bedroom'], ['changes', 'Expects changes during the study'],
@@ -1219,7 +1228,7 @@
     list.forEach(p => {
       const h = homeOf(p) || {};
       if (kind === 'p') { const v = p[key]; if (v === null || v === undefined || v === '') add(NOT_ANSWERED); else add(String(v)); return; }
-      if (kind === 'age') { const b = ageBand(p.birth_year); add(b || NOT_ANSWERED); return; }
+      if (kind === 'age') { const b = p.age_band ? lab('age_band', p.age_band) : ageBand(p.birth_year); add(b || NOT_ANSWERED); return; }
       if (!Object.prototype.hasOwnProperty.call(h, key)) { if (notAsked(key, h)) return; if (RETIRED.has(key)) return; add(NOT_ANSWERED); return; }
       const v = h[key];
       if (kind === 'multi') { const a = [...new Set(listOf(v))]; if (!a.length) add(NOT_ANSWERED); a.forEach(x => add(String(x))); return; }
@@ -1302,7 +1311,9 @@
       f('Status', status), f('Registered', esc(fmtStamp(p.created_at))), f('Profile updated', esc(fmtStamp(p.updated_at)), true), f('Team notified', p.notified_at ? esc(fmtStamp(p.notified_at)) : 'Not yet', true),
       f('PIN and devices', esc(pinWords(code))), f('Reminders', esc(reminderWords(code))),
       f('Language', esc(langWord(p.lang))), f('Last check-in', last ? esc(ago(last.t) + ' (' + fmtStamp(last.r.ts) + ')') : 'None yet'),
-      f('Sex', esc(lab('gender', p.gender))), f('Age', age !== null ? String(age) : ''), f('Height', num(p.height_cm) !== null ? round1(num(p.height_cm)) + ' cm' : ''), f('Weight', num(p.weight_kg) !== null ? round1(num(p.weight_kg)) + ' kg' : ''),
+      f('Sex', esc(lab('gender', p.gender))), f('Age', p.age_band ? esc(lab('age_band', p.age_band)) : age !== null ? String(age) : ''),
+      f('Height', p.height_band ? esc(lab('height_band', p.height_band)) : num(p.height_cm) !== null ? round1(num(p.height_cm)) + ' cm' : ''),
+      f('Weight', p.weight_band ? esc(lab('weight_band', p.weight_band)) : num(p.weight_kg) !== null ? round1(num(p.weight_kg)) + ' kg' : ''),
       f('Thermal sensitivity', esc(lab('sensitivity', p.sensitivity)))
     ].join('');
     const actions = (st.local || dbStale()) ? '' : `<div class="pact" data-errhost>${p.approved ? '' : `<button class="btn sm" type="button" data-act="approve" data-code="${esc(code)}">Approve</button>`}<button class="btn ghost sm" type="button" data-act="pinreset" data-code="${esc(code)}">${icon('key')}Reset PIN</button><button class="btn ghost sm" type="button" data-act="devout" data-code="${esc(code)}">${icon('out')}Sign out devices</button><button class="btn ghost sm danger" type="button" data-act="remove" data-code="${esc(code)}">Remove from the study</button>
@@ -1451,6 +1462,12 @@
     }
     if (act === 'refresh') { if (st.local) openLocal(); else { b.disabled = true; loadData(true); } return; }
     if (act === 'retry') { loadData(); return; }
+    if (act === 'copy-contacts') {            // 1.6: for the Bcc line of an email
+      const all = (st.contacts || []).join('; ');
+      (navigator.clipboard ? navigator.clipboard.writeText(all) : Promise.reject()).then(() => { b.textContent = 'Copied ' + plural((st.contacts || []).length, 'email'); },
+        () => { window.prompt('Copy the emails:', all); });
+      return;
+    }
     if (act === 'relogin') { expiredLogin(); return; }
     if (act === 'csv') { downloadCsv(); return; }
     if (act === 'xlsx') { downloadXlsx(); return; }

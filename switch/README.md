@@ -22,6 +22,18 @@ GitHub Pages only serves files, so the check-ins need a small database. The page
 filled in, both apps run in **local mode**: check-ins stay in the participant's browser, and the dashboard shows only
 the browser it is opened in.
 
+## Upgrading the live study to 1.6: ranges for age, height and weight, and a separate email list (once)
+
+1. Supabase → **SQL Editor → New query** → paste the whole of `supabase-setup.sql` → **Run**. It adds `age_band`,
+   `height_band` and `weight_band` to `participants`, the `study_contacts` table and `add_study_contact`, and joining
+   and My home switch to the ranges. Running it again also succeeds.
+2. Then push the 1.6 pages to `main`. Phones still on 1.5 keep working: what they send as exact numbers is kept
+   as its range only.
+3. The email asked on the last joining step goes to `study_contacts` in a request of its own, with no participant ID
+   and no device key; the table holds only the address and a language, never anything that links it to a
+   participant. The dashboard shows how many there are and copies them all (for the Bcc line). To remove one, delete
+   its row in Supabase → Table Editor → `study_contacts`.
+
 ## Upgrading the live study to 1.5: participant ID and PIN, no name or email (once)
 
 1. Supabase → **SQL Editor → New query** → paste the whole of `supabase-setup.sql` → **Run**. It keeps every
@@ -179,7 +191,7 @@ fill it in. Only the first half of the postcode is stored: the database refuses 
 | `prefer_not` | 1.3, list of `birth_year`, `height`, `weight` answered "Prefer not to say" (those columns are then empty) |
 | `consent`, `consent_at` | 1.3, the five consent statements ticked when joining (`info`, `choice`, `link`, `skip`, `agree`) and when |
 
-Sex (in the `gender` column: `female`, `male`, `prefer_not` from 1.5; gender answers until 1.4), year of birth, height (cm), weight (kg) and thermal sensitivity (`cold`, `average`, `warm`) stay in their
+Sex (in the `gender` column: `female`, `male`, `prefer_not` from 1.5; gender answers until 1.4), age, height and weight as ranges from 1.6 (`age_band`: `18_24` ... `65_74`, `75plus`; `height_band`: `lt150`, `150_159` ... `180_189`, `190plus`; `weight_band`: `lt50`, `50_59` ... `100_109`, `110plus`; each also `prefer_not`; year of birth, height (cm) and weight (kg) until 1.5) and thermal sensitivity (`cold`, `average`, `warm`) stay in their
 own `participants` columns. From 1.3 the sensitivity is made from `feel_cold` and `feel_warm`: `cold` when only the cold comes
 more easily than to most people, `warm` when only the warmth does, otherwise `average`. Height and weight can be typed in ft/in and st/lb; they are stored metric.
 
