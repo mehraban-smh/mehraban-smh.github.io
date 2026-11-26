@@ -29,10 +29,11 @@ the browser it is opened in.
    and My home switch to the ranges. Running it again also succeeds.
 2. Then push the 1.6 pages to `main`. Phones still on 1.5 keep working: what they send as exact numbers is kept
    as its range only.
-3. The email asked on the last joining step goes to `study_contacts` in a request of its own, with no participant ID
-   and no device key; the table holds only the address and a language, never anything that links it to a
-   participant. The dashboard shows how many there are and copies them all (for the Bcc line). To remove one, delete
-   its row in Supabase → Table Editor → `study_contacts`.
+3. The email asked on the last joining step is kept with the participant (`participants.email`, from 1.6.1; 1.6.0 sent
+   it to the separate `study_contacts` list, which stays only for phones still on 1.6.0). It is used only to contact
+   that person about the study and to share the results: it shows on the participant's dashboard page, the search
+   finds a participant by email, "Copy all emails" fills a Bcc line, and it is never in the downloads. Participants
+   can change it in My home. Re-run `supabase-setup.sql` for 1.6.1 before pushing its pages.
 
 ## Upgrading the live study to 1.5: participant ID and PIN, no name or email (once)
 

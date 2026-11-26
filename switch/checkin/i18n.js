@@ -668,11 +668,11 @@ const CY = {
   'Please choose your age range. &ldquo;Prefer not to say&rdquo; is fine.': 'Dewiswch eich ystod oedran. Mae &ldquo;Gwell gen i beidio â dweud&rdquo; yn iawn.',
   'Please choose your height range. &ldquo;Prefer not to say&rdquo; is fine.': 'Dewiswch eich ystod taldra. Mae &ldquo;Gwell gen i beidio â dweud&rdquo; yn iawn.',
   'Please choose your weight range. &ldquo;Prefer not to say&rdquo; is fine.': 'Dewiswch eich ystod pwysau. Mae &ldquo;Gwell gen i beidio â dweud&rdquo; yn iawn.',
-  'Used only to understand comfort differences between people. Everything you tell the study is stored under a participant ID, which you get when you join, never with your name or email.':
-    'Dim ond i ddeall gwahaniaethau cysur rhwng pobl. Caiff popeth rydych chi’n ei ddweud wrth yr astudiaeth ei gadw dan rif cyfranogwr, a gewch chi wrth ymuno, a byth gyda’ch enw na’ch e-bost.',
+  'Used only to understand comfort differences between people. Everything you tell the study is stored under a participant ID, which you get when you join, never with your name.':
+    'Dim ond i ddeall gwahaniaethau cysur rhwng pobl. Caiff popeth rydych chi’n ei ddweud wrth yr astudiaeth ei gadw dan rif cyfranogwr, a gewch chi wrth ymuno, a byth gyda’ch enw.',
   'Your email address': 'Eich cyfeiriad e-bost',
-  'Kept separately from your answers: it is never stored with your participant ID. The research team uses it only to contact you about the study and to share the results with you.':
-    'Caiff ei gadw ar wahân i’ch atebion: dydy e byth yn cael ei gadw gyda’ch rhif cyfranogwr. Dim ond i gysylltu â chi am yr astudiaeth ac i rannu’r canlyniadau â chi y mae’r tîm ymchwil yn ei ddefnyddio.',
+  'The research team uses it only to contact you about the study and to share the results with you. It is never part of the analysis and is never shared.':
+    'Dim ond i gysylltu â chi am yr astudiaeth ac i rannu’r canlyniadau â chi y mae’r tîm ymchwil yn ei ddefnyddio. Dydy e byth yn rhan o’r dadansoddi a dydy e byth yn cael ei rannu.',
   'Please enter your email address, like name@example.com.': 'Rhowch eich cyfeiriad e-bost, fel enw@example.com.',
   // 1.5.2: the ID card on Today and its pop-up
   'I&rsquo;ve written it down': 'Rydw i wedi’i ysgrifennu i lawr',

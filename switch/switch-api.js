@@ -46,7 +46,7 @@
  * ---- participant side (publishable key; "key" = this device's key from joining or signing in) ----
  *   key(), setKey(k)                  this device's key in localStorage switch_key (setKey(null) removes it)
  *   register(fields)                  register_participant. fields: pin, gender, age_band, height_band,
- *                                     weight_band (1.6: ranges), sensitivity, home (object), lang ('en' | 'cy'; 'en' when left
+ *                                     weight_band (1.6: ranges), email (1.6.1), sensitivity, home (object), lang ('en' | 'cy'; 'en' when left
  *                                     out), join (a token made once per joining, kept with the draft). No name
  *                                     or email (1.5). -> outcome row
  *                                     { status, tries_left, wait_min, code, name, is_new, approved, home,
@@ -73,7 +73,7 @@
  *                                     weight_kg, sensitivity, home, alias, alias_colour, race_hidden (always
  *                                     false now), lang ('en' | 'cy') } or null
  *   updateMyProfile(fields, home)     update_my_profile; fields: any of gender, age_band, height_band,
- *                                     weight_band, sensitivity, lang ('en' | 'cy') (only keys given change);
+ *                                     weight_band, email, sensitivity, lang ('en' | 'cy') (only keys given change);
  *   addContact(email, lang)           1.6: add_study_contact, the separate email list: sent on its own, with no
  *                                     participant ID and no device key
  *                                     home: the whole profile
@@ -357,6 +357,7 @@
       if (!live) return null;
       const body = { p_gender: fields.gender || null, p_age_band: fields.age_band || null,
         p_height_band: fields.height_band || null, p_weight_band: fields.weight_band || null, p_sensitivity: fields.sensitivity || null,
+        p_email: fields.email || null,
         p_home: fields.home || null, p_pin: fields.pin || null, p_lang: fields.lang === 'cy' ? 'cy' : 'en', p_join: fields.join || null };
       return S.rpcRow('register_participant', body, 'Registration failed');
     },
