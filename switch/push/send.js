@@ -331,7 +331,7 @@ const rawPriv = process.env.VAPID_PRIVATE_KEY || '';
 const PRIV = rawPriv.split(/\s+/).filter(l => /^[A-Za-z0-9_-]{43}$/.test(l)).pop() || rawPriv.trim();
 const FORCE = (process.env.FORCE_PARTICIPANT || '').trim().toUpperCase();
 const DRY = process.env.DRY_RUN === '1';
-const SUBJECT = 'mailto:info@mehraban.uk';
+const SUBJECT = 'mailto:s.mehraban2@swansea.ac.uk';
 
 function fail(msg) { console.error('ERROR: ' + msg); process.exit(1); }
 const mask = s => s ? s.slice(0, 12) + '...(' + s.length + ' chars)' : '(empty)';

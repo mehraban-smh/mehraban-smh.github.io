@@ -29,6 +29,11 @@
 --   - each participant has a language for the app and the reminders: lang, 'en' (English) or 'cy' (Welsh).
 --   - the default reminder hours are 07:00-22:00 every day (they were 17:00-22:30 on weekdays, 09:00-22:30 at
 --     weekends). Phones still on the old defaults are moved once, the first time this runs (app_migrations).
+--   - 1.5: nobody gives a name or an email any more. Joining gives a random 4-digit participant ID (4827) instead of
+--     the next P code, and signing in takes that ID (or an older P code) and the PIN. participants.email and name
+--     become optional; what participants who joined before gave stays where it is. Every ID ever given out is kept
+--     in participant_ids, so none is given out twice. A PIN reset on the dashboard now gives a 6-digit reset code:
+--     with the ID, it lets the participant choose a new PIN (the ID alone never does).
 
 create extension if not exists pgcrypto;
 
@@ -42,8 +47,8 @@ create extension if not exists pgcrypto;
 --   1. The app registers a profile through register_participant(). The new row has approved = false.
 --   2. Every hour switch/push/notify.js (GitHub Actions) looks for rows with notified_at still null
 --      and, if any of them are waiting, opens one issue in the repository listing them ("HomePulse: 2 new
---      participants waiting for approval", codes and times only, never the name or email), then
---      stamps notified_at. GitHub emails the repository owner about the issue.
+--      participants waiting for approval", participant IDs and times only), then stamps notified_at.
+--      GitHub emails the repository owner about the issue.
 --   3. The researcher opens the dashboard and clicks Approve, which sets approved = true (or Remove,
 --      which deletes the row, the participant's PIN and device keys, and their registered phones).
 --   4. Until then the participant cannot submit check-ins or register a phone for reminders (the
@@ -58,11 +63,15 @@ create extension if not exists pgcrypto;
 --
 -- alias is the participant's name in the Bay Race (e.g. "Puffin"): random, unique, never derived from
 -- the code, given by the trigger below. alias_colour (0-7) picks their colour in the race.
+--
+-- code is the participant ID: P01, P02, ... for everyone who joined before 1.5, then four random digits (4827,
+-- see sw_new_participant_id). No name or email is asked for since 1.5: those two columns are kept, optional,
+-- for the participants who joined before.
 -- ===================================================================================================
 create table if not exists public.participants (
-  code          text primary key,                -- P01, P02, ..., P99, P100, ...
-  email         text unique not null,
-  name          text not null,
+  code          text primary key,                -- the participant ID: P01 ... P99, P100 ... until 1.4, then 1000-9999
+  email         text unique,                     -- until 1.4 only (null from 1.5)
+  name          text,                            -- until 1.4 only (null from 1.5)
   gender        text,
   birth_year    integer,
   height_cm     numeric(5,1),
@@ -94,10 +103,13 @@ alter table public.participants add column if not exists alias text;
 alter table public.participants add column if not exists alias_colour smallint check (alias_colour between 0 and 7);
 alter table public.participants add column if not exists race_hidden boolean not null default false;
 alter table public.participants add column if not exists lang text not null default 'en' check (lang in ('en', 'cy'));
+-- 1.5: joining asks for neither a name nor an email. What participants gave before stays (a second run changes nothing).
+alter table public.participants alter column email drop not null;
+alter table public.participants alter column name drop not null;
 -- The Bay Race is no longer optional: nobody is hidden from it any more (a second run finds nobody to change).
 update public.participants set race_hidden = false where race_hidden;
 create unique index if not exists participants_alias_unique on public.participants (alias);
-create sequence if not exists public.participant_seq start 1;
+create sequence if not exists public.participant_seq start 1;      -- the P codes until 1.4; no longer used (kept)
 alter table public.participants enable row level security;
 
 -- Researchers sign in on the dashboard: they may read, approve and remove participants.
@@ -188,18 +200,19 @@ end $$;
 -- One participant on any number of devices: a 4-digit PIN and a key per device
 --
 -- Participants choose a 4-digit PIN when they join. Joining, or signing in on another phone or tablet
--- with their email and PIN, gives that device a random key. The device keeps the key and sends it with
+-- with their participant ID and PIN, gives that device a random key. The device keeps the key and sends it with
 -- every check-in (submit_checkin) and when it loads the participant's own history, profile, points and
 -- the Bay Race, so every device shows the same person.
 -- Only a hash of each key and a salted hash of the PIN are stored, in two tables that nobody reads
 -- directly: the public key and signed-in researchers reach them only through the functions below.
--- Five wrong tries in a row (a wrong PIN, or a wrong participant code, see below) lock signing in for that
+-- Five wrong tries in a row (a wrong PIN, or a wrong reset code, see below) lock signing in for that
 -- participant: 15 minutes the first time, 1 hour the next, then 24 hours each time, until they sign in
 -- successfully. Easy PINs (four of a digit, 1234, 4321, 0123, 9876, 1212, 2580) are refused when a PIN is set.
--- A participant without a PIN (one who joined with 0.4.0, or after a researcher cleared a forgotten PIN on
--- the dashboard with reset_participant_pin) chooses one by signing in with their email, the new PIN AND
--- their participant code (P07): the code is on their phone from 0.4.0, or the team gives it to them. The
--- email alone is never enough to take over an account.
+-- A participant without a PIN (one who joined with 0.4.0, or whose forgotten PIN a researcher reset on the
+-- dashboard with reset_participant_pin) chooses one by signing in with their participant ID, the new PIN AND
+-- the 6-digit reset code that reset_participant_pin gave the researcher (it works for 7 days, until a PIN is
+-- chosen with it). The ID alone is never enough to take over an account. (Until 1.4 the second proof was the
+-- participant code, next to the email; the code is now the ID itself.)
 -- ===================================================================================================
 create table if not exists public.participant_pins (
   code         text primary key references public.participants(code) on delete cascade,
@@ -208,12 +221,19 @@ create table if not exists public.participant_pins (
   failures     integer not null default 0,      -- wrong tries in a row
   lock_count   integer not null default 0,      -- locks since the last successful sign-in (15 min, 1 h, then 24 h)
   locked_until timestamptz,
+  reset_hash   text,                            -- 1.5: sha-256 of code:reset code, from reset_participant_pin, until a PIN is chosen
+  reset_until  timestamptz,                     -- 1.5: the reset code works until then (7 days)
+  join_hash    text,                            -- 1.5: sha-256 of the app's join token, so a join sent twice makes one participant
   updated_at   timestamptz not null default now()
 );
 -- Projects set up with an earlier draft of this file: a row may now exist before the PIN does.
 alter table public.participant_pins alter column salt drop not null;
 alter table public.participant_pins alter column pin_hash drop not null;
 alter table public.participant_pins add column if not exists lock_count integer not null default 0;
+alter table public.participant_pins add column if not exists reset_hash text;
+alter table public.participant_pins add column if not exists reset_until timestamptz;
+alter table public.participant_pins add column if not exists join_hash text;
+create unique index if not exists participant_pins_join on public.participant_pins (join_hash);
 alter table public.participant_pins enable row level security;      -- no policies: the functions only
 
 create table if not exists public.participant_devices (
@@ -227,6 +247,43 @@ alter table public.participant_devices enable row level security;   -- no polici
 
 revoke all on public.participant_pins, public.participant_devices from anon, authenticated;
 grant select, insert, update, delete on public.participant_pins, public.participant_devices to service_role;
+
+-- 1.5: every participant ID ever given out, so a new participant never gets the ID of anyone before them: not of
+-- a participant removed on the dashboard (their check-ins stay under it), nor one already written on a paper
+-- questionnaire. Filled here from the participants and the check-ins on every run, and by sw_new_participant_id.
+create table if not exists public.participant_ids (
+  code       text primary key,
+  issued_at  timestamptz not null default now()
+);
+alter table public.participant_ids enable row level security;       -- no policies: the functions only
+revoke all on public.participant_ids from anon, authenticated;
+grant select, insert, update, delete on public.participant_ids to service_role;
+do $$
+begin
+  insert into public.participant_ids (code) select p.code from public.participants p on conflict (code) do nothing;
+  if to_regclass('public.comfort_votes') is not null then          -- a new project creates it further down
+    insert into public.participant_ids (code) select distinct v.participant from public.comfort_votes v
+     where v.participant is not null on conflict (code) do nothing;
+  end if;
+end $$;
+
+-- A new participant ID: four digits, 1000-9999, chosen at random among those never given out. Registrations take
+-- turns (the lock lasts until the caller's transaction ends), so two can never get the same ID.
+create or replace function public.sw_new_participant_id()
+returns text
+language plpgsql volatile security definer set search_path = public as $$
+declare v text;
+begin
+  perform pg_advisory_xact_lock(hashtext('switch participant id'));
+  select c::text into v from generate_series(1000, 9999) c
+   where not exists (select 1 from public.participant_ids i where i.code = c::text)
+     and not exists (select 1 from public.participants p where p.code = c::text)
+   order by gen_random_uuid() limit 1;
+  if v is null then raise exception 'No participant IDs are left. Please contact the research team.' using errcode = '22023'; end if;
+  insert into public.participant_ids (code) values (v);
+  return v;
+end $$;
+revoke all on function public.sw_new_participant_id() from public, anon, authenticated;
 
 create or replace function public.sw_hash(p text)
 returns text
@@ -297,7 +354,7 @@ language sql immutable set search_path = public as $$
 $$;
 revoke all on function public.sw_weak_pin(text) from public, anon, authenticated;
 
--- One wrong try (a wrong PIN, or a wrong participant code while choosing a first PIN) for a participant whose
+-- One wrong try (a wrong PIN, or a wrong reset code while choosing a new PIN) for a participant whose
 -- PIN row is locked by the caller. The fifth in a row locks signing in: 15 minutes the first time, 1 hour the
 -- second, 24 hours from the third (lock_count is cleared only by a successful sign-in).
 create or replace function public.sw_pin_failure(p_code text, out locked boolean, out tries_left integer, out wait_min integer)
@@ -317,36 +374,41 @@ begin
 end $$;
 revoke all on function public.sw_pin_failure(text) from public, anon, authenticated;
 
--- Email, PIN and (only for a participant who has no PIN yet) the participant code in; the outcome as a row,
+-- Participant ID, PIN and (only for a participant who has no PIN yet) the reset code in; the outcome as a row,
 -- never an error, so a wrong try stays counted:
---   ok           signed in: the code, name, approval, home profile, alias and a new device key
---                (pin_set: this PIN has just become the participant's PIN, as they had none)
+--   ok           signed in: the code (the participant ID), approval, home profile, alias and a new device key
+--                (pin_set: this PIN has just become the participant's PIN, as they had none). name is always
+--                null since 1.5 (kept so the row keeps its shape)
 --   wrong        wrong PIN; tries_left before the lock
 --   locked       too many wrong tries; wait_min minutes to wait (15, 60 or 1440)
---   pin_needed   no PIN given, or not 4 digits. Given for EVERY email, registered or not, before anything is
---                looked up, so it tells nobody whether an email is in the study, and counts no try
---   code_needed  the participant has no PIN yet (joined with 0.4.0, or the team cleared it): send p_code too.
---                Without p_code: tries_left null, no try counted. With a wrong p_code: tries_left, one try counted
---   weak_pin     the participant code was right but the new PIN is too easy (nothing stored, no try counted)
---   not_found    no participant has that email (only answered when a 4-digit PIN came with it)
+--   pin_needed   no PIN given, or not 4 digits. Given for EVERY ID, registered or not, before anything is
+--                looked up, so it tells nobody whether an ID is in the study, and counts no try
+--   code_needed  the participant has no PIN (joined with 0.4.0, or the team reset it): send p_reset too, the
+--                6-digit reset code from reset_participant_pin. Without p_reset: tries_left null, no try counted.
+--                With a wrong or expired one: tries_left, one try counted
+--   weak_pin     the reset code was right but the new PIN is too easy (nothing stored, no try counted)
+--   not_found    no participant has that ID (only answered when a 4-digit PIN came with it)
+-- p_code is the participant ID as typed: 4827, or an older code such as P07 (any case, spaces ignored).
+-- Until 1.4 this took the email first and the participant code as the second proof; those versions are dropped.
 drop function if exists public.participant_sign_in(text, text);
 drop function if exists public.participant_sign_in(text, text, text);
 drop function if exists public.sw_sign_in(text, text);
 drop function if exists public.sw_sign_in(text, text, text);
-create or replace function public.sw_sign_in(p_email text, p_pin text, p_code text default null)
+create or replace function public.sw_sign_in(p_code text, p_pin text, p_reset text default null)
 returns table(status text, tries_left integer, wait_min integer, code text, name text, is_new boolean,
               approved boolean, home jsonb, device_key text, pin_set boolean, alias text, lang text)
 language plpgsql security definer set search_path = public as $$
 #variable_conflict use_column
 declare
-  v_email text := lower(trim(coalesce(p_email, '')));
+  v_code text := upper(regexp_replace(coalesce(p_code, ''), '\s', '', 'g'));
+  v_reset text := regexp_replace(coalesce(p_reset, ''), '\s', '', 'g');
   p record; pin record; f record; v_salt text; v_key text;
 begin
   if p_pin is null or p_pin !~ '^[0-9]{4}$' then
     return query select 'pin_needed'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text, null::text;
     return;
   end if;
-  select x.code, x.name, x.approved, x.home, x.alias, x.lang into p from public.participants x where x.email = v_email;
+  select x.code, x.approved, x.home, x.alias, x.lang into p from public.participants x where x.code = v_code;
   if not found then
     return query select 'not_found'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text, null::text;
     return;
@@ -354,17 +416,19 @@ begin
   -- One row per participant holds the PIN (when there is one) and the count of wrong tries; locked, so two
   -- tries at the same moment take turns.
   insert into public.participant_pins (code) values (p.code) on conflict (code) do nothing;
-  select x.salt, x.pin_hash, x.failures, x.lock_count, x.locked_until into pin from public.participant_pins x where x.code = p.code for update;
+  select x.salt, x.pin_hash, x.failures, x.lock_count, x.locked_until, x.reset_hash, x.reset_until into pin
+    from public.participant_pins x where x.code = p.code for update;
   if pin.locked_until is not null and pin.locked_until > now() then
     return query select 'locked'::text, 0, greatest(1, ceil(extract(epoch from pin.locked_until - now()) / 60))::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text, null::text;
     return;
   end if;
-  if pin.pin_hash is null then                               -- no PIN yet: this one becomes theirs, with their code
-    if nullif(trim(coalesce(p_code, '')), '') is null then
+  if pin.pin_hash is null then                               -- no PIN yet: this one becomes theirs, with the reset code
+    if v_reset = '' then
       return query select 'code_needed'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text, null::text;
       return;
     end if;
-    if upper(trim(p_code)) <> p.code then
+    if pin.reset_hash is null or pin.reset_until is null or pin.reset_until <= now()
+       or public.sw_hash(p.code || ':' || v_reset) <> pin.reset_hash then
       select * into f from public.sw_pin_failure(p.code);
       return query select case when f.locked then 'locked' else 'code_needed' end::text, f.tries_left, f.wait_min, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text, null::text;
       return;
@@ -375,9 +439,9 @@ begin
     end if;
     v_salt := replace(gen_random_uuid()::text, '-', '');
     update public.participant_pins x set salt = v_salt, pin_hash = public.sw_hash(v_salt || ':' || p_pin), failures = 0, lock_count = 0,
-           locked_until = null, updated_at = now() where x.code = p.code;
+           locked_until = null, reset_hash = null, reset_until = null, updated_at = now() where x.code = p.code;
     v_key := public.sw_new_key(p.code);
-    return query select 'ok'::text, null::integer, null::integer, p.code::text, p.name::text, false, coalesce(p.approved, false), p.home::jsonb, v_key, true, p.alias::text, p.lang::text;
+    return query select 'ok'::text, null::integer, null::integer, p.code::text, null::text, false, coalesce(p.approved, false), p.home::jsonb, v_key, true, p.alias::text, p.lang::text;
     return;
   end if;
   if public.sw_hash(pin.salt || ':' || p_pin) <> pin.pin_hash then
@@ -387,84 +451,77 @@ begin
   end if;
   update public.participant_pins x set failures = 0, lock_count = 0, locked_until = null, updated_at = now() where x.code = p.code;
   v_key := public.sw_new_key(p.code);
-  return query select 'ok'::text, null::integer, null::integer, p.code::text, p.name::text, false, coalesce(p.approved, false), p.home::jsonb, v_key, false, p.alias::text, p.lang::text;
+  return query select 'ok'::text, null::integer, null::integer, p.code::text, null::text, false, coalesce(p.approved, false), p.home::jsonb, v_key, false, p.alias::text, p.lang::text;
 end $$;
 revoke all on function public.sw_sign_in(text, text, text) from public, anon, authenticated;
 
--- "I have registered before" and "One more step": email and PIN, plus the participant code when the answer
--- was code_needed (see sw_sign_in for the outcome). The earlier two-argument version is dropped above.
-create or replace function public.participant_sign_in(p_email text, p_pin text, p_code text default null)
+-- "I have registered before", "One more step" and "Sign in again": participant ID and PIN, plus the reset code when
+-- the answer was code_needed (see sw_sign_in for the outcome). The earlier versions are dropped above.
+create or replace function public.participant_sign_in(p_code text, p_pin text, p_reset text default null)
 returns table(status text, tries_left integer, wait_min integer, code text, name text, is_new boolean,
               approved boolean, home jsonb, device_key text, pin_set boolean, alias text, lang text)
 language sql security definer set search_path = public as $$
-  select * from public.sw_sign_in(p_email, p_pin, p_code);
+  select * from public.sw_sign_in(p_code, p_pin, p_reset);
 $$;
 revoke all on function public.participant_sign_in(text, text, text) from public;
 grant execute on function public.participant_sign_in(text, text, text) to anon, authenticated;
 
--- Joining. A new email creates the participant with the profile, the home profile, the PIN and the next
--- code (P01 ... P99, P100, ...), and the device gets its key; an easy PIN gives weak_pin and creates
--- nothing. An email already registered is a sign-in with that PIN (the same outcome row as sw_sign_in,
--- without a participant code: a participant with no PIN gets code_needed and signs in instead), so one
--- email is always one participant. An unknown email without a name is pin_needed or not_found, as signing in.
+-- Joining. Creates the participant with the profile, the home profile and the PIN, gives them a new random
+-- participant ID (sw_new_participant_id) and the device its key; an easy PIN gives weak_pin and creates nothing.
+-- No name or email (1.5). p_join is a token the app makes once per joining (kept with its draft): the same token
+-- again (the answer to the first try was lost, and the participant tapped Join again) is a sign-in to the
+-- participant it made, with that PIN (the outcome row of sw_sign_in, is_new false), never a second participant.
 -- p_lang is the app's language for this participant: 'en' (English, also when left out) or 'cy' (Welsh).
--- The 0.4.0 version (seven arguments, no PIN) and the 1.0 / 1.1 version (no p_lang) are dropped, and so is this
--- one, as its result may change.
+-- The 0.4.0 version (seven arguments, no PIN), the 1.0 / 1.1 version (no p_lang) and the 1.2 to 1.4 version (email
+-- and name first) are dropped, and so is this one, as its result may change.
 drop function if exists public.register_participant(text, text, text, integer, numeric, numeric, text);
 drop function if exists public.register_participant(text, text, text, integer, numeric, numeric, text, jsonb, text);
 drop function if exists public.register_participant(text, text, text, integer, numeric, numeric, text, jsonb, text, text);
+drop function if exists public.register_participant(text, integer, numeric, numeric, text, jsonb, text, text, text);
 create or replace function public.register_participant(
-  p_email text, p_name text default null, p_gender text default null, p_birth_year integer default null,
+  p_gender text default null, p_birth_year integer default null,
   p_height_cm numeric default null, p_weight_kg numeric default null, p_sensitivity text default null,
-  p_home jsonb default null, p_pin text default null, p_lang text default 'en')
+  p_home jsonb default null, p_pin text default null, p_lang text default 'en', p_join text default null)
 returns table(status text, tries_left integer, wait_min integer, code text, name text, is_new boolean,
               approved boolean, home jsonb, device_key text, pin_set boolean, alias text, lang text)
 language plpgsql security definer set search_path = public as $$
 #variable_conflict use_column
 declare
-  v_email text := lower(trim(coalesce(p_email, '')));
-  v_code text; v_alias text; v_salt text; v_key text; n bigint;
+  v_code text; v_alias text; v_salt text; v_key text;
+  v_join text := nullif(trim(coalesce(p_join, '')), '');
   v_lang text := lower(trim(coalesce(nullif(trim(p_lang), ''), 'en')));
 begin
-  if v_email !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' or length(v_email) > 254 then
-    raise exception 'That does not look like an email address' using errcode = '22023';
-  end if;
-  if exists (select 1 from public.participants x where x.email = v_email) then
-    return query select * from public.sw_sign_in(v_email, p_pin);
-    return;
-  end if;
-  if p_name is null or length(trim(p_name)) = 0 then
-    return query select * from public.sw_sign_in(v_email, p_pin);         -- pin_needed or not_found
-    return;
-  end if;
-  perform public.sw_check_profile(p_name, p_birth_year, p_height_cm, p_weight_kg, p_home);
+  perform public.sw_check_profile(null, p_birth_year, p_height_cm, p_weight_kg, p_home);
   if v_lang not in ('en', 'cy') then raise exception 'Unknown language "%" (en or cy)', p_lang using errcode = '22023'; end if;
   if p_pin is null or p_pin !~ '^[0-9]{4}$' then raise exception 'Please choose a 4-digit PIN' using errcode = '22023'; end if;
+  if v_join is not null and length(v_join) > 100 then raise exception 'The join token is too long' using errcode = '22023'; end if;
   if public.sw_weak_pin(p_pin) then
     return query select 'weak_pin'::text, null::integer, null::integer, null::text, null::text, false, null::boolean, null::jsonb, null::text, false, null::text, null::text;
     return;
   end if;
-  loop                                       -- never truncated: P99, P100, ... and never a code that is taken
-    n := nextval('public.participant_seq');
-    v_code := 'P' || lpad(n::text, greatest(2, length(n::text)), '0');
-    exit when not exists (select 1 from public.participants x where x.code = v_code);
-  end loop;
-  begin
-    insert into public.participants (code, email, name, gender, birth_year, height_cm, weight_kg, sensitivity, home, lang)
-      values (v_code, v_email, trim(p_name), left(trim(p_gender), 40), p_birth_year, p_height_cm, p_weight_kg,
-              case when p_sensitivity in ('cold', 'average', 'warm') then p_sensitivity end, p_home, v_lang)
-      returning alias into v_alias;
-  exception when unique_violation then       -- the same email joined a moment ago (two taps): sign in instead
-    return query select * from public.sw_sign_in(v_email, p_pin);
-    return;
-  end;
+  -- Registrations take turns from here (the same lock as sw_new_participant_id), so a join sent twice at once
+  -- finds the first one's participant.
+  perform pg_advisory_xact_lock(hashtext('switch participant id'));
+  if v_join is not null then
+    select x.code into v_code from public.participant_pins x where x.join_hash = public.sw_hash(v_join);
+    if v_code is not null then
+      return query select * from public.sw_sign_in(v_code, p_pin);
+      return;
+    end if;
+  end if;
+  v_code := public.sw_new_participant_id();
+  insert into public.participants (code, gender, birth_year, height_cm, weight_kg, sensitivity, home, lang)
+    values (v_code, left(trim(p_gender), 40), p_birth_year, p_height_cm, p_weight_kg,
+            case when p_sensitivity in ('cold', 'average', 'warm') then p_sensitivity end, p_home, v_lang)
+    returning alias into v_alias;
   v_salt := replace(gen_random_uuid()::text, '-', '');
-  insert into public.participant_pins (code, salt, pin_hash) values (v_code, v_salt, public.sw_hash(v_salt || ':' || p_pin));
+  insert into public.participant_pins (code, salt, pin_hash, join_hash)
+    values (v_code, v_salt, public.sw_hash(v_salt || ':' || p_pin), case when v_join is not null then public.sw_hash(v_join) end);
   v_key := public.sw_new_key(v_code);
-  return query select 'ok'::text, null::integer, null::integer, v_code, trim(p_name), true, false, p_home, v_key, true, v_alias, v_lang;
+  return query select 'ok'::text, null::integer, null::integer, v_code, null::text, true, false, p_home, v_key, true, v_alias, v_lang;
 end $$;
-revoke all on function public.register_participant(text, text, text, integer, numeric, numeric, text, jsonb, text, text) from public;
-grant execute on function public.register_participant(text, text, text, integer, numeric, numeric, text, jsonb, text, text) to anon, authenticated;
+revoke all on function public.register_participant(text, integer, numeric, numeric, text, jsonb, text, text, text) from public;
+grant execute on function public.register_participant(text, integer, numeric, numeric, text, jsonb, text, text, text) to anon, authenticated;
 
 -- The participant's own profile for a signed-in device (the same on every device). A key that is not
 -- (or no longer) valid is refused (28000), so the app asks to sign in again.
@@ -474,8 +531,8 @@ create or replace function public.sw_profile(p_code text)
 returns table(code text, name text, approved boolean, gender text, birth_year integer, height_cm numeric, weight_kg numeric,
               sensitivity text, home jsonb, alias text, alias_colour smallint, race_hidden boolean, lang text)
 language sql stable security definer set search_path = public as $$
-  select x.code, x.name, x.approved, x.gender, x.birth_year, x.height_cm, x.weight_kg, x.sensitivity, x.home, x.alias, x.alias_colour, false, x.lang
-    from public.participants x where x.code = p_code;
+  select x.code, null::text, x.approved, x.gender, x.birth_year, x.height_cm, x.weight_kg, x.sensitivity, x.home, x.alias, x.alias_colour, false, x.lang
+    from public.participants x where x.code = p_code;          -- name: null since 1.5 (no name goes to a phone)
 $$;
 revoke all on function public.sw_profile(text) from public, anon, authenticated;
 
@@ -492,8 +549,8 @@ revoke all on function public.my_profile(text) from public;
 grant execute on function public.my_profile(text) to anon, authenticated;
 
 -- "My home" in Settings, and "Tell us about your home" for participants who joined before 1.0.
--- p_fields holds only what changes, any of: name, gender, birth_year, height_cm, weight_kg, sensitivity, lang
--- ('en' or 'cy').
+-- p_fields holds only what changes, any of: gender, birth_year, height_cm, weight_kg, sensitivity, lang
+-- ('en' or 'cy'). name, which apps before 1.5 still send, is accepted and ignored: no name is stored any more.
 -- p_home is the whole home profile (it replaces the stored one), or null to leave it. The same checks as
 -- joining. Returns the profile afterwards.
 drop function if exists public.update_my_profile(text, jsonb, jsonb);
@@ -505,7 +562,7 @@ language plpgsql security definer set search_path = public as $$
 declare
   v_code text := public.sw_code_of(p_key);
   f jsonb := coalesce(p_fields, '{}'::jsonb);
-  bad text; v_name text; v_by integer; v_h numeric; v_w numeric;
+  bad text; v_by integer; v_h numeric; v_w numeric;
 begin
   if v_code is null then raise exception 'This device is not signed in' using errcode = '28000'; end if;
   if jsonb_typeof(f) <> 'object' then raise exception 'p_fields must be a JSON object' using errcode = '22023'; end if;
@@ -515,16 +572,11 @@ begin
   if f ? 'lang' and coalesce(lower(trim(f->>'lang')), '') not in ('en', 'cy') then
     raise exception 'Unknown language "%" (en or cy)', f->>'lang' using errcode = '22023';
   end if;
-  if f ? 'name' then
-    v_name := trim(f->>'name');
-    if coalesce(v_name, '') = '' then raise exception 'Please give your name' using errcode = '22023'; end if;
-  end if;
   begin v_by := (f->>'birth_year')::numeric::integer; exception when others then raise exception 'Please check the year of birth' using errcode = '22023'; end;
   begin v_h := (f->>'height_cm')::numeric; exception when others then raise exception 'Please check the height' using errcode = '22023'; end;
   begin v_w := (f->>'weight_kg')::numeric; exception when others then raise exception 'Please check the weight' using errcode = '22023'; end;
-  perform public.sw_check_profile(v_name, v_by, v_h, v_w, case when jsonb_typeof(p_home) = 'null' then null else p_home end);
+  perform public.sw_check_profile(null, v_by, v_h, v_w, case when jsonb_typeof(p_home) = 'null' then null else p_home end);
   update public.participants x set
-    name        = case when f ? 'name' then v_name else x.name end,
     gender      = case when f ? 'gender' then left(trim(f->>'gender'), 40) else x.gender end,
     birth_year  = case when f ? 'birth_year' then v_by else x.birth_year end,
     height_cm   = case when f ? 'height_cm' then v_h else x.height_cm end,
@@ -552,17 +604,30 @@ grant execute on function public.forget_device(text) to anon, authenticated;
 -- Dashboard (signed-in researchers only): clear a forgotten PIN (the next sign-in sets a new one), sign
 -- a participant out on all devices (a lost phone), and which participants have a PIN and how many devices.
 -- reset_participant_pin clears the PIN and any lock now in force (the participant is usually on the phone
--- with the team), but not lock_count: only a successful sign-in clears that. The next sign-in then needs the
--- participant code with the new PIN. True when there was a PIN to clear.
+-- with the team), but not lock_count: only a successful sign-in clears that. It returns a new random 6-digit
+-- reset code, shown to the researcher once (only its hash is kept), which the participant needs with their ID
+-- to choose the new PIN, within 7 days; a second reset replaces it. Null for a code nobody has. (Until 1.4 it
+-- returned true or false, and the participant code was the second proof; drop first, as the result changed.)
+-- The devices already signed in keep working.
+drop function if exists public.reset_participant_pin(text);
 create or replace function public.reset_participant_pin(p_code text)
-returns boolean
+returns text
 language plpgsql security definer set search_path = public as $$
-declare v boolean;
+declare
+  v_code text := upper(regexp_replace(coalesce(p_code, ''), '\s', '', 'g'));
+  n integer; v_reset text;
 begin
-  select x.pin_hash is not null into v from public.participant_pins x where x.code = upper(trim(p_code));
-  update public.participant_pins x set salt = null, pin_hash = null, failures = 0, locked_until = null, updated_at = now()
-   where x.code = upper(trim(p_code));
-  return coalesce(v, false);
+  if not exists (select 1 from public.participants x where x.code = v_code) then return null; end if;
+  loop                                        -- 24 random bits from a fresh uuid, evenly into 000000-999999
+    n := ('x' || lpad(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6), 8, '0'))::bit(32)::integer;
+    exit when n < 16000000;
+  end loop;
+  v_reset := lpad((n % 1000000)::text, 6, '0');
+  insert into public.participant_pins (code) values (v_code) on conflict (code) do nothing;
+  update public.participant_pins x set salt = null, pin_hash = null, failures = 0, locked_until = null,
+         reset_hash = public.sw_hash(v_code || ':' || v_reset), reset_until = now() + interval '7 days', updated_at = now()
+   where x.code = v_code;
+  return v_reset;
 end $$;
 revoke all on function public.reset_participant_pin(text) from public, anon;
 grant execute on function public.reset_participant_pin(text) to authenticated;
@@ -576,13 +641,15 @@ $$;
 revoke all on function public.sign_out_devices(text) from public, anon;
 grant execute on function public.sign_out_devices(text) to authenticated;
 
+-- reset_pending (1.5): the PIN was reset and its reset code still works (no new PIN chosen yet).
 drop function if exists public.participant_sign_in_info();
 create or replace function public.participant_sign_in_info()
-returns table(code text, pin_set boolean, locked boolean, devices integer, last_seen timestamptz)
+returns table(code text, pin_set boolean, locked boolean, devices integer, last_seen timestamptz, reset_pending boolean)
 language sql security definer stable set search_path = public as $$
   select p.code, (pp.pin_hash is not null), coalesce(pp.locked_until > now(), false),
          (select count(*)::integer from public.participant_devices d where d.code = p.code),
-         (select max(d.last_seen) from public.participant_devices d where d.code = p.code)
+         (select max(d.last_seen) from public.participant_devices d where d.code = p.code),
+         coalesce(pp.pin_hash is null and pp.reset_hash is not null and pp.reset_until > now(), false)
     from public.participants p left join public.participant_pins pp on pp.code = p.code
    order by p.code;
 $$;

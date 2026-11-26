@@ -9,7 +9,7 @@
  *   live, cfg                         true when config.js names a Supabase project; the config object
  *   participant()                     code from ?p= (stored) or the one remembered on this phone, or null
  *   setParticipant(code)              remembers the code (upper-cased)
- *   validCode(code)                   true for P01, P99, P100 ...
+ *   validCode(code)                   true for a participant ID: 4827 (1000-9999, from 1.5), or P01, P99, P100 ...
  *   toRecord(row, participant)        a check-in row (phone shape) -> the database row: exactly client_id,
  *                                     participant, ts, local_time, tz_offset_min, prompt, at_home, room_time, tsv,
  *                                     preference, acceptability, clo, garments, met, activity, room, air, sun,
@@ -45,27 +45,30 @@
  *
  * ---- participant side (publishable key; "key" = this device's key from joining or signing in) ----
  *   key(), setKey(k)                  this device's key in localStorage switch_key (setKey(null) removes it)
- *   register(fields)                  register_participant. fields: email, pin, name, gender, birth_year,
- *                                     height_cm, weight_kg, sensitivity, home (object), lang ('en' | 'cy';
- *                                     'en' when left out). -> outcome row
+ *   register(fields)                  register_participant. fields: pin, gender, birth_year, height_cm,
+ *                                     weight_kg, sensitivity, home (object), lang ('en' | 'cy'; 'en' when left
+ *                                     out), join (a token made once per joining, kept with the draft). No name
+ *                                     or email (1.5). -> outcome row
  *                                     { status, tries_left, wait_min, code, name, is_new, approved, home,
- *                                     device_key, pin_set, alias, lang }; an email already registered is a
- *                                     sign-in (lang then is the stored one, not the one sent).
+ *                                     device_key, pin_set, alias, lang }: code is the new 4-digit participant ID
+ *                                     (name is always null). The same join token again is a sign-in to the
+ *                                     participant it made (is_new false; lang then is the stored one).
  *                                     Rejects with the database's message (err.code '22023') for values it refuses.
- *   signIn(email, pin, code?)         participant_sign_in -> the same row. status:
+ *   signIn(code, pin, reset?)         participant_sign_in -> the same row. code: the participant ID as typed
+ *                                     (4827, or an older P07). status:
  *                                       ok          signed in (pin_set true: this PIN has just become theirs)
  *                                       wrong       wrong PIN, tries_left before the lock
  *                                       locked      wait_min minutes (15, then 60, then 1440 after repeated locks)
- *                                       pin_needed  pin missing or not 4 digits (answered for ANY email, so it
- *                                                   says nothing about whether the email is registered)
- *                                       code_needed the participant has no PIN yet (joined with 0.4.0, or the
- *                                                   team reset it): call again with code = their participant
- *                                                   code (P07). tries_left null: no code was sent; a number: the
- *                                                   code sent was wrong (one try counted)
- *                                       weak_pin    the code was right but the new PIN is too easy (nothing stored)
- *                                       not_found   no participant with that email (only after a 4-digit PIN)
- *                                     register() can answer weak_pin too (and code_needed for an email that is
- *                                     registered but has no PIN).
+ *                                       pin_needed  pin missing or not 4 digits (answered for ANY ID, so it
+ *                                                   says nothing about whether the ID is registered)
+ *                                       code_needed the participant has no PIN (joined with 0.4.0, or the team
+ *                                                   reset it): call again with reset = the 6-digit reset code
+ *                                                   the team gave them. tries_left null: no reset code was sent;
+ *                                                   a number: the one sent was wrong or too old (one try counted)
+ *                                       weak_pin    the reset code was right but the new PIN is too easy (nothing stored)
+ *                                       not_found   no participant with that ID (only after a 4-digit PIN)
+ *                                     register() can answer weak_pin too (and, for a join token sent again,
+ *                                     any sign-in outcome).
  *   myProfile()                       my_profile -> { code, name, approved, gender, birth_year, height_cm,
  *                                     weight_kg, sensitivity, home, alias, alias_colour, race_hidden (always
  *                                     false now), lang ('en' | 'cy') } or null
@@ -121,8 +124,10 @@
  *                                     last_prompt_at, last_vote_at, tz, the 8 hour fields, user_agent,
  *                                     created_at, updated_at (never the endpoint or its keys). Rejects on error
  *   signInInfo(token)                 participant_sign_in_info -> Map code -> { code, pin_set, locked, devices,
- *                                     last_seen }. Rejects on error
- *   resetPin(token, code)             reset_participant_pin -> true if a PIN was cleared
+ *                                     last_seen, reset_pending }. Rejects on error
+ *   resetPin(token, code)             reset_participant_pin -> the 6-digit reset code to give the participant
+ *                                     (shown once), or null when nobody has that code. Rejects on error, and when
+ *                                     the database still answers as before 1.5 (true / false)
  *   signOutDevices(token, code)       sign_out_devices -> number of devices signed out
  *   approve(token, code)              PATCH approved = true -> true if the row exists (setApproval(token,
  *                                     code, approved) is the general form)
@@ -150,7 +155,7 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
     del(k) { try { localStorage.removeItem(k); } catch (e) {} }
   };
-  const KEY_KEY = 'switch_key';   // this device's key: given by joining or signing in with email and PIN
+  const KEY_KEY = 'switch_key';   // this device's key: given by joining or signing in with participant ID and PIN
   const pad = n => String(n).padStart(2, '0');
   const MIN = 60000, DAY_MS = 86400000;
 
@@ -197,7 +202,7 @@
       return LS.get('switch_participant', null);
     },
     setParticipant(p) { LS.set('switch_participant', String(p).trim().toUpperCase()); },
-    validCode: p => /^P\d{2,}$/.test(p || ''),
+    validCode: p => /^(\d{4}|P\d{2,})$/.test(p || ''),
 
     /* ---- one check-in row, in the shape of the database table ---- */
     toRecord(row, participant) {
@@ -345,16 +350,19 @@
       return done.size;
     },
 
-    /* ---- joining and signing in: the database assigns the code and gives this device a key ---- */
+    /* ---- joining and signing in: the database assigns the participant ID and gives this device a key ---- */
     async register(fields) {
       if (!live) return null;
-      const body = { p_email: fields.email, p_name: fields.name || null, p_gender: fields.gender || null, p_birth_year: fields.birth_year ?? null,
+      const body = { p_gender: fields.gender || null, p_birth_year: fields.birth_year ?? null,
         p_height_cm: fields.height_cm ?? null, p_weight_kg: fields.weight_kg ?? null, p_sensitivity: fields.sensitivity || null,
-        p_home: fields.home || null, p_pin: fields.pin || null, p_lang: fields.lang === 'cy' ? 'cy' : 'en' };
+        p_home: fields.home || null, p_pin: fields.pin || null, p_lang: fields.lang === 'cy' ? 'cy' : 'en', p_join: fields.join || null };
       return S.rpcRow('register_participant', body, 'Registration failed');
     },
-    // code: the participant code (P07), needed only when the answer was code_needed
-    async signIn(email, pin, code) { return S.rpcRow('participant_sign_in', { p_email: email, p_pin: pin || null, p_code: code ? String(code).trim().toUpperCase() : null }, 'Sign-in failed'); },
+    // code: the participant ID (4827, or P07); reset: the 6-digit reset code, needed only when the answer was code_needed
+    async signIn(code, pin, reset) {
+      return S.rpcRow('participant_sign_in', { p_code: String(code || '').replace(/\s+/g, '').toUpperCase(), p_pin: pin || null,
+        p_reset: reset ? String(reset).replace(/\s+/g, '') : null }, 'Sign-in failed');
+    },
     async rpcRow(fn, body, what) {
       const r = await fetch(rest('rpc/' + fn), { method: 'POST', headers: headers(), body: JSON.stringify(body) });
       const j = await r.json().catch(() => null);
@@ -507,7 +515,11 @@
       const rows = await S.researcherRpc(token, 'participant_sign_in_info', {}, 'Could not load the sign-in details');
       return new Map((rows || []).map(x => [x.code, x]));
     },
-    async resetPin(token, code) { return !!(await S.researcherRpc(token, 'reset_participant_pin', { p_code: code }, 'Could not reset the PIN')); },
+    async resetPin(token, code) {
+      const r = await S.researcherRpc(token, 'reset_participant_pin', { p_code: code }, 'Could not reset the PIN');
+      if (typeof r === 'boolean') throw new Error('The database has not been updated yet: run supabase-setup.sql again in Supabase. The PIN was cleared, but no reset code was made');
+      return typeof r === 'string' && r ? r : null;
+    },
     async signOutDevices(token, code) { return +(await S.researcherRpc(token, 'sign_out_devices', { p_code: code }, 'Could not sign out the devices')) || 0; },
     async pointsTable(token, from, to) { return S.researcherRpc(token, 'points_table', { p_from: from || null, p_to: to || null }, 'Could not load the points'); },
     // Both write functions ask PostgREST to return the rows it touched and resolve to true only when
